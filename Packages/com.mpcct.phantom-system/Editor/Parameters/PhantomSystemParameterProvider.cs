@@ -77,12 +77,6 @@ namespace MPCCT.PhantomSystem.Editor
                         PhantomParameterNames.ScaleReset(slot),
                         AnimatorControllerParameterType.Bool,
                         0f);
-                    AddAnimatorOnlyParameter(
-                        output,
-                        component,
-                        PhantomParameterNames.ScaleControlWeight(slot),
-                        AnimatorControllerParameterType.Float,
-                        1f);
                 }
 
                 if (slot.enablePhantomGrabbing)

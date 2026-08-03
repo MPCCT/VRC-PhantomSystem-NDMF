@@ -213,7 +213,6 @@ namespace MPCCT.PhantomSystem.Editor
                     generatedParameters.Add(PhantomParameterNames.Scale(slot.Slot));
                     generatedParameters.Add(PhantomParameterNames.Mirror(slot.Slot));
                     generatedParameters.Add(PhantomParameterNames.ScaleReset(slot.Slot));
-                    generatedParameters.Add(PhantomParameterNames.ScaleControlWeight(slot.Slot));
                 }
 
                 foreach (var generatedParameter in generatedParameters)

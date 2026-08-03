@@ -17,6 +17,7 @@ namespace MPCCT.PhantomSystem.Editor
         public PhantomBuildReport Report { get; }
         public AnimatorController Controller { get; }
 
+        public string SlotPath { get; }
         public string RootPath { get; }
         public string BaseAvatarPositionPath { get; }
         public string ArmaturePath { get; }
@@ -44,6 +45,11 @@ namespace MPCCT.PhantomSystem.Editor
             Report = report;
             Controller = controller;
 
+            SlotPath = slot.SlotRoot == null
+                ? null
+                : TransformPathUtility.GetRelativePath(
+                    slot.SlotRoot.transform,
+                    system.AvatarRoot);
             RootPath = TransformPathUtility.GetRelativePath(
                 slot.CloneRoot.transform,
                 system.AvatarRoot);
