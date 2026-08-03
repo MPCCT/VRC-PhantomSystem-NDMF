@@ -60,8 +60,10 @@ namespace MPCCT.PhantomSystem.Editor
             }
             if (slot.Slot.enablePhantomGrabbing)
             {
-                parameters.parameters.Add(LocalBoolParameter(
-                    PhantomParameterNames.PhantomGrabbingShowBones(slot.Slot)));
+                parameters.parameters.Add(BoolParameter(
+                    PhantomParameterNames.PhantomGrabbingShowBones(slot.Slot),
+                    false,
+                    false));
             }
         }
 

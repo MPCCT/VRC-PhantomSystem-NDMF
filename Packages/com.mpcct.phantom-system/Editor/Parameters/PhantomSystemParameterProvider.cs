@@ -81,9 +81,10 @@ namespace MPCCT.PhantomSystem.Editor
 
                 if (slot.enablePhantomGrabbing)
                 {
-                    AddLocalParameter(
+                    AddSyncedParameter(
                         output,
                         component,
+                        analysis.BaseParameters,
                         PhantomParameterNames.PhantomGrabbingShowBones(slot),
                         AnimatorControllerParameterType.Bool,
                         0f);

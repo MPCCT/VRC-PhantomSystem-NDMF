@@ -4,7 +4,7 @@ using static MPCCT.PhantomSystem.Editor.PhantomAnimatorGraphUtility;
 
 namespace MPCCT.PhantomSystem.Editor
 {
-    /// <summary>Shows the local Phantom Grabbing proxy-bone display only while frozen.</summary>
+    /// <summary>Shows the Phantom Grabbing proxy-bone display only while frozen.</summary>
     internal static class PhantomGrabbingBoneDisplayAnimatorModule
     {
         public static void Build(PhantomAnimatorBuildContext context)

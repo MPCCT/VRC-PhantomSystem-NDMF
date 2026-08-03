@@ -47,8 +47,8 @@ namespace MPCCT.PhantomSystem
         public bool useRotationConstraint;
         public bool rotationSolveInWorldSpace;
         public bool overridePhysBoneImmobileType;
-        public bool enablePhantomGrabbing;
-        public bool enableScaleControl;
+        public bool enablePhantomGrabbing = true;
+        public bool enableScaleControl = true;
     }
 
     [Serializable]

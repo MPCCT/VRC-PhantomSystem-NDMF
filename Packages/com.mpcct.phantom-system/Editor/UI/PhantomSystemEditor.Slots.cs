@@ -316,8 +316,8 @@ namespace MPCCT.PhantomSystem.Editor
             slotProperty.FindPropertyRelative("useRotationConstraint").boolValue = false;
             slotProperty.FindPropertyRelative("rotationSolveInWorldSpace").boolValue = false;
             slotProperty.FindPropertyRelative("overridePhysBoneImmobileType").boolValue = false;
-            slotProperty.FindPropertyRelative("enablePhantomGrabbing").boolValue = false;
-            slotProperty.FindPropertyRelative("enableScaleControl").boolValue = false;
+            slotProperty.FindPropertyRelative("enablePhantomGrabbing").boolValue = true;
+            slotProperty.FindPropertyRelative("enableScaleControl").boolValue = true;
             SetSlotFoldout(newIndex, true);
             SetSharedParameterFoldout(newIndex, false);
             SetSlotAdvancedFoldout(newIndex, false);
