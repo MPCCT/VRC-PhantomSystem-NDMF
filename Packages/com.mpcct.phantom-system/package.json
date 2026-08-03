@@ -5,8 +5,13 @@
   "unity": "2022.3",
   "description": "Automatic-prebake NDMF system for creating and controlling VRChat phantom avatars.",
   "author": {
-    "name": "MPCCT"
+    "name": "MPCCT",
+    "email": "mpcct_zbw@outlook.com",
+    "url": "https://github.com/MPCCT"
   },
+  "license": "MIT",
+  "documentationUrl": "https://github.com/MPCCT/VRC-PhantomSystem-NDMF#readme",
+  "changelogUrl": "https://github.com/MPCCT/VRC-PhantomSystem-NDMF/blob/master/Packages/com.mpcct.phantom-system/CHANGELOG.md",
   "dependencies": {
     "com.vrchat.avatars": "3.10.0",
     "nadena.dev.ndmf": "1.14.0",
