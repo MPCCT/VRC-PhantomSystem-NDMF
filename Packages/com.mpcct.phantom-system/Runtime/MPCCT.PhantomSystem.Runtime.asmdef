@@ -1,0 +1,19 @@
+{
+  "name": "MPCCT.PhantomSystem.Runtime",
+  "rootNamespace": "MPCCT.PhantomSystem",
+  "references": [
+    "VRC.SDK3A",
+    "nadena.dev.ndmf.runtime",
+    "nadena.dev.modular-avatar.core"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
+
