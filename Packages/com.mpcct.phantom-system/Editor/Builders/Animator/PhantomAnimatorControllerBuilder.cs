@@ -42,6 +42,7 @@ namespace MPCCT.PhantomSystem.Editor
             {
                 ScaleControlAnimatorModule.Build(context);
             }
+            PhantomTrackingControlAnimatorModule.Build(context);
 
             PhantomAnimatorGraphUtility.ValidateStateMotions(context);
             SaveGeneratedAssets(context);

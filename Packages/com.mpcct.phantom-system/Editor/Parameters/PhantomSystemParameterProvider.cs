@@ -98,6 +98,11 @@ namespace MPCCT.PhantomSystem.Editor
                         PhantomParameterNames.PhantomGrabbingContactRight(slot));
                 }
 
+                if (slot.tryConvertAnimatorTrackingControl && !slot.removeOriginalFx)
+                {
+                    AddTrackingParameters(output, component, slot);
+                }
+
                 if (slot.removeOriginalFx)
                 {
                     continue;
@@ -214,6 +219,29 @@ namespace MPCCT.PhantomSystem.Editor
                 name,
                 AnimatorControllerParameterType.Bool,
                 0f);
+        }
+
+        private static void AddTrackingParameters(
+            List<ProvidedParameter> output,
+            PhantomAuthoring source,
+            PhantomSlot slot)
+        {
+            foreach (var parameter in PhantomTrackingControlGroups.Parameters(slot))
+            {
+                AddAnimatorOnlyParameter(
+                    output,
+                    source,
+                    parameter,
+                    AnimatorControllerParameterType.Float,
+                    1f);
+            }
+
+            AddAnimatorOnlyParameter(
+                output,
+                source,
+                PhantomParameterNames.TrackingDirectWeight(slot),
+                AnimatorControllerParameterType.Float,
+                1f);
         }
 
         private static void AddAnimatorOnlyParameter(

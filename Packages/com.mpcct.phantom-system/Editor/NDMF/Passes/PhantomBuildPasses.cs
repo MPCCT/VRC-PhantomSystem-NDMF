@@ -214,6 +214,12 @@ namespace MPCCT.PhantomSystem.Editor
                     generatedParameters.Add(PhantomParameterNames.Mirror(slot.Slot));
                     generatedParameters.Add(PhantomParameterNames.ScaleReset(slot.Slot));
                 }
+                if (slot.Slot.tryConvertAnimatorTrackingControl && !slot.Slot.removeOriginalFx)
+                {
+                    generatedParameters.AddRange(
+                        PhantomTrackingControlGroups.Parameters(slot.Slot));
+                    generatedParameters.Add(PhantomParameterNames.TrackingDirectWeight(slot.Slot));
+                }
 
                 foreach (var generatedParameter in generatedParameters)
                 {
@@ -295,6 +301,12 @@ namespace MPCCT.PhantomSystem.Editor
 
             foreach (var slot in state.System.Slots)
             {
+                var sourceFxResult = PhantomSourceFxBehaviorProcessor.Process(
+                    ctx,
+                    slot,
+                    state.Report);
+                slot.ProcessedFxController = sourceFxResult.Controller;
+                slot.HasTrackingControlConversion = sourceFxResult.HasTrackingConversion;
                 PhantomAnimatorControllerBuilder.Build(ctx, state.System, slot, state.Report);
             }
 

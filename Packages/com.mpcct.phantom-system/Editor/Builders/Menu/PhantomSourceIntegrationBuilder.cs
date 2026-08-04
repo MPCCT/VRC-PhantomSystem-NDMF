@@ -28,7 +28,8 @@ namespace MPCCT.PhantomSystem.Editor
                 return;
             }
 
-            var fxController = GetFxController(descriptor);
+            var fxController = slot.ProcessedFxController
+                               ?? PhantomSourceFxControllerUtility.GetController(descriptor);
             if (fxController != null)
             {
                 var mergeAnimator = host.AddComponent<ModularAvatarMergeAnimator>();
@@ -62,16 +63,6 @@ namespace MPCCT.PhantomSystem.Editor
                     slot.GeneratedCoreMenu,
                     report);
             }
-        }
-
-        private static RuntimeAnimatorController GetFxController(VRCAvatarDescriptor descriptor)
-        {
-            return descriptor != null
-                   && descriptor.customizeAnimationLayers
-                   && descriptor.baseAnimationLayers != null
-                   && descriptor.baseAnimationLayers.Length > 4
-                ? descriptor.baseAnimationLayers[4].animatorController
-                : null;
         }
 
         private static void InstallOriginalMenu(

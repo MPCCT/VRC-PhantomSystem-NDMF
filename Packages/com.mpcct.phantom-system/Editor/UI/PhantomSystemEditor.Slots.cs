@@ -81,6 +81,8 @@ namespace MPCCT.PhantomSystem.Editor
                 slotProperty.FindPropertyRelative("rotationSolveInWorldSpace");
             var overridePhysBoneImmobileType =
                 slotProperty.FindPropertyRelative("overridePhysBoneImmobileType");
+            var tryConvertAnimatorTrackingControl =
+                slotProperty.FindPropertyRelative("tryConvertAnimatorTrackingControl");
             var enablePhantomGrabbing =
                 slotProperty.FindPropertyRelative("enablePhantomGrabbing");
             var enableScaleControl =
@@ -170,18 +172,18 @@ namespace MPCCT.PhantomSystem.Editor
                             includePhantomMenu,
                             new GUIContent(
                                 "Include Phantom Menu",
-                                "Include the final Expression Menu produced by this phantom avatar's NDMF prebake. Disabled when Remove Original FX excludes the source control layer."));
+                                "Include the final Expression Menu produced by this phantom avatar's NDMF prebake."));
                     }
                     EditorGUILayout.PropertyField(
                         enablePhantomGrabbing,
                         new GUIContent(
                             "Enable Phantom Grabbing",
-                            "While the phantom is frozen, Gesture 5 lets either hand move its Hips through contact grabbing, while a generated Humanoid PhysBone proxy lets its body react and be posed. Turning Freeze off disables Phantom Grabbing and returns the phantom to base-avatar following."));
+                            "While the phantom is frozen, Rock&Roll gesture lets either hand move its Hips through contact grabbing, while a generated Humanoid PhysBone proxy lets its body react and be posed. Turning Freeze off disables Phantom Grabbing and returns the phantom to base-avatar following."));
                     EditorGUILayout.PropertyField(
                         enableScaleControl,
                         new GUIContent(
                             "Enable Scale Control",
-                            "Add per-slot radial scale control, reset, and X-axis mirror controls. Scale ranges from 0.2x to 1.8x and adds 9 synced parameter bits."));
+                            "Add per-slot radial scale control, reset, and X-axis mirror controls."));
 
                     EditorGUILayout.Space();
                     EditorGUILayout.LabelField("Parameter Settings", EditorStyles.boldLabel);
@@ -208,7 +210,8 @@ namespace MPCCT.PhantomSystem.Editor
                         removeOriginalFx,
                         useRotationConstraint,
                         rotationSolveInWorldSpace,
-                        overridePhysBoneImmobileType);
+                        overridePhysBoneImmobileType,
+                        tryConvertAnimatorTrackingControl);
 
                     DrawValidation(slotIndex, source);
                 }
@@ -222,7 +225,8 @@ namespace MPCCT.PhantomSystem.Editor
             SerializedProperty removeOriginalFx,
             SerializedProperty useRotationConstraint,
             SerializedProperty rotationSolveInWorldSpace,
-            SerializedProperty overridePhysBoneImmobileType)
+            SerializedProperty overridePhysBoneImmobileType,
+            SerializedProperty tryConvertAnimatorTrackingControl)
         {
             EditorGUILayout.Space();
             var expanded = GetSlotAdvancedFoldout(slotIndex);
@@ -265,6 +269,11 @@ namespace MPCCT.PhantomSystem.Editor
                     new GUIContent(
                         "Override PhysBone Immobile Type",
                         "Set every PhysBone in this slot to All Motion. This can fix cases where a frozen phantom's PhysBones move along with the base avatar, but it overrides the source settings and may break PhysBone behavior."));
+                EditorGUILayout.PropertyField(
+                    tryConvertAnimatorTrackingControl,
+                    new GUIContent(
+                        "Try Convert Animator Tracking Control",
+                        "Convert supported Animator Tracking Control behaviors into PhantomSystem bone-group synchronization. Unsupported face simulation is reported as a partial conversion."));
             }
         }
 
@@ -316,6 +325,7 @@ namespace MPCCT.PhantomSystem.Editor
             slotProperty.FindPropertyRelative("useRotationConstraint").boolValue = false;
             slotProperty.FindPropertyRelative("rotationSolveInWorldSpace").boolValue = false;
             slotProperty.FindPropertyRelative("overridePhysBoneImmobileType").boolValue = false;
+            slotProperty.FindPropertyRelative("tryConvertAnimatorTrackingControl").boolValue = false;
             slotProperty.FindPropertyRelative("enablePhantomGrabbing").boolValue = true;
             slotProperty.FindPropertyRelative("enableScaleControl").boolValue = true;
             SetSlotFoldout(newIndex, true);

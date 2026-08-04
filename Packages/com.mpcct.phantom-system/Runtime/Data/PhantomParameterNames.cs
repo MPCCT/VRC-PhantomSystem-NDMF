@@ -14,6 +14,18 @@ namespace MPCCT.PhantomSystem
             Name(slot, "PhantomGrabbing/ContactRight");
         public static string PhantomGrabbingShowBones(PhantomSlot slot) =>
             Name(slot, "PhantomGrabbing/ShowBones");
+        public static string TrackingHead(PhantomSlot slot) => Name(slot, "Tracking/Head");
+        public static string TrackingLeftHand(PhantomSlot slot) => Name(slot, "Tracking/LeftHand");
+        public static string TrackingRightHand(PhantomSlot slot) => Name(slot, "Tracking/RightHand");
+        public static string TrackingHip(PhantomSlot slot) => Name(slot, "Tracking/Hip");
+        public static string TrackingLeftFoot(PhantomSlot slot) => Name(slot, "Tracking/LeftFoot");
+        public static string TrackingRightFoot(PhantomSlot slot) => Name(slot, "Tracking/RightFoot");
+        public static string TrackingLeftFingers(PhantomSlot slot) => Name(slot, "Tracking/LeftFingers");
+        public static string TrackingRightFingers(PhantomSlot slot) => Name(slot, "Tracking/RightFingers");
+        public static string TrackingEyes(PhantomSlot slot) => Name(slot, "Tracking/Eyes");
+        public static string TrackingMouth(PhantomSlot slot) => Name(slot, "Tracking/Mouth");
+        public static string TrackingDirectWeight(PhantomSlot slot) =>
+            Name(slot, "Tracking/DirectWeight");
 
         public static string OriginalParameterPrefix(PhantomSlot slot)
         {

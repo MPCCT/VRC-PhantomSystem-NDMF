@@ -59,6 +59,8 @@ namespace MPCCT.PhantomSystem.Editor
         public readonly Dictionary<HumanBodyBones, Transform> PhantomGrabbingBodyOutputConstraintHosts =
             new Dictionary<HumanBodyBones, Transform>();
         public AnimatorController GeneratedController;
+        public RuntimeAnimatorController ProcessedFxController;
+        public bool HasTrackingControlConversion;
         public GameObject OriginalIntegrationHost;
         public VRCExpressionsMenu GeneratedCoreMenu;
         public ModularAvatarMergeAnimator CoreMergeAnimator;

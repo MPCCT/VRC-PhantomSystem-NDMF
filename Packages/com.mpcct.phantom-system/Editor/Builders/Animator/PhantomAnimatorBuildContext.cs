@@ -111,6 +111,14 @@ namespace MPCCT.PhantomSystem.Editor
             return tree;
         }
 
+        public void RegisterBlendTree(BlendTree tree)
+        {
+            if (tree != null)
+            {
+                generatedBlendTrees.Add(tree);
+            }
+        }
+
         private static IReadOnlyDictionary<HumanBodyBones, string> ResolvePaths(
             IReadOnlyDictionary<HumanBodyBones, Transform> transforms,
             Transform avatarRoot)
