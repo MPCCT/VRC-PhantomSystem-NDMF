@@ -45,7 +45,7 @@ namespace MPCCT.PhantomSystem.Editor
                     binding.Path,
                     binding.ConstraintType,
                     ConstraintEnabled,
-                    false);
+                    true);
             }
 
             var directTree = CreateDirectTree(context, bindings, directWeightParameter);

@@ -16,6 +16,8 @@ namespace MPCCT.PhantomSystem.Editor
             PhantomSlotBuildState slot,
             PhantomBuildReport report)
         {
+            InstallPhysBoneParameterMappings(slot);
+
             var descriptor = slot.BakedAvatar;
             if (descriptor == null || slot.Slot == null || slot.Slot.removeOriginalFx)
             {
@@ -62,6 +64,44 @@ namespace MPCCT.PhantomSystem.Editor
                     descriptor.expressionsMenu,
                     slot.GeneratedCoreMenu,
                     report);
+            }
+        }
+
+        private static void InstallPhysBoneParameterMappings(PhantomSlotBuildState slot)
+        {
+            var parameterConfigs = PhantomParameterConfigBuilder.BuildPhysBonePrefixes(slot);
+            if (parameterConfigs.Count == 0 || slot.CloneRoot == null)
+            {
+                return;
+            }
+
+            var parameters = slot.CloneRoot.GetComponent<ModularAvatarParameters>();
+            if (parameters == null)
+            {
+                parameters = slot.CloneRoot.AddComponent<ModularAvatarParameters>();
+            }
+
+            if (parameters.parameters == null)
+            {
+                parameters.parameters = new List<ParameterConfig>();
+            }
+
+            foreach (var config in parameterConfigs)
+            {
+                var existingIndex = parameters.parameters.FindIndex(existing =>
+                    existing.isPrefix
+                    && string.Equals(
+                        existing.nameOrPrefix,
+                        config.nameOrPrefix,
+                        System.StringComparison.Ordinal));
+                if (existingIndex >= 0)
+                {
+                    parameters.parameters[existingIndex] = config;
+                }
+                else
+                {
+                    parameters.parameters.Add(config);
+                }
             }
         }
 

@@ -5,6 +5,7 @@ using nadena.dev.modular_avatar.core;
 using UnityEditor.Animations;
 using UnityEngine;
 using VRC.SDK3.Avatars.ScriptableObjects;
+using VRC.SDK3.Dynamics.PhysBone.Components;
 
 namespace MPCCT.PhantomSystem.Editor
 {
@@ -31,6 +32,47 @@ namespace MPCCT.PhantomSystem.Editor
                 {
                     AddRemapOnlyParameter(configs, parameter.name, slot);
                 }
+            }
+
+            return configs.Values.ToList();
+        }
+
+        public static List<ParameterConfig> BuildPhysBonePrefixes(PhantomSlotBuildState slot)
+        {
+            var configs = new Dictionary<string, ParameterConfig>(StringComparer.Ordinal);
+            if (slot?.Slot == null
+                || !slot.Slot.renamePhantomParameters
+                || slot.CloneRoot == null)
+            {
+                return configs.Values.ToList();
+            }
+
+            foreach (var physBone in slot.CloneRoot.GetComponentsInChildren<VRCPhysBone>(true))
+            {
+                var parameter = physBone.parameter;
+                if (ShouldSkipOriginalParameter(parameter, slot))
+                {
+                    continue;
+                }
+
+                var finalName = PhantomParameterPolicy.FinalOriginalParameterName(
+                    slot.Slot,
+                    parameter,
+                    slot.ValidSharedParameterNames);
+                if (string.Equals(finalName, parameter, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                configs[parameter] = new ParameterConfig
+                {
+                    nameOrPrefix = parameter,
+                    remapTo = finalName,
+                    isPrefix = true,
+                    syncType = ParameterSyncType.NotSynced,
+                    localOnly = true,
+                    saved = false
+                };
             }
 
             return configs.Values.ToList();
