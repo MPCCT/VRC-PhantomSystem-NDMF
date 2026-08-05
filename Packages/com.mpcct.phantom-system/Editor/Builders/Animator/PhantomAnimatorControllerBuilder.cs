@@ -42,8 +42,43 @@ namespace MPCCT.PhantomSystem.Editor
             {
                 ScaleControlAnimatorModule.Build(context);
             }
-            PhantomTrackingControlAnimatorModule.Build(context);
 
+            PhantomAnimatorGraphUtility.ValidateStateMotions(context);
+            SaveGeneratedAssets(context);
+
+            BuildTrackingController(ndmfContext, system, slot, report);
+        }
+
+        private static void BuildTrackingController(
+            BuildContext ndmfContext,
+            PhantomSystemBuildState system,
+            PhantomSlotBuildState slot,
+            PhantomBuildReport report)
+        {
+            if (!slot.HasTrackingControlConversion)
+            {
+                return;
+            }
+
+            var controller = new AnimatorController
+            {
+                name = $"PhantomSystem_{slot.SlotId}_Tracking_FX",
+                layers = new AnimatorControllerLayer[0]
+            };
+            var context = new PhantomAnimatorBuildContext(
+                ndmfContext,
+                system,
+                slot,
+                report,
+                controller);
+
+            PhantomTrackingControlAnimatorModule.Build(context);
+            if (controller.layers.Length == 0)
+            {
+                return;
+            }
+
+            slot.GeneratedTrackingController = controller;
             PhantomAnimatorGraphUtility.ValidateStateMotions(context);
             SaveGeneratedAssets(context);
         }

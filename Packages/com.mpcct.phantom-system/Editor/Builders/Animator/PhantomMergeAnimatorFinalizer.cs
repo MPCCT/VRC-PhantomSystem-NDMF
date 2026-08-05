@@ -35,11 +35,23 @@ namespace MPCCT.PhantomSystem.Editor
                     slot.OriginalMergeAnimator.layerPriority = CheckedIncrement(priority, slot, state.Report);
                     priority = slot.OriginalMergeAnimator.layerPriority;
                 }
+            }
 
+            foreach (var slot in state.System.Slots)
+            {
                 if (slot.CoreMergeAnimator != null)
                 {
                     slot.CoreMergeAnimator.layerPriority = CheckedIncrement(priority, slot, state.Report);
                     priority = slot.CoreMergeAnimator.layerPriority;
+                }
+            }
+
+            foreach (var slot in state.System.Slots)
+            {
+                if (slot.TrackingMergeAnimator != null)
+                {
+                    slot.TrackingMergeAnimator.layerPriority = CheckedIncrement(priority, slot, state.Report);
+                    priority = slot.TrackingMergeAnimator.layerPriority;
                 }
             }
         }

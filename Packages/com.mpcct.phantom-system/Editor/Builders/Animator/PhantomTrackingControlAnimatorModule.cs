@@ -48,12 +48,19 @@ namespace MPCCT.PhantomSystem.Editor
                     true);
             }
 
-            var directTree = CreateDirectTree(context, bindings, directWeightParameter);
+            var disabledTree = CreateDisabledDirectTree(
+                context,
+                disabledClip,
+                directWeightParameter);
+            var enabledTree = CreateEnabledDirectTree(context, bindings, directWeightParameter);
             var layer = AddLayer(context.Controller, "PhantomTrackingControl");
             var machine = layer.stateMachine;
-            var disabled = AddState(machine, disabledClip);
+            var disabled = machine.AddState("PhantomTrackingDisabled");
+            disabled.motion = disabledTree;
+            disabled.writeDefaultValues = true;
             var enabled = machine.AddState("PhantomTrackingEnabled");
-            enabled.motion = directTree;
+            enabled.motion = enabledTree;
+            enabled.writeDefaultValues = true;
             machine.defaultState = disabled;
 
             AddTransition(
@@ -71,18 +78,22 @@ namespace MPCCT.PhantomSystem.Editor
                 BoolCondition(PhantomParameterNames.Freeze(slot), true));
         }
 
-        private static BlendTree CreateDirectTree(
+        private static BlendTree CreateDisabledDirectTree(
+            PhantomAnimatorBuildContext context,
+            AnimationClip disabledClip,
+            string directWeightParameter)
+        {
+            var direct = CreateDirectTree(context, "PhantomTrackingDisabledDirect");
+            AddDirectChild(direct, disabledClip, directWeightParameter);
+            return direct;
+        }
+
+        private static BlendTree CreateEnabledDirectTree(
             PhantomAnimatorBuildContext context,
             IReadOnlyList<ConstraintBinding> bindings,
             string directWeightParameter)
         {
-            var direct = new BlendTree
-            {
-                name = "PhantomTrackingDirect",
-                blendType = BlendTreeType.Direct,
-                useAutomaticThresholds = false
-            };
-            context.RegisterBlendTree(direct);
+            var direct = CreateDirectTree(context, "PhantomTrackingEnabledDirect");
 
             var includedGroups = new HashSet<PhantomTrackingControlGroup>();
             foreach (var binding in bindings)
@@ -118,13 +129,35 @@ namespace MPCCT.PhantomSystem.Editor
                     parameter);
                 groupTree.AddChild(offClip, 0f);
                 groupTree.AddChild(onClip, 1f);
-                direct.AddChild(groupTree, 1f);
-                var children = direct.children;
-                children[children.Length - 1].directBlendParameter = directWeightParameter;
-                direct.children = children;
+                AddDirectChild(direct, groupTree, directWeightParameter);
             }
 
             return direct;
+        }
+
+        private static BlendTree CreateDirectTree(
+            PhantomAnimatorBuildContext context,
+            string name)
+        {
+            var direct = new BlendTree
+            {
+                name = name,
+                blendType = BlendTreeType.Direct,
+                useAutomaticThresholds = false
+            };
+            context.RegisterBlendTree(direct);
+            return direct;
+        }
+
+        private static void AddDirectChild(
+            BlendTree direct,
+            Motion motion,
+            string directWeightParameter)
+        {
+            direct.AddChild(motion, 1f);
+            var children = direct.children;
+            children[children.Length - 1].directBlendParameter = directWeightParameter;
+            direct.children = children;
         }
 
         private static List<ConstraintBinding> CollectBindings(PhantomAnimatorBuildContext context)

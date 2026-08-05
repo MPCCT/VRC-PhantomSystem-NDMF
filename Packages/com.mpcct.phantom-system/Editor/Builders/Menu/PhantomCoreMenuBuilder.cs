@@ -38,6 +38,16 @@ namespace MPCCT.PhantomSystem.Editor
             mergeAnimator.matchAvatarWriteDefaults = true;
             slot.CoreMergeAnimator = mergeAnimator;
 
+            if (slot.GeneratedTrackingController != null)
+            {
+                var trackingMergeAnimator = host.AddComponent<ModularAvatarMergeAnimator>();
+                trackingMergeAnimator.animator = slot.GeneratedTrackingController;
+                trackingMergeAnimator.layerType = VRCAvatarDescriptor.AnimLayerType.FX;
+                trackingMergeAnimator.pathMode = MergeAnimatorPathMode.Absolute;
+                trackingMergeAnimator.matchAvatarWriteDefaults = false;
+                slot.TrackingMergeAnimator = trackingMergeAnimator;
+            }
+
             var parameters = host.AddComponent<ModularAvatarParameters>();
             parameters.parameters = new List<ParameterConfig>
             {
