@@ -66,6 +66,10 @@ Shader "Hidden/PhantomSystem/BoneDisplay"
             half _RimCutoff;
             half _RimSoftness;
 
+            float _VRChatCameraMode;
+            float _VRChatMirrorMode;
+            float _VRChatFaceMirrorMode;
+
             v2f vert(appdata v)
             {
                 v2f o;
@@ -84,6 +88,16 @@ Shader "Hidden/PhantomSystem/BoneDisplay"
             half4 frag(v2f i) : SV_Target
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
+
+                // Bone Display is a local positioning aid. Keep it out of
+                // handheld cameras, screenshots, mirrors, and face mirrors.
+                float normalScreenView =
+                    1.0 - step(0.5, abs(_VRChatCameraMode));
+                normalScreenView *=
+                    1.0 - step(0.5, abs(_VRChatMirrorMode));
+                normalScreenView *=
+                    1.0 - step(0.5, abs(_VRChatFaceMirrorMode));
+                clip(normalScreenView - 0.5);
 
                 half3 normalWS = normalize(i.normalWS);
                 half3 viewDirWS = normalize(UnityWorldSpaceViewDir(i.positionWS));

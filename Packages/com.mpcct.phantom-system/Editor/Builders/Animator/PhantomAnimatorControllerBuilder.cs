@@ -42,11 +42,50 @@ namespace MPCCT.PhantomSystem.Editor
             {
                 ScaleControlAnimatorModule.Build(context);
             }
+            if (slot.Slot.enablePhantomView)
+            {
+                PhantomViewAnimatorModule.BuildVisibility(context);
+            }
 
             PhantomAnimatorGraphUtility.ValidateStateMotions(context);
             SaveGeneratedAssets(context);
 
             BuildTrackingController(ndmfContext, system, slot, report);
+            BuildPhantomViewController(ndmfContext, system, slot, report);
+        }
+
+        private static void BuildPhantomViewController(
+            BuildContext ndmfContext,
+            PhantomSystemBuildState system,
+            PhantomSlotBuildState slot,
+            PhantomBuildReport report)
+        {
+            if (!slot.Slot.enablePhantomView)
+            {
+                return;
+            }
+
+            var controller = new AnimatorController
+            {
+                name = $"PhantomSystem_{slot.SlotId}_PhantomView_FX",
+                layers = new AnimatorControllerLayer[0]
+            };
+            var context = new PhantomAnimatorBuildContext(
+                ndmfContext,
+                system,
+                slot,
+                report,
+                controller);
+
+            PhantomViewAnimatorModule.BuildControls(context);
+            if (controller.layers.Length == 0)
+            {
+                return;
+            }
+
+            slot.GeneratedPhantomViewController = controller;
+            PhantomAnimatorGraphUtility.ValidateStateMotions(context);
+            SaveGeneratedAssets(context);
         }
 
         private static void BuildTrackingController(

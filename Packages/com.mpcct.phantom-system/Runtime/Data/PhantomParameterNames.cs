@@ -8,6 +8,14 @@ namespace MPCCT.PhantomSystem
         public static string Scale(PhantomSlot slot) => Name(slot, "Scale");
         public static string Mirror(PhantomSlot slot) => Name(slot, "Mirror");
         public static string ScaleReset(PhantomSlot slot) => Name(slot, "ScaleReset");
+        public static string PhantomViewEnabled(PhantomSlot slot) =>
+            Name(slot, "PhantomView/Enabled");
+        public static string PhantomViewStereoStrength(PhantomSlot slot) =>
+            Name(slot, "PhantomView/StereoStrength");
+        public static string PhantomViewMaskSize(PhantomSlot slot) =>
+            Name(slot, "PhantomView/MaskSize");
+        public static string PhantomViewDirectWeight(PhantomSlot slot) =>
+            Name(slot, "PhantomView/DirectWeight");
         public static string PhantomGrabbingContactLeft(PhantomSlot slot) =>
             Name(slot, "PhantomGrabbing/ContactLeft");
         public static string PhantomGrabbingContactRight(PhantomSlot slot) =>

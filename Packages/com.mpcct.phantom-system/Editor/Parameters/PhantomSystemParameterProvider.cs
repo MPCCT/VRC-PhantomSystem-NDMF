@@ -98,6 +98,34 @@ namespace MPCCT.PhantomSystem.Editor
                         PhantomParameterNames.PhantomGrabbingContactRight(slot));
                 }
 
+                if (slot.enablePhantomView)
+                {
+                    AddLocalParameter(
+                        output,
+                        component,
+                        PhantomParameterNames.PhantomViewEnabled(slot),
+                        AnimatorControllerParameterType.Bool,
+                        0f);
+                    AddLocalParameter(
+                        output,
+                        component,
+                        PhantomParameterNames.PhantomViewStereoStrength(slot),
+                        AnimatorControllerParameterType.Float,
+                        PhantomViewAnimatorModule.DefaultStereoStrengthParameter);
+                    AddLocalParameter(
+                        output,
+                        component,
+                        PhantomParameterNames.PhantomViewMaskSize(slot),
+                        AnimatorControllerParameterType.Float,
+                        PhantomViewAnimatorModule.DefaultMaskSizeParameter);
+                    AddAnimatorOnlyParameter(
+                        output,
+                        component,
+                        PhantomParameterNames.PhantomViewDirectWeight(slot),
+                        AnimatorControllerParameterType.Float,
+                        1f);
+                }
+
                 if (slot.tryConvertAnimatorTrackingControl && !slot.removeOriginalFx)
                 {
                     AddTrackingParameters(output, component, slot);

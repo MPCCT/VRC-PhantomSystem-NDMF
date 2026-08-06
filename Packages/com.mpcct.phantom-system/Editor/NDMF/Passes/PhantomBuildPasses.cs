@@ -214,6 +214,13 @@ namespace MPCCT.PhantomSystem.Editor
                     generatedParameters.Add(PhantomParameterNames.Mirror(slot.Slot));
                     generatedParameters.Add(PhantomParameterNames.ScaleReset(slot.Slot));
                 }
+                if (slot.Slot.enablePhantomView)
+                {
+                    generatedParameters.Add(PhantomParameterNames.PhantomViewEnabled(slot.Slot));
+                    generatedParameters.Add(PhantomParameterNames.PhantomViewStereoStrength(slot.Slot));
+                    generatedParameters.Add(PhantomParameterNames.PhantomViewMaskSize(slot.Slot));
+                    generatedParameters.Add(PhantomParameterNames.PhantomViewDirectWeight(slot.Slot));
+                }
                 if (slot.Slot.tryConvertAnimatorTrackingControl && !slot.Slot.removeOriginalFx)
                 {
                     generatedParameters.AddRange(
@@ -283,6 +290,7 @@ namespace MPCCT.PhantomSystem.Editor
             foreach (var slot in state.System.Slots)
             {
                 ConstraintRigBuilder.Build(ctx, slot, state.Report);
+                PhantomViewBuilder.Build(ctx, state.System, slot, state.Report);
             }
 
             state.Report.ThrowIfErrors();

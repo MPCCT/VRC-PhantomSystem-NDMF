@@ -54,6 +54,15 @@ namespace MPCCT.PhantomSystem.Editor
                     priority = slot.TrackingMergeAnimator.layerPriority;
                 }
             }
+
+            foreach (var slot in state.System.Slots)
+            {
+                if (slot.PhantomViewMergeAnimator != null)
+                {
+                    slot.PhantomViewMergeAnimator.layerPriority = CheckedIncrement(priority, slot, state.Report);
+                    priority = slot.PhantomViewMergeAnimator.layerPriority;
+                }
+            }
         }
 
         private static int CheckedIncrement(int priority, PhantomSlotBuildState slot, PhantomBuildReport report)

@@ -24,6 +24,10 @@ namespace MPCCT.PhantomSystem.Editor
         public Transform AvatarRoot;
         public GameObject RuntimeRoot;
         public GameObject SlotsRoot;
+        public GameObject ViewsRoot;
+        public Mesh PhantomViewDisplayMesh;
+        public RenderTexture PhantomViewLeftTexture;
+        public RenderTexture PhantomViewRightTexture;
         public VRCExpressionsMenu GeneratedSystemMenu;
         public VRCExpressionsMenu GeneratedRootMenu;
         public List<PhantomSlotBuildState> Slots { get; } = new List<PhantomSlotBuildState>();
@@ -44,6 +48,11 @@ namespace MPCCT.PhantomSystem.Editor
         public Transform ArmatureConstraintTarget;
         public Transform PhantomGrabbingHipsConstraintHost;
         public Transform PhantomGrabbingBoneDisplayHost;
+        public Transform PhantomViewRoot;
+        public Transform PhantomViewCaptureRoot;
+        public Transform PhantomViewLeftCamera;
+        public Transform PhantomViewRightCamera;
+        public Transform PhantomViewDisplayHost;
         public readonly Dictionary<HumanBodyBones, Transform> CloneBones = new Dictionary<HumanBodyBones, Transform>();
         public readonly Dictionary<HumanBodyBones, string> CloneBoneAvatarPaths = new Dictionary<HumanBodyBones, string>();
         public readonly Dictionary<HumanBodyBones, global::System.Type> CloneBoneConstraintTypes =
@@ -60,12 +69,14 @@ namespace MPCCT.PhantomSystem.Editor
             new Dictionary<HumanBodyBones, Transform>();
         public AnimatorController GeneratedController;
         public AnimatorController GeneratedTrackingController;
+        public AnimatorController GeneratedPhantomViewController;
         public RuntimeAnimatorController ProcessedFxController;
         public bool HasTrackingControlConversion;
         public GameObject OriginalIntegrationHost;
         public VRCExpressionsMenu GeneratedCoreMenu;
         public ModularAvatarMergeAnimator CoreMergeAnimator;
         public ModularAvatarMergeAnimator TrackingMergeAnimator;
+        public ModularAvatarMergeAnimator PhantomViewMergeAnimator;
         public ModularAvatarMergeAnimator OriginalMergeAnimator;
         internal readonly HashSet<string> ValidSharedParameterNames =
             new HashSet<string>(System.StringComparer.Ordinal);

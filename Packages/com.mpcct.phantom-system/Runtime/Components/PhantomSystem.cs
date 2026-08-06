@@ -50,6 +50,7 @@ namespace MPCCT.PhantomSystem
         public bool tryConvertAnimatorTrackingControl;
         public bool enablePhantomGrabbing = true;
         public bool enableScaleControl = true;
+        public bool enablePhantomView = true;
     }
 
     [Serializable]

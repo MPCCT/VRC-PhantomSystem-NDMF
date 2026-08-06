@@ -87,6 +87,8 @@ namespace MPCCT.PhantomSystem.Editor
                 slotProperty.FindPropertyRelative("enablePhantomGrabbing");
             var enableScaleControl =
                 slotProperty.FindPropertyRelative("enableScaleControl");
+            var enablePhantomView =
+                slotProperty.FindPropertyRelative("enablePhantomView");
             var slotName = string.IsNullOrWhiteSpace(idProperty.stringValue)
                 ? $"Slot{slotIndex + 1}"
                 : idProperty.stringValue.Trim();
@@ -184,6 +186,11 @@ namespace MPCCT.PhantomSystem.Editor
                         new GUIContent(
                             "Enable Scale Control",
                             "Add per-slot radial scale control, reset, and X-axis mirror controls."));
+                    EditorGUILayout.PropertyField(
+                        enablePhantomView,
+                        new GUIContent(
+                            "Enable Phantom View",
+                            "Add a local stereo view rendered from the phantom's Humanoid Head."));
 
                     EditorGUILayout.Space();
                     EditorGUILayout.LabelField("Parameter Settings", EditorStyles.boldLabel);

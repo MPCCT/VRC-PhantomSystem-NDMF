@@ -24,6 +24,9 @@ namespace MPCCT.PhantomSystem.Editor
         public string PhantomGrabbingHipsPath { get; }
         public string PhantomGrabbingHipsConstraintPath { get; }
         public string PhantomGrabbingBoneDisplayPath { get; }
+        public string PhantomViewLeftCameraPath { get; }
+        public string PhantomViewRightCameraPath { get; }
+        public string PhantomViewDisplayPath { get; }
         public IReadOnlyDictionary<HumanBodyBones, string> PhantomGrabbingBodyPhysBonePaths { get; }
         public IReadOnlyDictionary<HumanBodyBones, string> PhantomGrabbingBodySyncConstraintPaths { get; }
         public IReadOnlyDictionary<HumanBodyBones, string> PhantomGrabbingBodyOutputConstraintPaths { get; }
@@ -75,6 +78,15 @@ namespace MPCCT.PhantomSystem.Editor
                 : TransformPathUtility.GetRelativePath(
                     slot.PhantomGrabbingBoneDisplayHost,
                     system.AvatarRoot);
+            PhantomViewLeftCameraPath = ResolvePath(
+                slot.PhantomViewLeftCamera,
+                system.AvatarRoot);
+            PhantomViewRightCameraPath = ResolvePath(
+                slot.PhantomViewRightCamera,
+                system.AvatarRoot);
+            PhantomViewDisplayPath = ResolvePath(
+                slot.PhantomViewDisplayHost,
+                system.AvatarRoot);
 
             PhantomGrabbingBodyPhysBonePaths = ResolvePaths(
                 slot.PhantomGrabbingBodyPhysBoneHosts,
@@ -133,6 +145,13 @@ namespace MPCCT.PhantomSystem.Editor
             }
 
             return paths;
+        }
+
+        private static string ResolvePath(Transform target, Transform avatarRoot)
+        {
+            return target == null
+                ? null
+                : TransformPathUtility.GetRelativePath(target, avatarRoot);
         }
     }
 }

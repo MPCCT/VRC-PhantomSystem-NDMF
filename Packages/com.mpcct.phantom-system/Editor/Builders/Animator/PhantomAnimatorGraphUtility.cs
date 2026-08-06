@@ -141,7 +141,8 @@ namespace MPCCT.PhantomSystem.Editor
             PhantomAnimatorBuildContext context,
             AnimatorState state,
             string parameter,
-            bool value)
+            bool value,
+            bool localOnly = false)
         {
             var driver = state.AddStateMachineBehaviour<VRCAvatarParameterDriver>();
             if (driver == null)
@@ -152,7 +153,7 @@ namespace MPCCT.PhantomSystem.Editor
                 context.NdmfContext.AssetSaver.SaveAsset(driver);
             }
 
-            driver.localOnly = false;
+            driver.localOnly = localOnly;
             if (driver.parameters == null)
             {
                 driver.parameters = new List<VRC_AvatarParameterDriver.Parameter>();

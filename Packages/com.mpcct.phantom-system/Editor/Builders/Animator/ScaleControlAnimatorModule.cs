@@ -8,8 +8,8 @@ namespace MPCCT.PhantomSystem.Editor
     /// <summary>Builds per-slot scale and X-axis mirror controls.</summary>
     internal static class ScaleControlAnimatorModule
     {
-        private const float MinimumScale = 0.2f;
-        private const float MaximumScale = 1.8f;
+        public const float MinimumScale = 0.2f;
+        public const float MaximumScale = 1.8f;
         public const float DefaultScaleParameter = 0.5f;
 
         public static void Build(PhantomAnimatorBuildContext context)
