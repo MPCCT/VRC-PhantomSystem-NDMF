@@ -59,6 +59,7 @@ NDMF の手動 Bake を行う場合は、Modular Avatar の通常の Manual Bake
 - **Include Phantom Menu**：分身元の最終 Expression Menu を Slot メニューに追加します。
 - **Enable Phantom Grabbing**：Hips の Grab、PhysBone ボディ Proxy、ボーン表示を生成します。
 - **Enable Scale Control**：スケール、リセット、X 軸ミラー操作を追加します。
+- **Enable Phantom View**：ローカル専用の分身ステレオビューを追加します。
 
 新しい Slot では Phantom Grabbing と Scale Control が既定で有効です。
 
@@ -93,7 +94,12 @@ NDMF の手動 Bake を行う場合は、Modular Avatar の通常の Manual Bake
 - **Scale**：Slot 全体を `0.2x` から `1.8x` まで拡縮します。
 - **Reset Scale**：スケールを `1.0x` に戻します。
 - **Mirror**：Slot のローカル X 軸で分身を反転します。
-- **Bone Display**：Freeze 中に生成された八面体ボーン Mesh を表示します。
+- **Bone Display**：Freeze 中に生成された八面体ボーン Mesh を表示します。ミラーと VRChat カメラには表示されません。
+- **Settings > Phantom View**：**Enable Phantom View** を有効にしたときに使えるローカル専用ビュー操作です。
+  - **Enabled**：現在の Slot の分身ビューを表示します。いずれかの Slot で有効にすると、
+    他の Slot の Phantom View は自動的に無効になります。
+  - **Stereo Strength**：左右カメラの間隔を調整します。Scale Control 有効時は、間隔も分身のスケールに比例します。
+  - **Mask Size**：中央ビューの角度マスクの大きさを調整します。境界は周囲の視野へ滑らかにフェードします。
 
 ## 注意事項
 

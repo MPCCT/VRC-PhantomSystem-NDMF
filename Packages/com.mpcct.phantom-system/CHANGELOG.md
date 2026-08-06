@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.3
+
+- Added an optional local Phantom View for each Slot. It captures from the phantom's descriptor View Position and displays a head-constrained view for the local player.
+- Added `Settings > Phantom View` in expression menu controls for enabling the view, adjusting local **Stereo Strength**, and adjusting the angular **Mask Size**.
+- Added a projection-aware, angle-based center mask with proportional feathering, and per-eye FOV remapping for VR rendering.
+- Excluded the Phantom Grabbing Bone Display from VRChat mirrors, face mirrors, handheld cameras, and screenshots.
+- Fixed Animator Tracking Control conversion on Write Defaults Off avatars by merging its Direct BlendTrees through a dedicated Write Defaults On controller.
+
 ## 0.1.2
 
 - Added optional Animator Tracking Control translation into per-slot phantom bone-group synchronization.

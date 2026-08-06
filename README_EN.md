@@ -64,6 +64,8 @@ instead of Modular Avatar's regular Manual Bake command.
 - **Enable Phantom Grabbing**: Generates Hips grabbing, PhysBone body proxies,
   and the bone display.
 - **Enable Scale Control**: Adds scale, reset, and X-axis mirror controls.
+- **Enable Phantom View**: Adds a local-only stereo view captured from the
+  phantom.
 
 New Slots enable Phantom Grabbing and Scale Control by default.
 
@@ -100,7 +102,16 @@ New Slots enable Phantom Grabbing and Scale Control by default.
 - **Scale**: Scales the entire Slot from `0.2x` to `1.8x`.
 - **Reset Scale**: Restores `1.0x` scale.
 - **Mirror**: Mirrors the phantom on the Slot's local X axis.
-- **Bone Display**: Shows the generated octahedral bone mesh while frozen.
+- **Bone Display**: Shows the generated octahedral bone mesh while frozen. It
+  is hidden from mirrors and VRChat cameras.
+- **Settings > Phantom View**: Local-only view controls, available when
+  **Enable Phantom View** is enabled.
+  - **Enabled**: Displays the selected phantom's view. Enabling one Slot's
+    Phantom View automatically disables every other Slot's Phantom View.
+  - **Stereo Strength**: Adjusts left/right camera separation. When Scale
+    Control is enabled, separation scales proportionally with the phantom.
+  - **Mask Size**: Adjusts the angular size of the central view mask; its edge
+    fades smoothly into the surrounding view.
 
 ## Notes
 

@@ -52,6 +52,7 @@ https://mpcct.github.io/VRC-PhantomSystem-NDMF/index.json
 - **Include Phantom Menu**：将分身源最终生成的 Expression Menu 加入 Slot 菜单。
 - **Enable Phantom Grabbing**：生成 Hips 抓取、PhysBone 身体代理和骨骼显示功能。
 - **Enable Scale Control**：添加缩放、恢复缩放和 X 轴镜像控制。
+- **Enable Phantom View**：添加仅本地可见的分身立体视角。
 
 新建 Slot 默认启用 Phantom Grabbing 和 Scale Control。
 
@@ -82,7 +83,12 @@ https://mpcct.github.io/VRC-PhantomSystem-NDMF/index.json
 - **Scale**：在 `0.2x` 到 `1.8x` 之间调整整个 Slot 的大小。
 - **Reset Scale**：恢复到 `1.0x`。
 - **Mirror**：沿 Slot 本地 X 轴镜像分身。
-- **Bone Display**：Freeze 时显示生成的八面体骨骼网格。
+- **Bone Display**：Freeze 时显示生成的八面体骨骼网格；不会显示在镜子或 VRChat 相机中。
+- **Settings > Phantom View**：启用 **Enable Phantom View** 后可用的仅本地视角控制。
+  - **Enabled**：显示当前 Slot 的分身视角。开启任意一个 Slot 的 Phantom View 时，
+    其他 Slot 的 Phantom View 会自动关闭。
+  - **Stereo Strength**：调整左右相机间距。启用 Scale Control 时，间距会随分身比例变化。
+  - **Mask Size**：调整中心视角遮罩的角度大小；边缘会平滑淡出到周围视野。
 
 ## 注意事项
 

@@ -1,7 +1,7 @@
 {
   "name": "com.mpcct.phantom-system",
   "displayName": "PhantomSystem",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "unity": "2022.3",
   "description": "Automatic-prebake NDMF system for creating and controlling VRChat phantom avatars.",
   "author": {
