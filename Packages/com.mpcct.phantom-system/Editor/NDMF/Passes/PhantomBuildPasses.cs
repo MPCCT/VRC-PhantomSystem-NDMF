@@ -392,4 +392,19 @@ namespace MPCCT.PhantomSystem.Editor
             state.Report.ThrowIfErrors();
         }
     }
+
+    public static class RenamePhantomArmaturesPass
+    {
+        public static void Execute(BuildContext ctx)
+        {
+            var state = ctx.GetState<PhantomBuildState>();
+            if (!state.HasWork)
+            {
+                return;
+            }
+
+            PhantomArmatureRenamer.Rename(ctx, state.System);
+            state.Report.ThrowIfErrors();
+        }
+    }
 }

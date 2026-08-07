@@ -1,4 +1,5 @@
 using nadena.dev.ndmf;
+using nadena.dev.ndmf.animator;
 using nadena.dev.ndmf.fluent;
 
 [assembly: ExportsPlugin(typeof(MPCCT.PhantomSystem.Editor.PhantomSystemPlugin))]
@@ -31,9 +32,16 @@ namespace MPCCT.PhantomSystem.Editor
                 .BeforePlugin("nadena.dev.modular-avatar")
                 .Run("Finalize Phantom Merge Animators", FinalizeMergeAnimatorsPass.Execute);
 
-            InPhase(BuildPhase.Transforming)
+            var postModularAvatar = InPhase(BuildPhase.Transforming)
                 .AfterPlugin("nadena.dev.modular-avatar")
-                .Run("Cleanup Phantom Authoring Components", CleanupAuthoringComponentsPass.Execute);
+                .BeforePlugin("nadena.dev.modular-avatar.late-transform-stages");
+
+            postModularAvatar.WithRequiredExtension(typeof(AnimatorServicesContext), sequence =>
+            {
+                sequence.Run("Rename Phantom Armatures", RenamePhantomArmaturesPass.Execute)
+                    .Then
+                    .Run("Cleanup Phantom Authoring Components", CleanupAuthoringComponentsPass.Execute);
+            });
 
             InPhase(BuildPhase.Optimizing)
                 .AfterPlugin("nadena.dev.modular-avatar")
