@@ -17,7 +17,13 @@ namespace MPCCT.PhantomSystem.Editor
             PhantomSystemProjectSettingsSnapshot projectSettings,
             PhantomBuildReport report)
         {
-            if (slot?.Slot == null || slot.Slot.removeSourceControls)
+            if (slot?.Slot == null)
+            {
+                return default;
+            }
+
+            slot.ConvertedActionLayers.Clear();
+            if (slot.Slot.removeSourceControls)
             {
                 return default;
             }
@@ -38,6 +44,10 @@ namespace MPCCT.PhantomSystem.Editor
                 var controller = UnityEngine.Object.Instantiate(baseController);
                 controller.name = $"PhantomSystem_{slot.SlotId}_Processed{pair.Key}";
                 PrefixLayers(controller, slot.SlotId, pair.Key);
+                if (pair.Key == VRCAvatarDescriptor.AnimLayerType.Action)
+                {
+                    RecordConvertedActionLayers(slot, controller);
+                }
                 prepared[pair.Key] = new PreparedController(pair.Value, controller);
             }
 
@@ -161,6 +171,19 @@ namespace MPCCT.PhantomSystem.Editor
                 }
             }
             controller.layers = layers;
+        }
+
+        private static void RecordConvertedActionLayers(
+            PhantomSlotBuildState slot,
+            AnimatorController controller)
+        {
+            var layers = controller.layers;
+            for (var index = 0; index < layers.Length; index++)
+            {
+                slot.ConvertedActionLayers.Add(new PhantomConvertedActionLayer(
+                    layers[index].name,
+                    index == 0 ? 1f : layers[index].defaultWeight));
+            }
         }
 
         private static RuntimeAnimatorController BuildOutput(
@@ -347,9 +370,9 @@ namespace MPCCT.PhantomSystem.Editor
                     state.TemporaryPoseRemoved++;
                     continue;
                 }
-                if (behaviour is VRCPlayableLayerControl)
+                if (behaviour is VRCPlayableLayerControl playableLayerControl)
                 {
-                    state.PlayableLayerRemoved++;
+                    ProcessPlayableLayerControl(playableLayerControl, state, kept);
                     continue;
                 }
                 if (behaviour is VRCAnimatorLayerControl layerControl)
@@ -388,6 +411,55 @@ namespace MPCCT.PhantomSystem.Editor
             return new BehaviourChanges(kept.ToArray(), driver);
         }
 
+        private static void ProcessPlayableLayerControl(
+            VRCPlayableLayerControl control,
+            ProcessingState state,
+            ICollection<StateMachineBehaviour> kept)
+        {
+            if (control.layer != VRC_PlayableLayerControl.BlendableLayer.Action
+                || state.Slot.ConvertedActionLayers.Count == 0)
+            {
+                state.PlayableLayerRemoved++;
+                return;
+            }
+
+            bool enabled;
+            if (Mathf.Approximately(control.goalWeight, 0f))
+            {
+                enabled = false;
+            }
+            else if (Mathf.Approximately(control.goalWeight, 1f))
+            {
+                enabled = true;
+            }
+            else
+            {
+                state.NonBinaryActionPlayableLayerRemoved++;
+                return;
+            }
+
+            if (!Mathf.Approximately(control.blendDuration, 0f))
+            {
+                state.ActionPlayableBlendDurationIgnored++;
+            }
+
+            for (var index = 0; index < state.Slot.ConvertedActionLayers.Count; index++)
+            {
+                var actionLayer = state.Slot.ConvertedActionLayers[index];
+                var marker = ScriptableObject.CreateInstance<PhantomAnimatorLayerControlMarker>();
+                marker.name = "Phantom Action Playable Layer Control Retarget";
+                marker.targetPlayable = VRCAvatarDescriptor.AnimLayerType.FX;
+                marker.targetLayerName = actionLayer.LayerName;
+                marker.goalWeight = enabled ? actionLayer.EnabledWeight : 0f;
+                marker.blendDuration = 0f;
+                marker.debugString = index == 0 ? control.debugString : string.Empty;
+                state.CreatedMarkers.Add(marker);
+                kept.Add(marker);
+            }
+
+            state.ActionPlayableLayerConverted++;
+        }
+
         private static StateMachineBehaviour ProcessLayerControl(
             VRCAnimatorLayerControl control,
             ProcessingState state)
@@ -395,6 +467,12 @@ namespace MPCCT.PhantomSystem.Editor
             if (!TryConvertPlayable(control.playable, out var sourceTarget))
             {
                 state.LayerControlRemoved++;
+                return null;
+            }
+
+            if (sourceTarget == VRCAvatarDescriptor.AnimLayerType.Action)
+            {
+                state.ActionLayerControlRemoved++;
                 return null;
             }
 
@@ -407,16 +485,14 @@ namespace MPCCT.PhantomSystem.Editor
             }
 
             var sameController = sourceTarget == state.OwnerPlayable;
-            if (sameController && sourceTarget != VRCAvatarDescriptor.AnimLayerType.Action)
+            if (sameController)
             {
                 return control;
             }
 
             var marker = ScriptableObject.CreateInstance<PhantomAnimatorLayerControlMarker>();
             marker.name = "Phantom Animator Layer Control Retarget";
-            marker.targetPlayable = sourceTarget == VRCAvatarDescriptor.AnimLayerType.Action
-                ? VRCAvatarDescriptor.AnimLayerType.FX
-                : sourceTarget;
+            marker.targetPlayable = sourceTarget;
             marker.targetLayerName = layers[control.layer];
             marker.goalWeight = control.goalWeight;
             marker.blendDuration = control.blendDuration;
@@ -567,6 +643,10 @@ namespace MPCCT.PhantomSystem.Editor
             public int LocomotionRemoved;
             public int TemporaryPoseRemoved;
             public int PlayableLayerRemoved;
+            public int ActionPlayableLayerConverted;
+            public int NonBinaryActionPlayableLayerRemoved;
+            public int ActionPlayableBlendDurationIgnored;
+            public int ActionLayerControlRemoved;
             public int LayerControlRemoved;
             public int LayerControlRetargeted;
             public int DriverCount;
@@ -605,7 +685,23 @@ namespace MPCCT.PhantomSystem.Editor
                 }
                 if (PlayableLayerRemoved > 0)
                 {
-                    Report.Warning($"Slot '{Slot.SlotId}' removed {PlayableLayerRemoved} avatar-global Playable Layer Control behavior(s).", Slot.BakedAvatar);
+                    Report.Warning($"Slot '{Slot.SlotId}' removed {PlayableLayerRemoved} Playable Layer Control behavior(s) with unavailable or unsupported targets.", Slot.BakedAvatar);
+                }
+                if (ActionPlayableLayerConverted > 0)
+                {
+                    Report.Warning($"Slot '{Slot.SlotId}' converted {ActionPlayableLayerConverted} binary Action Playable Layer Control behavior(s) into instant controls for all Converted Action layers.", Slot.BakedAvatar);
+                }
+                if (NonBinaryActionPlayableLayerRemoved > 0)
+                {
+                    Report.Warning($"Slot '{Slot.SlotId}' removed {NonBinaryActionPlayableLayerRemoved} Action Playable Layer Control behavior(s) whose Goal Weight was neither 0 nor 1.", Slot.BakedAvatar);
+                }
+                if (ActionPlayableBlendDurationIgnored > 0)
+                {
+                    Report.Warning($"Slot '{Slot.SlotId}' ignored Blend Duration on {ActionPlayableBlendDurationIgnored} converted Action Playable Layer Control behavior(s); Converted Action switching is instant.", Slot.BakedAvatar);
+                }
+                if (ActionLayerControlRemoved > 0)
+                {
+                    Report.Warning($"Slot '{Slot.SlotId}' removed {ActionLayerControlRemoved} Animator Layer Control behavior(s) targeting Action because Converted Action weight is controlled as one playable group.", Slot.BakedAvatar);
                 }
                 if (LayerControlRetargeted > 0)
                 {

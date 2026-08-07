@@ -27,6 +27,7 @@ namespace MPCCT.PhantomSystem.Editor
 
             var controllers = CollectControllers(descriptor);
             var targets = BuildTargetMap(controllers, state.Report);
+            DisableConvertedActionLayers(state, controllers, targets);
             foreach (var pair in controllers)
             {
                 ProcessController(context, pair.Value, targets, state.Report);
@@ -36,6 +37,63 @@ namespace MPCCT.PhantomSystem.Editor
             {
                 VerifyNoMarkers(pair.Key, pair.Value, state.Report);
             }
+        }
+
+        private static void DisableConvertedActionLayers(
+            PhantomBuildState state,
+            IReadOnlyDictionary<VRCAvatarDescriptor.AnimLayerType, AnimatorController> controllers,
+            IReadOnlyDictionary<VRCAvatarDescriptor.AnimLayerType, Dictionary<string, int>> targets)
+        {
+            var hasConvertedAction = false;
+            foreach (var slot in state.System.Slots)
+            {
+                if (slot.ConvertedActionLayers.Count > 0)
+                {
+                    hasConvertedAction = true;
+                    break;
+                }
+            }
+
+            if (!hasConvertedAction)
+            {
+                return;
+            }
+
+            if (!controllers.TryGetValue(VRCAvatarDescriptor.AnimLayerType.FX, out var fxController)
+                || !targets.TryGetValue(VRCAvatarDescriptor.AnimLayerType.FX, out var fxTargets))
+            {
+                state.Report.Error("Cannot disable Converted Action layers because the final FX controller is missing.");
+                return;
+            }
+
+            var layers = fxController.layers;
+            foreach (var slot in state.System.Slots)
+            {
+                foreach (var actionLayer in slot.ConvertedActionLayers)
+                {
+                    if (!fxTargets.TryGetValue(actionLayer.LayerName, out var layerIndex)
+                        || layerIndex < 0
+                        || layerIndex >= layers.Length)
+                    {
+                        state.Report.Error(
+                            $"Could not resolve Converted Action layer '{actionLayer.LayerName}' in the final FX controller.",
+                            fxController);
+                        continue;
+                    }
+
+                    if (layerIndex == 0)
+                    {
+                        state.Report.Error(
+                            $"Converted Action layer '{actionLayer.LayerName}' became final FX layer 0 and cannot be weight-controlled.",
+                            fxController);
+                        continue;
+                    }
+
+                    layers[layerIndex].defaultWeight = 0f;
+                }
+            }
+
+            fxController.layers = layers;
         }
 
         private static Dictionary<VRCAvatarDescriptor.AnimLayerType, AnimatorController>

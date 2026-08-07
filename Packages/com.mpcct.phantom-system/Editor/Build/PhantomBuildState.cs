@@ -84,7 +84,21 @@ namespace MPCCT.PhantomSystem.Editor
         public ModularAvatarMergeAnimator SourceFxMergeAnimator;
         public ModularAvatarMergeAnimator SourceGestureMergeAnimator;
         public ModularAvatarMergeAnimator SourceActionMergeAnimator;
+        internal readonly List<PhantomConvertedActionLayer> ConvertedActionLayers =
+            new List<PhantomConvertedActionLayer>();
         internal readonly HashSet<string> ValidSharedParameterNames =
             new HashSet<string>(System.StringComparer.Ordinal);
+    }
+
+    internal readonly struct PhantomConvertedActionLayer
+    {
+        public readonly string LayerName;
+        public readonly float EnabledWeight;
+
+        public PhantomConvertedActionLayer(string layerName, float enabledWeight)
+        {
+            LayerName = layerName;
+            EnabledWeight = enabledWeight;
+        }
     }
 }

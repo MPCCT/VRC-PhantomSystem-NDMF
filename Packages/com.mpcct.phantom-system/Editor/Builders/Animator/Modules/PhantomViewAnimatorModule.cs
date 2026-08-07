@@ -224,7 +224,7 @@ namespace MPCCT.PhantomSystem.Editor
         private static void BuildCameraTypeFilter(
             PhantomAnimatorBuildContext context)
         {
-            AddFloatParameter(context.Controller, VrModeParameter, 0f);
+            AddIntParameter(context.Controller, VrModeParameter, 0);
 
             var desktopClip = context.CreateClip("PhantomViewDesktopCameraFilter");
             var vrClip = context.CreateClip("PhantomViewVRCameraFilter");
@@ -241,17 +241,22 @@ namespace MPCCT.PhantomSystem.Editor
                 "material._RequireStereoCamera",
                 1f);
 
-            var tree = context.CreateBlendTree(
-                "PhantomViewCameraFilterTree",
-                VrModeParameter);
-            tree.AddChild(desktopClip, 0f);
-            tree.AddChild(vrClip, 1f);
-
             var layer = AddLayer(context.Controller, "PhantomViewCameraFilter");
-            var state = layer.stateMachine.AddState("PhantomViewCameraFilter");
-            state.motion = tree;
-            state.writeDefaultValues = true;
-            layer.stateMachine.defaultState = state;
+            var machine = layer.stateMachine;
+            var desktop = AddState(machine, desktopClip);
+            var vr = AddState(machine, vrClip);
+            desktop.writeDefaultValues = true;
+            vr.writeDefaultValues = true;
+            machine.defaultState = desktop;
+
+            AddTransition(
+                desktop,
+                vr,
+                IntEqualsCondition(VrModeParameter, 1));
+            AddTransition(
+                vr,
+                desktop,
+                IntEqualsCondition(VrModeParameter, 0));
         }
 
         private static BlendTree CreateDirectTree(
