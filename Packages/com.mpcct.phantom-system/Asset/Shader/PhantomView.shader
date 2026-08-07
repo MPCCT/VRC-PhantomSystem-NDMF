@@ -11,6 +11,7 @@ Shader "Hidden/PhantomSystem/PhantomView"
         _MaskSizeAngleDegrees("Mask Size Angle", Range(0.0, 90.0)) = 40.0
         _MaskFadeRatio("Mask Fade Ratio", Range(0.0, 1.0)) = 0.25
         _Opacity("Opacity", Range(0.0, 1.0)) = 1.0
+        [HideInInspector] _RequireStereoCamera("Require Stereo Camera", Float) = 0.0
     }
 
     SubShader
@@ -31,7 +32,6 @@ Shader "Hidden/PhantomSystem/PhantomView"
         Pass
         {
             CGPROGRAM
-            #pragma target 3.0
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
@@ -61,6 +61,7 @@ Shader "Hidden/PhantomSystem/PhantomView"
             float _MaskSizeAngleDegrees;
             float _MaskFadeRatio;
             float _Opacity;
+            float _RequireStereoCamera;
 
             float _VRChatCameraMode;
             float _VRChatMirrorMode;
@@ -93,9 +94,9 @@ Shader "Hidden/PhantomSystem/PhantomView"
                 return screenPosition.xy / screenPosition.w;
             }
 
-            float2 RemapCaptureFov(
+            float2 ProjectionRaySlope(
                 float2 screenUV,
-                out float viewAngleDegrees)
+                float4x4 inverseProjection)
             {
                 float4 clipPosition = float4(
                     screenUV * 2.0 - 1.0,
@@ -103,16 +104,17 @@ Shader "Hidden/PhantomSystem/PhantomView"
                     1.0
                 );
                 float4 cameraSpacePosition = mul(
-                    unity_CameraInvProjection,
+                    inverseProjection,
                     clipPosition
                 );
                 float forwardDistance = max(
                     abs(cameraSpacePosition.z),
-                    1e-5
-                );
-                float2 raySlope =
-                    cameraSpacePosition.xy / forwardDistance;
-                viewAngleDegrees = degrees(atan(length(raySlope)));
+                    1e-5);
+                return cameraSpacePosition.xy / forwardDistance;
+            }
+
+            float2 RemapCaptureFov(float2 raySlope)
+            {
 
                 float captureAspect = _LeftEyeTexture_TexelSize.z /
                     max(_LeftEyeTexture_TexelSize.w, 1.0);
@@ -146,14 +148,23 @@ Shader "Hidden/PhantomSystem/PhantomView"
             float4 SampleCurrentEye(float2 uv)
             {
                 #if defined(USING_STEREO_MATRICES)
-                    if (unity_StereoEyeIndex == 1)
+                    float4 color = tex2D(_LeftEyeTexture, uv);
+                    UNITY_BRANCH
+                    if (unity_StereoEyeIndex != 0)
                     {
-                        return tex2D(_RightEyeTexture, uv);
+                        color = tex2D(_RightEyeTexture, uv);
                     }
+                    return color;
+                #else
+                    // In VR, keep monoscopic capture cameras from feeding this
+                    // display back into either capture texture. Desktop leaves
+                    // the guard disabled and deliberately uses the left image.
+                    if (_RequireStereoCamera >= 0.5)
+                    {
+                        return float4(0.0, 0.0, 0.0, 0.0);
+                    }
+                    return tex2D(_LeftEyeTexture, uv);
                 #endif
-
-                // Desktop and non-stereo cameras deliberately use the left image.
-                return tex2D(_LeftEyeTexture, uv);
             }
 
             float4 frag(v2f i) : SV_Target
@@ -170,10 +181,11 @@ Shader "Hidden/PhantomSystem/PhantomView"
                 clip(normalScreenView - 0.5);
 
                 float2 screenUV = NonStereoScreenUV(i.screenPos);
-                float viewAngleDegrees;
-                float2 sampleUV = RemapCaptureFov(
+                float2 raySlope = ProjectionRaySlope(
                     screenUV,
-                    viewAngleDegrees);
+                    unity_CameraInvProjection);
+                float2 sampleUV = RemapCaptureFov(raySlope);
+                float viewAngleDegrees = degrees(atan(length(raySlope)));
 
                 float outerAngleDegrees = max(
                     _MaskSizeAngleDegrees,

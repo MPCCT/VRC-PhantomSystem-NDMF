@@ -9,6 +9,7 @@ namespace MPCCT.PhantomSystem.Editor
     internal static class PhantomViewAnimatorModule
     {
         private const string IsLocalParameter = "IsLocal";
+        private const string VrModeParameter = "VRMode";
 
         public const float MaximumStereoStrength = 0.1f;
         public const float DefaultStereoStrengthParameter = 0.64f;
@@ -66,6 +67,8 @@ namespace MPCCT.PhantomSystem.Editor
             state.motion = directTree;
             state.writeDefaultValues = true;
             layer.stateMachine.defaultState = state;
+
+            BuildCameraTypeFilter(context);
         }
 
         private static bool ValidatePaths(PhantomAnimatorBuildContext context)
@@ -216,6 +219,39 @@ namespace MPCCT.PhantomSystem.Editor
             tree.AddChild(minimumClip, 0f);
             tree.AddChild(maximumClip, 1f);
             return tree;
+        }
+
+        private static void BuildCameraTypeFilter(
+            PhantomAnimatorBuildContext context)
+        {
+            AddFloatParameter(context.Controller, VrModeParameter, 0f);
+
+            var desktopClip = context.CreateClip("PhantomViewDesktopCameraFilter");
+            var vrClip = context.CreateClip("PhantomViewVRCameraFilter");
+            SetFloat(
+                desktopClip,
+                context.PhantomViewDisplayPath,
+                typeof(MeshRenderer),
+                "material._RequireStereoCamera",
+                0f);
+            SetFloat(
+                vrClip,
+                context.PhantomViewDisplayPath,
+                typeof(MeshRenderer),
+                "material._RequireStereoCamera",
+                1f);
+
+            var tree = context.CreateBlendTree(
+                "PhantomViewCameraFilterTree",
+                VrModeParameter);
+            tree.AddChild(desktopClip, 0f);
+            tree.AddChild(vrClip, 1f);
+
+            var layer = AddLayer(context.Controller, "PhantomViewCameraFilter");
+            var state = layer.stateMachine.AddState("PhantomViewCameraFilter");
+            state.motion = tree;
+            state.writeDefaultValues = true;
+            layer.stateMachine.defaultState = state;
         }
 
         private static BlendTree CreateDirectTree(
