@@ -12,6 +12,7 @@ namespace MPCCT.PhantomSystem.Editor
     {
         public PhantomSystemBuildState System { get; set; }
         public PhantomBuildReport Report { get; } = new PhantomBuildReport();
+        internal PhantomSystemProjectSettingsSnapshot ProjectSettings { get; set; }
         internal Dictionary<string, PhantomParameterDefinition> BaseParameters { get; } =
             new Dictionary<string, PhantomParameterDefinition>(global::System.StringComparer.Ordinal);
 
@@ -28,6 +29,7 @@ namespace MPCCT.PhantomSystem.Editor
         public Mesh PhantomViewDisplayMesh;
         public RenderTexture PhantomViewLeftTexture;
         public RenderTexture PhantomViewRightTexture;
+        internal PhantomSystemProjectSettingsSnapshot ProjectSettings;
         public VRCExpressionsMenu GeneratedSystemMenu;
         public VRCExpressionsMenu GeneratedRootMenu;
         public List<PhantomSlotBuildState> Slots { get; } = new List<PhantomSlotBuildState>();
@@ -71,13 +73,17 @@ namespace MPCCT.PhantomSystem.Editor
         public AnimatorController GeneratedTrackingController;
         public AnimatorController GeneratedPhantomViewController;
         public RuntimeAnimatorController ProcessedFxController;
+        public RuntimeAnimatorController ProcessedGestureController;
+        public RuntimeAnimatorController ProcessedActionController;
         public bool HasTrackingControlConversion;
-        public GameObject OriginalIntegrationHost;
+        public GameObject SourceIntegrationHost;
         public VRCExpressionsMenu GeneratedCoreMenu;
         public ModularAvatarMergeAnimator CoreMergeAnimator;
         public ModularAvatarMergeAnimator TrackingMergeAnimator;
         public ModularAvatarMergeAnimator PhantomViewMergeAnimator;
-        public ModularAvatarMergeAnimator OriginalMergeAnimator;
+        public ModularAvatarMergeAnimator SourceFxMergeAnimator;
+        public ModularAvatarMergeAnimator SourceGestureMergeAnimator;
+        public ModularAvatarMergeAnimator SourceActionMergeAnimator;
         internal readonly HashSet<string> ValidSharedParameterNames =
             new HashSet<string>(System.StringComparer.Ordinal);
     }

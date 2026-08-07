@@ -14,7 +14,7 @@ namespace MPCCT.PhantomSystem.Editor
     {
         public static List<ParameterConfig> Build(
             PhantomSlotBuildState slot,
-            RuntimeAnimatorController fxController)
+            IEnumerable<RuntimeAnimatorController> controllers)
         {
             var configs = new Dictionary<string, ParameterConfig>();
             var parameters = slot.BakedAvatar != null ? slot.BakedAvatar.expressionParameters : null;
@@ -26,15 +26,42 @@ namespace MPCCT.PhantomSystem.Editor
                 }
             }
 
-            if (slot.Slot.renamePhantomParameters && fxController is AnimatorController animatorController)
+            if (slot.Slot.renamePhantomParameters && controllers != null)
             {
-                foreach (var parameter in animatorController.parameters)
+                foreach (var runtimeController in controllers)
                 {
-                    AddRemapOnlyParameter(configs, parameter.name, slot);
+                    var animatorController = GetBaseController(runtimeController);
+                    if (animatorController == null)
+                    {
+                        continue;
+                    }
+
+                    foreach (var parameter in animatorController.parameters)
+                    {
+                        AddRemapOnlyParameter(configs, parameter.name, slot);
+                    }
                 }
             }
 
             return configs.Values.ToList();
+        }
+
+        private static AnimatorController GetBaseController(
+            RuntimeAnimatorController controller)
+        {
+            var current = controller;
+            var visited = new HashSet<RuntimeAnimatorController>();
+            while (current is AnimatorOverrideController overrideController)
+            {
+                if (!visited.Add(current))
+                {
+                    return null;
+                }
+
+                current = overrideController.runtimeAnimatorController;
+            }
+
+            return current as AnimatorController;
         }
 
         public static List<ParameterConfig> BuildPhysBonePrefixes(PhantomSlotBuildState slot)

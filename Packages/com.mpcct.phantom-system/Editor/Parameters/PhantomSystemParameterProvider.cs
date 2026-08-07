@@ -126,12 +126,12 @@ namespace MPCCT.PhantomSystem.Editor
                         1f);
                 }
 
-                if (slot.tryConvertAnimatorTrackingControl && !slot.removeOriginalFx)
+                if (slot.tryConvertAnimatorTrackingControl && !slot.removeSourceControls)
                 {
                     AddTrackingParameters(output, component, slot);
                 }
 
-                if (slot.removeOriginalFx)
+                if (slot.removeSourceControls)
                 {
                     continue;
                 }

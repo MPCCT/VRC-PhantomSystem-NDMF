@@ -35,6 +35,13 @@ namespace MPCCT.PhantomSystem.Editor
                     : "The required MA Menu Installer is missing.",
                 EditorStyles.miniLabel);
 
+            EditorGUILayout.Space();
+
+            if (GUILayout.Button("Open Global Settings"))
+            {
+                PhantomSystemGlobalSettingsWindow.Open();
+            }
+
             DrawManualBake();
         }
 

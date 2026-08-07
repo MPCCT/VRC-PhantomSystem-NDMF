@@ -114,7 +114,7 @@ namespace MPCCT.PhantomSystem.Editor
         {
             var resolution = new PhantomSharedRuleResolution();
             if (slot == null
-                || slot.removeOriginalFx
+                || slot.removeSourceControls
                 || !slot.renamePhantomParameters
                 || slot.sharedParameterNames == null
                 || slot.sharedParameterNames.Count == 0)
@@ -203,7 +203,7 @@ namespace MPCCT.PhantomSystem.Editor
                 return analysis;
             }
 
-            if (slot.removeOriginalFx)
+            if (slot.removeSourceControls)
             {
                 analysis.FinalContributionCost = analysis.GeneratedParameterCost;
                 return analysis;

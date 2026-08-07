@@ -75,7 +75,7 @@ namespace MPCCT.PhantomSystem.Editor
             var prefixProperty = slotProperty.FindPropertyRelative("parameterPrefix");
             var renameProperty = slotProperty.FindPropertyRelative("renamePhantomParameters");
             var sharedNames = slotProperty.FindPropertyRelative("sharedParameterNames");
-            var removeOriginalFx = slotProperty.FindPropertyRelative("removeOriginalFx");
+            var removeSourceControls = slotProperty.FindPropertyRelative("removeSourceControls");
             var useRotationConstraint = slotProperty.FindPropertyRelative("useRotationConstraint");
             var rotationSolveInWorldSpace =
                 slotProperty.FindPropertyRelative("rotationSolveInWorldSpace");
@@ -168,7 +168,7 @@ namespace MPCCT.PhantomSystem.Editor
                     EditorGUILayout.PropertyField(idProperty, new GUIContent("Slot Name"));
                     EditorGUILayout.PropertyField(sourceProperty, new GUIContent("Phantom Avatar"));
                     EditorGUILayout.PropertyField(spawnProperty, new GUIContent("Spawn Override"));
-                    using (new EditorGUI.DisabledScope(removeOriginalFx.boolValue))
+                    using (new EditorGUI.DisabledScope(removeSourceControls.boolValue))
                     {
                         EditorGUILayout.PropertyField(
                             includePhantomMenu,
@@ -194,7 +194,7 @@ namespace MPCCT.PhantomSystem.Editor
 
                     EditorGUILayout.Space();
                     EditorGUILayout.LabelField("Parameter Settings", EditorStyles.boldLabel);
-                    using (new EditorGUI.DisabledScope(removeOriginalFx.boolValue))
+                    using (new EditorGUI.DisabledScope(removeSourceControls.boolValue))
                     {
                         EditorGUILayout.PropertyField(prefixProperty, new GUIContent("Parameter Prefix"));
                         EditorGUILayout.PropertyField(
@@ -206,15 +206,15 @@ namespace MPCCT.PhantomSystem.Editor
                             sharedNames);
                     }
 
-                    if (removeOriginalFx.boolValue)
+                    if (removeSourceControls.boolValue)
                     {
                         EditorGUILayout.LabelField(
-                            "Source FX, source parameters, and the source menu are excluded.",
+                            "Source FX, Action, Gesture, parameters, and menu are excluded.",
                             EditorStyles.miniLabel);
                     }
                     DrawSlotAdvancedOptions(
                         slotIndex,
-                        removeOriginalFx,
+                        removeSourceControls,
                         useRotationConstraint,
                         rotationSolveInWorldSpace,
                         overridePhysBoneImmobileType,
@@ -229,7 +229,7 @@ namespace MPCCT.PhantomSystem.Editor
 
         private void DrawSlotAdvancedOptions(
             int slotIndex,
-            SerializedProperty removeOriginalFx,
+            SerializedProperty removeSourceControls,
             SerializedProperty useRotationConstraint,
             SerializedProperty rotationSolveInWorldSpace,
             SerializedProperty overridePhysBoneImmobileType,
@@ -254,10 +254,10 @@ namespace MPCCT.PhantomSystem.Editor
             using (new EditorGUI.IndentLevelScope())
             {
                 EditorGUILayout.PropertyField(
-                    removeOriginalFx,
+                    removeSourceControls,
                     new GUIContent(
-                        "Remove Original FX",
-                        "Exclude this phantom's prebaked FX controller, source parameter definitions, and final source Expression Menu. PhantomSystem Core controls remain installed."));
+                        "Remove Source Controls",
+                        "Exclude this phantom's prebaked FX, Action, and Gesture controllers, source parameter definitions, and final source Expression Menu. PhantomSystem Core controls remain installed."));
                 EditorGUILayout.PropertyField(
                     useRotationConstraint,
                     new GUIContent(
@@ -276,11 +276,14 @@ namespace MPCCT.PhantomSystem.Editor
                     new GUIContent(
                         "Override PhysBone Immobile Type",
                         "Set every PhysBone in this slot to All Motion. This can fix cases where a frozen phantom's PhysBones move along with the base avatar, but it overrides the source settings and may break PhysBone behavior."));
-                EditorGUILayout.PropertyField(
-                    tryConvertAnimatorTrackingControl,
-                    new GUIContent(
-                        "Try Convert Animator Tracking Control",
-                        "Convert supported Animator Tracking Control behaviors into PhantomSystem bone-group synchronization. Unsupported face simulation is reported as a partial conversion."));
+                using (new EditorGUI.DisabledScope(removeSourceControls.boolValue))
+                {
+                    EditorGUILayout.PropertyField(
+                        tryConvertAnimatorTrackingControl,
+                        new GUIContent(
+                            "Try Convert Animator Tracking Control",
+                            "Convert supported Animator Tracking Control behaviors into PhantomSystem bone-group synchronization. Unsupported face simulation is reported as a partial conversion."));
+                }
             }
         }
 
@@ -328,11 +331,11 @@ namespace MPCCT.PhantomSystem.Editor
             slotProperty.FindPropertyRelative("parameterPrefix").stringValue = "";
             slotProperty.FindPropertyRelative("renamePhantomParameters").boolValue = true;
             slotProperty.FindPropertyRelative("sharedParameterNames").ClearArray();
-            slotProperty.FindPropertyRelative("removeOriginalFx").boolValue = false;
+            slotProperty.FindPropertyRelative("removeSourceControls").boolValue = false;
             slotProperty.FindPropertyRelative("useRotationConstraint").boolValue = false;
             slotProperty.FindPropertyRelative("rotationSolveInWorldSpace").boolValue = false;
             slotProperty.FindPropertyRelative("overridePhysBoneImmobileType").boolValue = false;
-            slotProperty.FindPropertyRelative("tryConvertAnimatorTrackingControl").boolValue = false;
+            slotProperty.FindPropertyRelative("tryConvertAnimatorTrackingControl").boolValue = true;
             slotProperty.FindPropertyRelative("enablePhantomGrabbing").boolValue = true;
             slotProperty.FindPropertyRelative("enableScaleControl").boolValue = true;
             SetSlotFoldout(newIndex, true);

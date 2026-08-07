@@ -43,11 +43,11 @@ namespace MPCCT.PhantomSystem
         public bool renamePhantomParameters = true;
         [HideInInspector]
         public List<string> sharedParameterNames = new List<string>();
-        public bool removeOriginalFx;
+        public bool removeSourceControls;
         public bool useRotationConstraint;
         public bool rotationSolveInWorldSpace;
         public bool overridePhysBoneImmobileType;
-        public bool tryConvertAnimatorTrackingControl;
+        public bool tryConvertAnimatorTrackingControl = true;
         public bool enablePhantomGrabbing = true;
         public bool enableScaleControl = true;
         public bool enablePhantomView = true;

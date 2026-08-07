@@ -12,7 +12,6 @@ namespace MPCCT.PhantomSystem.Editor
     {
         private const string DisplayShaderAssetPath =
             "Packages/com.mpcct.phantom-system/Asset/Shader/PhantomView.shader";
-        private const int RenderTextureSize = 1024;
         private const int PlayerLocalLayer = 10;
         private const float CaptureVerticalFieldOfView = 90f;
         private const float CaptureAspect = 1f;
@@ -154,24 +153,27 @@ namespace MPCCT.PhantomSystem.Editor
             {
                 system.PhantomViewLeftTexture = CreateRenderTexture(
                     context,
-                    "Left");
+                    "Left",
+                    system.ProjectSettings.PhantomViewTextureSize);
             }
 
             if (system.PhantomViewRightTexture == null)
             {
                 system.PhantomViewRightTexture = CreateRenderTexture(
                     context,
-                    "Right");
+                    "Right",
+                    system.ProjectSettings.PhantomViewTextureSize);
             }
         }
 
         private static RenderTexture CreateRenderTexture(
             BuildContext context,
-            string eyeName)
+            string eyeName,
+            int textureSize)
         {
             var texture = new RenderTexture(
-                RenderTextureSize,
-                RenderTextureSize,
+                textureSize,
+                textureSize,
                 16,
                 RenderTextureFormat.ARGB32,
                 RenderTextureReadWrite.Default)

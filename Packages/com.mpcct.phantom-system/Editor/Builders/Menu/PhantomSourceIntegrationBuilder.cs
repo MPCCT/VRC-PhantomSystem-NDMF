@@ -7,7 +7,7 @@ using VRC.SDK3.Avatars.ScriptableObjects;
 
 namespace MPCCT.PhantomSystem.Editor
 {
-    /// <summary>Installs a prebaked avatar's original FX controller and expression menu.</summary>
+    /// <summary>Installs a prebaked avatar's source playable controllers, parameters, and menu.</summary>
     internal static class PhantomSourceIntegrationBuilder
     {
         public static void Install(
@@ -19,34 +19,41 @@ namespace MPCCT.PhantomSystem.Editor
             InstallPhysBoneParameterMappings(slot);
 
             var descriptor = slot.BakedAvatar;
-            if (descriptor == null || slot.Slot == null || slot.Slot.removeOriginalFx)
+            if (descriptor == null || slot.Slot == null || slot.Slot.removeSourceControls)
             {
                 return;
             }
 
-            var host = EnsureOriginalIntegrationHost(slot);
+            var host = EnsureSourceIntegrationHost(slot);
             if (host == null)
             {
                 return;
             }
 
-            var fxController = slot.ProcessedFxController
-                               ?? PhantomSourceFxControllerUtility.GetController(descriptor);
-            if (fxController != null)
-            {
-                var mergeAnimator = host.AddComponent<ModularAvatarMergeAnimator>();
-                mergeAnimator.animator = fxController;
-                mergeAnimator.layerType = VRCAvatarDescriptor.AnimLayerType.FX;
-                mergeAnimator.pathMode = MergeAnimatorPathMode.Relative;
-                mergeAnimator.matchAvatarWriteDefaults = true;
+            slot.SourceFxMergeAnimator = AddMergeAnimator(
+                host,
+                slot,
+                slot.ProcessedFxController,
+                VRCAvatarDescriptor.AnimLayerType.FX);
+            slot.SourceActionMergeAnimator = AddMergeAnimator(
+                host,
+                slot,
+                slot.ProcessedActionController,
+                VRCAvatarDescriptor.AnimLayerType.FX);
+            slot.SourceGestureMergeAnimator = AddMergeAnimator(
+                host,
+                slot,
+                slot.ProcessedGestureController,
+                VRCAvatarDescriptor.AnimLayerType.Gesture);
 
-                var root = new AvatarObjectReference();
-                root.Set(slot.CloneRoot);
-                mergeAnimator.relativePathRoot = root;
-                slot.OriginalMergeAnimator = mergeAnimator;
-            }
-
-            var parameterConfigs = PhantomParameterConfigBuilder.Build(slot, fxController);
+            var parameterConfigs = PhantomParameterConfigBuilder.Build(
+                slot,
+                new[]
+                {
+                    slot.ProcessedFxController,
+                    slot.ProcessedActionController,
+                    slot.ProcessedGestureController
+                });
             if (parameterConfigs.Count > 0)
             {
                 var parameters = host.AddComponent<ModularAvatarParameters>();
@@ -65,6 +72,29 @@ namespace MPCCT.PhantomSystem.Editor
                     slot.GeneratedCoreMenu,
                     report);
             }
+        }
+
+        private static ModularAvatarMergeAnimator AddMergeAnimator(
+            GameObject host,
+            PhantomSlotBuildState slot,
+            RuntimeAnimatorController controller,
+            VRCAvatarDescriptor.AnimLayerType layerType)
+        {
+            if (controller == null || slot.CloneRoot == null)
+            {
+                return null;
+            }
+
+            var mergeAnimator = host.AddComponent<ModularAvatarMergeAnimator>();
+            mergeAnimator.animator = controller;
+            mergeAnimator.layerType = layerType;
+            mergeAnimator.pathMode = MergeAnimatorPathMode.Relative;
+            mergeAnimator.matchAvatarWriteDefaults = true;
+
+            var root = new AvatarObjectReference();
+            root.Set(slot.CloneRoot);
+            mergeAnimator.relativePathRoot = root;
+            return mergeAnimator;
         }
 
         private static void InstallPhysBoneParameterMappings(PhantomSlotBuildState slot)
@@ -127,11 +157,11 @@ namespace MPCCT.PhantomSystem.Editor
             installer.installTargetMenu = coreMenu;
         }
 
-        private static GameObject EnsureOriginalIntegrationHost(PhantomSlotBuildState slot)
+        private static GameObject EnsureSourceIntegrationHost(PhantomSlotBuildState slot)
         {
-            if (slot.OriginalIntegrationHost != null)
+            if (slot.SourceIntegrationHost != null)
             {
-                return slot.OriginalIntegrationHost;
+                return slot.SourceIntegrationHost;
             }
 
             if (slot.SlotRoot == null)
@@ -139,9 +169,9 @@ namespace MPCCT.PhantomSystem.Editor
                 return null;
             }
 
-            var host = new GameObject("PhantomOriginalFX_MA");
+            var host = new GameObject("PhantomSourceControls_MA");
             host.transform.SetParent(slot.SlotRoot.transform, false);
-            slot.OriginalIntegrationHost = host;
+            slot.SourceIntegrationHost = host;
             return host;
         }
 

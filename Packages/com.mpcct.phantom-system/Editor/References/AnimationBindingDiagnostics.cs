@@ -1,7 +1,9 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using nadena.dev.ndmf;
 using UnityEditor;
+using UnityEditor.Animations;
 using UnityEngine;
 using VRC.SDK3.Avatars.Components;
 
@@ -12,24 +14,12 @@ namespace MPCCT.PhantomSystem.Editor
         public static void InspectFinalAvatar(BuildContext context, PhantomBuildState state)
         {
             var descriptor = context.AvatarRootObject.GetComponent<VRCAvatarDescriptor>();
-            if (descriptor == null
-                || descriptor.baseAnimationLayers == null
-                || descriptor.baseAnimationLayers.Length <= 4)
+            if (descriptor == null || state?.System?.RuntimeRoot == null)
             {
                 return;
             }
 
-            var controller = descriptor.baseAnimationLayers[4].animatorController;
-            if (controller == null)
-            {
-                return;
-            }
-
-            if (state?.System?.RuntimeRoot == null)
-            {
-                return;
-            }
-
+            var controllers = CollectControllers(descriptor);
             var phantomRootPath = TransformPathUtility.GetRelativePath(
                 state.System.RuntimeRoot.transform,
                 context.AvatarRootTransform);
@@ -38,29 +28,156 @@ namespace MPCCT.PhantomSystem.Editor
                 return;
             }
 
-            var reported = new HashSet<string>();
-            foreach (var clip in controller.animationClips.Where(clip => clip != null).Distinct())
+            var prohibitedRootPaths = new HashSet<string>(StringComparer.Ordinal)
             {
-                foreach (var binding in AnimationUtility.GetCurveBindings(clip)
-                             .Concat(AnimationUtility.GetObjectReferenceCurveBindings(clip)))
+                string.Empty,
+                phantomRootPath
+            };
+            foreach (var slot in state.System.Slots)
+            {
+                AddPath(prohibitedRootPaths, slot.SlotRoot, context.AvatarRootTransform);
+                AddPath(prohibitedRootPaths, slot.CloneRoot, context.AvatarRootTransform);
+            }
+
+            var reported = new HashSet<string>();
+            foreach (var pair in controllers)
+            {
+                foreach (var clip in pair.Value.animationClips.Where(clip => clip != null).Distinct())
                 {
-                    if (!IsPhantomPath(binding.path, phantomRootPath)
-                        || IsValidBindingTarget(context.AvatarRootTransform, binding))
-                    {
-                        continue;
-                    }
-
-                    var key = $"{clip.GetInstanceID()}|{binding.path}|{binding.type?.FullName}|{binding.propertyName}";
-                    if (!reported.Add(key))
-                    {
-                        continue;
-                    }
-
-                    state.Report.Warning(
-                        $"Final FX clip '{clip.name}' has an invalid phantom binding '{binding.path}' "
-                        + $"({binding.type?.Name}.{binding.propertyName}). AAO may remove the affected animation as meaningless.",
-                        clip);
+                    InspectClip(
+                        context,
+                        state,
+                        pair.Key,
+                        clip,
+                        phantomRootPath,
+                        prohibitedRootPaths,
+                        reported);
                 }
+            }
+        }
+
+        private static Dictionary<VRCAvatarDescriptor.AnimLayerType, AnimatorController>
+            CollectControllers(VRCAvatarDescriptor descriptor)
+        {
+            var result = new Dictionary<VRCAvatarDescriptor.AnimLayerType, AnimatorController>();
+            AddLayers(descriptor.baseAnimationLayers, result);
+            AddLayers(descriptor.specialAnimationLayers, result);
+            return result;
+        }
+
+        private static void AddLayers(
+            VRCAvatarDescriptor.CustomAnimLayer[] layers,
+            IDictionary<VRCAvatarDescriptor.AnimLayerType, AnimatorController> result)
+        {
+            foreach (var layer in layers ?? Array.Empty<VRCAvatarDescriptor.CustomAnimLayer>())
+            {
+                if ((layer.type == VRCAvatarDescriptor.AnimLayerType.FX
+                     || layer.type == VRCAvatarDescriptor.AnimLayerType.Gesture)
+                    && GetBaseController(layer.animatorController) is AnimatorController controller)
+                {
+                    result[layer.type] = controller;
+                }
+            }
+        }
+
+        private static AnimatorController GetBaseController(RuntimeAnimatorController runtimeController)
+        {
+            var current = runtimeController;
+            var visited = new HashSet<RuntimeAnimatorController>();
+            while (current is AnimatorOverrideController overrideController
+                   && visited.Add(current))
+            {
+                current = overrideController.runtimeAnimatorController;
+            }
+            return current as AnimatorController;
+        }
+
+        private static void InspectClip(
+            BuildContext context,
+            PhantomBuildState state,
+            VRCAvatarDescriptor.AnimLayerType playable,
+            AnimationClip clip,
+            string phantomRootPath,
+            ISet<string> prohibitedRootPaths,
+            ISet<string> reported)
+        {
+            var converted = IsConvertedPlayableClip(clip);
+            foreach (var binding in AnimationUtility.GetCurveBindings(clip)
+                         .Concat(AnimationUtility.GetObjectReferenceCurveBindings(clip)))
+            {
+                if (IsPhantomPath(binding.path, phantomRootPath)
+                    && !IsValidBindingTarget(context.AvatarRootTransform, binding))
+                {
+                    var key = $"invalid|{clip.GetInstanceID()}|{binding.path}|{binding.type?.FullName}|{binding.propertyName}";
+                    if (reported.Add(key))
+                    {
+                        state.Report.Warning(
+                            $"Final {playable} clip '{clip.name}' has an invalid phantom binding '{binding.path}' "
+                            + $"({binding.type?.Name}.{binding.propertyName}). The missing target may have been left "
+                            + "intentionally by another build tool.",
+                            clip);
+                    }
+                }
+
+                if (!converted)
+                {
+                    continue;
+                }
+
+                if (binding.type == typeof(Animator))
+                {
+                    var key = $"muscle|{clip.GetInstanceID()}|{binding.propertyName}";
+                    if (reported.Add(key))
+                    {
+                        state.Report.Error(
+                            $"Converted {playable} clip '{clip.name}' still contains humanoid Animator binding "
+                            + $"'{binding.propertyName}'.",
+                            clip);
+                    }
+                }
+
+                if (binding.type == typeof(Transform)
+                    && prohibitedRootPaths.Contains(binding.path ?? string.Empty)
+                    && IsPositionRotationOrScale(binding.propertyName))
+                {
+                    var key = $"root|{clip.GetInstanceID()}|{binding.path}|{binding.propertyName}";
+                    if (reported.Add(key))
+                    {
+                        state.Report.Error(
+                            $"Converted {playable} clip '{clip.name}' animates protected phantom root "
+                            + $"'{binding.path}' through '{binding.propertyName}'. Root Motion must target Hips only.",
+                            clip);
+                    }
+                }
+            }
+        }
+
+        private static bool IsConvertedPlayableClip(AnimationClip clip)
+        {
+            return clip.name.StartsWith("PhantomSystem_", StringComparison.Ordinal)
+                   && (clip.name.IndexOf("_Action_", StringComparison.Ordinal) >= 0
+                       || clip.name.IndexOf("_Gesture_", StringComparison.Ordinal) >= 0);
+        }
+
+        private static bool IsPositionRotationOrScale(string propertyName)
+        {
+            return propertyName != null
+                   && (propertyName.StartsWith("m_LocalPosition.", StringComparison.Ordinal)
+                       || propertyName.StartsWith("m_LocalRotation.", StringComparison.Ordinal)
+                       || propertyName.StartsWith("localEulerAnglesRaw.", StringComparison.Ordinal)
+                       || propertyName.StartsWith("m_LocalScale.", StringComparison.Ordinal));
+        }
+
+        private static void AddPath(ISet<string> paths, GameObject value, Transform avatarRoot)
+        {
+            if (value == null)
+            {
+                return;
+            }
+            var path = TransformPathUtility.GetRelativePath(value.transform, avatarRoot);
+            if (path != null)
+            {
+                paths.Add(path);
             }
         }
 
@@ -72,7 +189,7 @@ namespace MPCCT.PhantomSystem.Editor
             }
 
             return path == phantomRootPath
-                   || path.StartsWith(phantomRootPath + "/", System.StringComparison.Ordinal);
+                   || path.StartsWith(phantomRootPath + "/", StringComparison.Ordinal);
         }
 
         private static bool IsValidBindingTarget(Transform avatarRoot, EditorCurveBinding binding)
@@ -92,4 +209,3 @@ namespace MPCCT.PhantomSystem.Editor
         }
     }
 }
-

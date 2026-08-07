@@ -29,6 +29,7 @@ namespace MPCCT.PhantomSystem.Editor
         {
             var state = ctx.GetState<PhantomBuildState>();
             state.System = null;
+            state.ProjectSettings = PhantomSystemProjectSettings.instance.CreateSnapshot();
             state.BaseParameters.Clear();
             foreach (var pair in PhantomParameterAnalysis.ReadBaseParameters(ctx.AvatarRootObject, ctx))
             {
@@ -55,7 +56,8 @@ namespace MPCCT.PhantomSystem.Editor
             var systemState = new PhantomSystemBuildState
             {
                 AuthoringComponent = authoring,
-                AvatarRoot = ctx.AvatarRootTransform
+                AvatarRoot = ctx.AvatarRootTransform,
+                ProjectSettings = state.ProjectSettings
             };
 
             var slots = authoring.slots ?? new System.Collections.Generic.List<PhantomSlot>();
@@ -221,7 +223,7 @@ namespace MPCCT.PhantomSystem.Editor
                     generatedParameters.Add(PhantomParameterNames.PhantomViewMaskSize(slot.Slot));
                     generatedParameters.Add(PhantomParameterNames.PhantomViewDirectWeight(slot.Slot));
                 }
-                if (slot.Slot.tryConvertAnimatorTrackingControl && !slot.Slot.removeOriginalFx)
+                if (slot.Slot.tryConvertAnimatorTrackingControl && !slot.Slot.removeSourceControls)
                 {
                     generatedParameters.AddRange(
                         PhantomTrackingControlGroups.Parameters(slot.Slot));
@@ -309,12 +311,15 @@ namespace MPCCT.PhantomSystem.Editor
 
             foreach (var slot in state.System.Slots)
             {
-                var sourceFxResult = PhantomSourceFxBehaviorProcessor.Process(
+                var sourceResult = PhantomSourcePlayableControllerProcessor.Process(
                     ctx,
                     slot,
+                    state.System.ProjectSettings,
                     state.Report);
-                slot.ProcessedFxController = sourceFxResult.Controller;
-                slot.HasTrackingControlConversion = sourceFxResult.HasTrackingConversion;
+                slot.ProcessedFxController = sourceResult.FxController;
+                slot.ProcessedGestureController = sourceResult.GestureController;
+                slot.ProcessedActionController = sourceResult.ActionController;
+                slot.HasTrackingControlConversion = sourceResult.HasTrackingConversion;
                 PhantomAnimatorControllerBuilder.Build(ctx, state.System, slot, state.Report);
             }
 
@@ -376,6 +381,17 @@ namespace MPCCT.PhantomSystem.Editor
         {
             var state = ctx.GetState<PhantomBuildState>();
             AnimationBindingDiagnostics.InspectFinalAvatar(ctx, state);
+            state.Report.ThrowIfErrors();
+        }
+    }
+
+    public static class RetargetPhantomAnimatorLayerControlsPass
+    {
+        public static void Execute(BuildContext ctx)
+        {
+            var state = ctx.GetState<PhantomBuildState>();
+            PhantomAnimatorLayerControlRetargeter.Retarget(ctx, state);
+            state.Report.ThrowIfErrors();
         }
     }
 

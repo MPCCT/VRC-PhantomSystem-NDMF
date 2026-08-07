@@ -102,20 +102,42 @@ namespace MPCCT.PhantomSystem.Editor
                 var baseAnimator = baseDescriptor != null
                     ? baseDescriptor.GetComponent<Animator>()
                     : null;
-                if (baseAnimator == null
-                    || baseAnimator.GetBoneTransform(HumanBodyBones.LeftHand) == null
-                    || baseAnimator.GetBoneTransform(HumanBodyBones.RightHand) == null)
+                if (baseAnimator == null)
                 {
-                    UnityEngine.Object selectionTarget = baseAnimator != null
-                        ? baseAnimator
-                        : baseDescriptor != null
-                            ? baseDescriptor
-                            : authoring;
+                    Add(
+                        result,
+                        PhantomValidationSeverity.Error,
+                        "Phantom Grabbing requires the base avatar root to have an Animator.",
+                        baseDescriptor != null
+                            ? (UnityEngine.Object)baseDescriptor
+                            : authoring);
+                }
+                else if (baseAnimator.avatar == null)
+                {
+                    Add(
+                        result,
+                        PhantomValidationSeverity.Error,
+                        "Phantom Grabbing requires the base Animator to have an Avatar asset.",
+                        baseAnimator);
+                }
+                else if (!baseAnimator.avatar.isValid
+                         || !baseAnimator.avatar.isHuman
+                         || !baseAnimator.isHuman)
+                {
+                    Add(
+                        result,
+                        PhantomValidationSeverity.Error,
+                        "Phantom Grabbing requires the base Animator to use a valid Humanoid Avatar.",
+                        baseAnimator);
+                }
+                else if (!HasHumanoidBone(baseAnimator, HumanBodyBones.LeftHand)
+                         || !HasHumanoidBone(baseAnimator, HumanBodyBones.RightHand))
+                {
                     Add(
                         result,
                         PhantomValidationSeverity.Error,
                         "Phantom Grabbing requires the base avatar to expose both Humanoid hand bones.",
-                        selectionTarget);
+                        baseAnimator);
                 }
             }
 
@@ -170,7 +192,7 @@ namespace MPCCT.PhantomSystem.Editor
                     "The phantom source Animator is not a valid Humanoid.",
                     animator);
             }
-            else if (animator.GetBoneTransform(HumanBodyBones.Hips) == null)
+            else if (!HasHumanoidBone(animator, HumanBodyBones.Hips))
             {
                 Add(
                     result,
@@ -330,6 +352,30 @@ namespace MPCCT.PhantomSystem.Editor
             }
 
             return count;
+        }
+
+        private static bool HasHumanoidBone(Animator animator, HumanBodyBones bone)
+        {
+            if (animator == null
+                || animator.avatar == null
+                || !animator.avatar.isValid
+                || !animator.avatar.isHuman
+                || !animator.isHuman)
+            {
+                return false;
+            }
+
+            try
+            {
+                return animator.GetBoneTransform(bone) != null;
+            }
+            catch (InvalidOperationException)
+            {
+                // Unity can temporarily leave an Animator without a bound runtime Avatar
+                // while importing or refreshing serialized references. Inspector validation
+                // must report an unavailable bone rather than breaking its delayed refresh.
+                return false;
+            }
         }
 
         private static VRCAvatarDescriptor FindAvatarDescriptor(Transform start)
