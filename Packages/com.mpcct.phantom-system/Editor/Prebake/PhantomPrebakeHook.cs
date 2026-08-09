@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using nadena.dev.ndmf;
 using nadena.dev.ndmf.platform;
 using UnityEditor;
@@ -75,7 +76,7 @@ namespace MPCCT.PhantomSystem.Editor
                 }
 
                 var authoring = authoringComponents[0];
-                ValidateSources(avatarRoot, authoring);
+                ValidateSources(authoring);
 
                 var prebakedBySource = new Dictionary<VRCAvatarDescriptor, GameObject>();
                 var slots = authoring.slots ?? new List<PhantomSlot>();
@@ -150,37 +151,21 @@ namespace MPCCT.PhantomSystem.Editor
             return stagingRoot;
         }
 
-        private static void ValidateSources(GameObject avatarRoot, PhantomAuthoring authoring)
+        private static void ValidateSources(PhantomAuthoring authoring)
         {
-            var slots = authoring.slots ?? new List<PhantomSlot>();
-            for (var slotIndex = 0; slotIndex < slots.Count; slotIndex++)
+            var validation = PhantomSourceValidator.ValidateAuthoring(authoring);
+            var errors = validation.GlobalIssues
+                .Concat(validation.Slots.SelectMany(slot => slot.Issues))
+                .Where(issue => issue.Severity == PhantomValidationSeverity.ConfigurationError
+                                || issue.Severity == PhantomValidationSeverity.InternalError)
+                .Select(issue => string.IsNullOrEmpty(issue.Code)
+                    ? issue.Message
+                    : $"[{issue.Code}] {issue.Message}")
+                .ToArray();
+            if (errors.Length > 0)
             {
-                var slot = slots[slotIndex];
-                var slotId = string.IsNullOrWhiteSpace(slot?.id) ? $"#{slotIndex + 1}" : slot.id.Trim();
-                var source = slot?.phantomAvatar;
-                if (source == null)
-                {
-                    throw new InvalidOperationException($"Phantom slot '{slotId}' has no source avatar.");
-                }
-
-                if (source.gameObject == avatarRoot || source.transform.IsChildOf(avatarRoot.transform))
-                {
-                    throw new InvalidOperationException(
-                        $"Phantom slot '{slotId}' must reference an avatar outside the avatar being built.");
-                }
-
-                var animator = source.GetComponent<Animator>();
-                if (animator == null || !animator.isHuman)
-                {
-                    throw new InvalidOperationException(
-                        $"Phantom source '{source.name}' must have a humanoid Animator.");
-                }
-
-                if (source.GetComponentsInChildren<PhantomAuthoring>(true).Length > 0)
-                {
-                    throw new InvalidOperationException(
-                        $"Phantom source '{source.name}' contains a nested PhantomSystem.");
-                }
+                throw new InvalidOperationException(
+                    "PhantomSystem configuration validation failed:\n" + string.Join("\n", errors));
             }
         }
 

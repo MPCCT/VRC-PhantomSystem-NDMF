@@ -117,7 +117,7 @@ namespace MPCCT.PhantomSystem.Editor
 
             if (context.BaseAvatarPositionPath == null || context.ArmaturePath == null)
             {
-                context.Report.Error(
+                context.Report.InternalError(
                     $"Slot '{context.Slot.SlotId}' could not resolve PositionLock helper paths.",
                     context.ErrorContext);
             }

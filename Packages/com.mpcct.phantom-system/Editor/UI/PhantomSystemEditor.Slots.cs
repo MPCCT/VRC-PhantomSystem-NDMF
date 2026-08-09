@@ -122,10 +122,11 @@ namespace MPCCT.PhantomSystem.Editor
                     headerRect.y,
                     54f,
                     headerRect.height);
+                const float statusWidth = 132f;
                 var statusRect = new Rect(
-                    upRect.xMin - 80f,
+                    upRect.xMin - statusWidth - 4f,
                     headerRect.y,
-                    76f,
+                    statusWidth,
                     headerRect.height);
                 var foldoutRect = new Rect(
                     headerRect.x,
@@ -338,6 +339,7 @@ namespace MPCCT.PhantomSystem.Editor
             slotProperty.FindPropertyRelative("tryConvertAnimatorTrackingControl").boolValue = true;
             slotProperty.FindPropertyRelative("enablePhantomGrabbing").boolValue = true;
             slotProperty.FindPropertyRelative("enableScaleControl").boolValue = true;
+            slotProperty.FindPropertyRelative("enablePhantomView").boolValue = true;
             SetSlotFoldout(newIndex, true);
             SetSharedParameterFoldout(newIndex, false);
             SetSlotAdvancedFoldout(newIndex, false);
@@ -346,7 +348,7 @@ namespace MPCCT.PhantomSystem.Editor
 
         private string NextUniqueSlotName()
         {
-            var usedNames = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
+            var usedNames = new HashSet<string>(System.StringComparer.Ordinal);
             for (var index = 0; index < slots.arraySize; index++)
             {
                 var value = slots.GetArrayElementAtIndex(index)

@@ -19,7 +19,7 @@ namespace MPCCT.PhantomSystem.Editor
                 || context.PhantomGrabbingBodySyncConstraintPaths.Count == 0
                 || context.PhantomGrabbingBodyOutputConstraintPaths.Count == 0)
             {
-                context.Report.Error(
+                context.Report.InternalError(
                     $"Slot '{context.Slot.SlotId}' could not resolve the generated "
                     + "body proxy skeleton required by Phantom Grabbing.",
                     context.ErrorContext);

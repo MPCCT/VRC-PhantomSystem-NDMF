@@ -146,7 +146,7 @@ namespace MPCCT.PhantomSystem.Editor
                     if (!layers.TryAdd(controllerLayers[index].name, index)
                         && controllerLayers[index].name.StartsWith("PhantomSystem_", StringComparison.Ordinal))
                     {
-                        report.Error(
+                        report.InternalError(
                             $"Final {pair.Key} controller contains duplicate PhantomSystem layer name "
                             + $"'{controllerLayers[index].name}'. Animator Layer Control targets are ambiguous.",
                             pair.Value);
@@ -267,7 +267,7 @@ namespace MPCCT.PhantomSystem.Editor
                 || !layers.TryGetValue(marker.targetLayerName ?? string.Empty, out var layerIndex)
                 || !TryConvertPlayable(marker.targetPlayable, out var playable))
             {
-                report.Error(
+                report.InternalError(
                     $"Could not resolve Phantom Animator Layer Control target "
                     + $"'{marker.targetPlayable}/{marker.targetLayerName}'.",
                     marker);
@@ -333,7 +333,7 @@ namespace MPCCT.PhantomSystem.Editor
             }
             if (found.Count > 0)
             {
-                report.Error(
+                report.InternalError(
                     $"Final {playable} controller still contains {found.Count} temporary Phantom Animator Layer Control marker(s).",
                     controller);
             }

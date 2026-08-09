@@ -17,7 +17,7 @@ namespace MPCCT.PhantomSystem.Editor
             if (slot.CloneArmature == null)
             {
                 var context = (Object)slot.CloneRoot ?? system.AuthoringComponent;
-                report.Error($"Slot '{slot.SlotId}' could not resolve the prebaked phantom armature from humanoid hips.", context);
+                report.InternalError($"Slot '{slot.SlotId}' could not resolve the prebaked phantom armature from humanoid hips.", context);
                 return;
             }
 

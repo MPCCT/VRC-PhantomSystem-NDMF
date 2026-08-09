@@ -48,7 +48,7 @@ namespace MPCCT.PhantomSystem.Editor
         {
             if (!slot.CloneBones.TryGetValue(HumanBodyBones.Hips, out var cloneHips))
             {
-                report.Error(
+                report.InternalError(
                     $"Slot '{slot.SlotId}' enables Phantom Grabbing, but its baked avatar has no Humanoid Hips.",
                     slot.CloneRoot);
                 return;
@@ -66,7 +66,7 @@ namespace MPCCT.PhantomSystem.Editor
                     HumanBodyBones.Hips,
                     out var proxyHips))
             {
-                report.Error(
+                report.InternalError(
                     $"Slot '{slot.SlotId}' could not generate the Phantom Grabbing body proxy Hips.",
                     slot.CloneRoot);
                 return;

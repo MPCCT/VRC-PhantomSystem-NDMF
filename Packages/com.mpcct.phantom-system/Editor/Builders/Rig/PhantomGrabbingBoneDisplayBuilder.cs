@@ -27,7 +27,7 @@ namespace MPCCT.PhantomSystem.Editor
             {
                 if (material == null)
                 {
-                    report.Error(
+                    report.InternalError(
                         $"Phantom Grabbing bone display material was not found at '{DisplayMaterialAssetPath}'.",
                         slot.CloneRoot);
                 }
@@ -45,7 +45,7 @@ namespace MPCCT.PhantomSystem.Editor
                 .ToList();
             if (segments.Count == 0)
             {
-                report.Error(
+                report.InternalError(
                     $"Slot '{slot.SlotId}' generated no Phantom Grabbing body segments for bone display.",
                     slot.CloneRoot);
                 return;
@@ -90,7 +90,7 @@ namespace MPCCT.PhantomSystem.Editor
                 .FirstOrDefault(candidate => candidate.vertexCount > 0 && candidate.subMeshCount > 0);
             if (mesh == null)
             {
-                report.Error(
+                report.InternalError(
                     $"Phantom Grabbing bone display mesh was not found in '{TemplateMeshAssetPath}'.",
                     slot.CloneRoot);
             }
@@ -110,7 +110,7 @@ namespace MPCCT.PhantomSystem.Editor
                 || bounds.size.y <= 0.000001f
                 || bounds.size.z <= 0.000001f)
             {
-                report.Error(
+                report.InternalError(
                     $"Phantom Grabbing bone display template '{template.name}' must have non-zero X, Y, and Z bounds.",
                     template);
                 return null;
@@ -121,7 +121,7 @@ namespace MPCCT.PhantomSystem.Editor
             var sourceTriangles = template.triangles;
             if (sourceVertices.Length == 0 || sourceTriangles.Length == 0)
             {
-                report.Error(
+                report.InternalError(
                     $"Phantom Grabbing bone display template '{template.name}' contains no geometry.",
                     template);
                 return null;

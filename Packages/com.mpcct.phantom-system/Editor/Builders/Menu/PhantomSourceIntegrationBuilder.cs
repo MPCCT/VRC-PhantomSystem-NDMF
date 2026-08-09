@@ -145,7 +145,8 @@ namespace MPCCT.PhantomSystem.Editor
         {
             if (coreMenu == null)
             {
-                report.Warning($"Slot '{slot.SlotId}' needs a PhantomSystem menu target, but no generated menu is available.");
+                report.InternalError(
+                    $"Slot '{slot.SlotId}' requested source menu installation, but the enabled Core Menu builder returned no menu.");
                 return;
             }
 

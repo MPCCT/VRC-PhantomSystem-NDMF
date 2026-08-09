@@ -7,6 +7,40 @@ using Object = UnityEngine.Object;
 
 namespace MPCCT.PhantomSystem.Editor
 {
+    internal enum PhantomAnimationBindingKind
+    {
+        ResolvedHumanoid,
+        RootTransform,
+        UnsupportedAnimator,
+        NonHumanoid
+    }
+
+    internal static class PhantomAnimationBindingClassifier
+    {
+        public static PhantomAnimationBindingKind Classify(EditorCurveBinding binding)
+        {
+            if (binding.type == typeof(Animator))
+            {
+                if (PhantomHumanoidClipBaker.IsRootMotionBinding(binding))
+                {
+                    return PhantomAnimationBindingKind.RootTransform;
+                }
+
+                return PhantomHumanoidClipBaker.TryResolveHumanoidBinding(binding, out _, out _)
+                    ? PhantomAnimationBindingKind.ResolvedHumanoid
+                    : PhantomAnimationBindingKind.UnsupportedAnimator;
+            }
+
+            if (PhantomHumanoidClipBaker.IsRootPositionOrRotationBinding(binding)
+                || PhantomHumanoidClipBaker.IsRootScaleBinding(binding))
+            {
+                return PhantomAnimationBindingKind.RootTransform;
+            }
+
+            return PhantomAnimationBindingKind.NonHumanoid;
+        }
+    }
+
     /// <summary>
     /// Converts the humanoid portion of one animation clip into ordinary transform curves
     /// targeting a specific humanoid hierarchy. Controller integration is intentionally
@@ -99,22 +133,25 @@ namespace MPCCT.PhantomSystem.Editor
             var affectedBones = new HashSet<HumanBodyBones>();
             var forcePositionBones = new HashSet<HumanBodyBones>();
             var skippedAnimatorBindings = new List<EditorCurveBinding>();
+            var resolvedHumanoidBindingCount = 0;
             foreach (var binding in animatorBindings)
             {
-                if (TryResolveHumanoidBinding(
-                        binding,
-                        out var bone,
-                        out var forcePosition))
+                var kind = PhantomAnimationBindingClassifier.Classify(binding);
+                if (kind == PhantomAnimationBindingKind.UnsupportedAnimator)
                 {
+                    skippedAnimatorBindings.Add(binding);
+                    continue;
+                }
+
+                if (kind == PhantomAnimationBindingKind.ResolvedHumanoid
+                    && TryResolveHumanoidBinding(binding, out var bone, out var forcePosition))
+                {
+                    resolvedHumanoidBindingCount++;
                     affectedBones.Add(bone);
                     if (forcePosition)
                     {
                         forcePositionBones.Add(bone);
                     }
-                }
-                else
-                {
-                    skippedAnimatorBindings.Add(binding);
                 }
             }
 
@@ -156,6 +193,7 @@ namespace MPCCT.PhantomSystem.Editor
             return new PhantomHumanoidClipBakeResult(
                 output,
                 sampleRate,
+                resolvedHumanoidBindingCount,
                 bakedBones,
                 missingBones,
                 skippedAnimatorBindings,
@@ -873,7 +911,7 @@ namespace MPCCT.PhantomSystem.Editor
             return current == root ? string.Join("/", parts) : null;
         }
 
-        private static bool TryResolveHumanoidBinding(
+        internal static bool TryResolveHumanoidBinding(
             EditorCurveBinding binding,
             out HumanBodyBones bone,
             out bool forcePosition)
@@ -902,6 +940,16 @@ namespace MPCCT.PhantomSystem.Editor
                     bone = (HumanBodyBones)boneIndex;
                     return true;
                 }
+            }
+
+            // Unity serializes translation degrees of freedom as Animator curves such
+            // as "ChestTDOF.z". These curves affect the local position of the named
+            // humanoid bone, so they must participate in sampling and force position
+            // curves to be written even when the sampled position is otherwise static.
+            if (TryResolveTranslationDofBinding(binding.propertyName, out bone))
+            {
+                forcePosition = true;
+                return true;
             }
 
             if (StartsWithAny(binding.propertyName, "RootT.", "BodyT."))
@@ -972,13 +1020,57 @@ namespace MPCCT.PhantomSystem.Editor
             return false;
         }
 
-        private static bool IsRootMotionBinding(EditorCurveBinding binding)
+        private static bool TryResolveTranslationDofBinding(
+            string propertyName,
+            out HumanBodyBones bone)
+        {
+            bone = HumanBodyBones.LastBone;
+            if (string.IsNullOrEmpty(propertyName) || propertyName.Length < 3)
+            {
+                return false;
+            }
+
+            var separator = propertyName.LastIndexOf('.');
+            if (separator <= 0 || separator != propertyName.Length - 2)
+            {
+                return false;
+            }
+
+            var component = propertyName[propertyName.Length - 1];
+            if (component != 'x' && component != 'y' && component != 'z')
+            {
+                return false;
+            }
+
+            const string suffix = "TDOF";
+            var serializedBoneName = propertyName.Substring(0, separator);
+            if (!serializedBoneName.EndsWith(suffix, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            var boneName = serializedBoneName.Substring(
+                0,
+                serializedBoneName.Length - suffix.Length);
+            if (!Enum.TryParse(boneName, false, out bone)
+                || bone == HumanBodyBones.LastBone
+                || !Enum.IsDefined(typeof(HumanBodyBones), bone)
+                || !string.Equals(bone.ToString(), boneName, StringComparison.Ordinal))
+            {
+                bone = HumanBodyBones.LastBone;
+                return false;
+            }
+
+            return true;
+        }
+
+        internal static bool IsRootMotionBinding(EditorCurveBinding binding)
         {
             return binding.type == typeof(Animator)
                    && StartsWithAny(binding.propertyName, "RootT.", "RootQ.");
         }
 
-        private static bool IsRootPositionOrRotationBinding(EditorCurveBinding binding)
+        internal static bool IsRootPositionOrRotationBinding(EditorCurveBinding binding)
         {
             if (binding.type != typeof(Transform)
                 || !string.IsNullOrEmpty(binding.path))
@@ -994,7 +1086,7 @@ namespace MPCCT.PhantomSystem.Editor
                 "localEulerAnglesBaked.");
         }
 
-        private static bool IsRootScaleBinding(EditorCurveBinding binding)
+        internal static bool IsRootScaleBinding(EditorCurveBinding binding)
         {
             return binding.type == typeof(Transform)
                    && string.IsNullOrEmpty(binding.path)
@@ -1378,6 +1470,7 @@ namespace MPCCT.PhantomSystem.Editor
     {
         public AnimationClip Clip { get; }
         public float SampleRate { get; }
+        public int ResolvedHumanoidBindingCount { get; }
         public IReadOnlyList<HumanBodyBones> BakedBones { get; }
         public IReadOnlyList<HumanBodyBones> MissingBones { get; }
         public IReadOnlyList<EditorCurveBinding> SkippedAnimatorBindings { get; }
@@ -1393,6 +1486,7 @@ namespace MPCCT.PhantomSystem.Editor
         internal PhantomHumanoidClipBakeResult(
             AnimationClip clip,
             float sampleRate,
+            int resolvedHumanoidBindingCount,
             IReadOnlyList<HumanBodyBones> bakedBones,
             IReadOnlyList<HumanBodyBones> missingBones,
             IReadOnlyList<EditorCurveBinding> skippedAnimatorBindings,
@@ -1407,6 +1501,7 @@ namespace MPCCT.PhantomSystem.Editor
         {
             Clip = clip;
             SampleRate = sampleRate;
+            ResolvedHumanoidBindingCount = resolvedHumanoidBindingCount;
             BakedBones = bakedBones;
             MissingBones = missingBones;
             SkippedAnimatorBindings = skippedAnimatorBindings;

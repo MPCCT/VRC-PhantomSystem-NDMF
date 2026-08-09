@@ -1,3 +1,4 @@
+using System.Linq;
 using nadena.dev.ndmf;
 using UnityEngine;
 using PhantomAuthoring = MPCCT.PhantomSystem.PhantomSystem;
@@ -64,13 +65,12 @@ namespace MPCCT.PhantomSystem.Editor
             for (var slotIndex = 0; slotIndex < slots.Count; slotIndex++)
             {
                 var slot = slots[slotIndex];
-                var slotId = string.IsNullOrWhiteSpace(slot?.id)
-                    ? PhantomSlot.DefaultId
-                    : slot.id.Trim();
+                var identity = PhantomSlotIdentity.Create(slot);
                 systemState.Slots.Add(new PhantomSlotBuildState
                 {
                     Slot = slot,
-                    SlotId = slotId,
+                    SlotId = identity.SlotId,
+                    Identity = identity,
                     SourceAvatar = slot?.phantomAvatar,
                     PrebakedRoot = PhantomPrebakeSession.GetRoot(authoring, slotIndex)
                 });
@@ -87,163 +87,106 @@ namespace MPCCT.PhantomSystem.Editor
             var state = ctx.GetState<PhantomBuildState>();
             if (!state.HasWork)
             {
-                state.Report.ThrowIfErrors();
+                state.Report.AbortIfErrors();
                 return;
             }
 
-            ValidateCoreParameterNamespaces(state);
+            ReportValidation(
+                state.Report,
+                PhantomSourceValidator.ValidateAuthoring(state.System.AuthoringComponent));
+            state.Report.AbortIfErrors();
 
-            var baseAnimator = ctx.AvatarRootObject.GetComponent<Animator>();
-            if (baseAnimator == null)
-            {
-                state.Report.Error("Base avatar has no Animator component.", ctx.AvatarRootObject);
-            }
-            else if (!baseAnimator.isHuman)
-            {
-                state.Report.Error("Base avatar Animator is not humanoid.", baseAnimator);
-            }
+            ReportValidation(state.Report, PhantomSourceValidator.ValidatePrebakedState(state));
+            state.Report.AbortIfErrors();
+            ResolveParameters(ctx, state);
 
-            var system = state.System;
-            var missingPrebakeReported = false;
-            if (system.Slots.Count == 0)
-            {
-                state.Report.Error($"PhantomSystem on '{system.AuthoringComponent.name}' has no slots.", system.AuthoringComponent);
-            }
-
-            foreach (var slot in system.Slots)
-            {
-                if (slot.SourceAvatar == null)
-                {
-                    state.Report.Error($"Slot '{slot.SlotId}' has no phantom avatar.", system.AuthoringComponent);
-                    continue;
-                }
-
-                if (slot.SourceAvatar.gameObject == ctx.AvatarRootObject)
-                {
-                    state.Report.Error($"Slot '{slot.SlotId}' references the avatar currently being built. Assign a separate phantom avatar instead of the base avatar.", slot.SourceAvatar);
-                    continue;
-                }
-
-                if (slot.SourceAvatar.transform.IsChildOf(ctx.AvatarRootTransform))
-                {
-                    state.Report.Error($"Slot '{slot.SlotId}' phantom avatar '{slot.SourceAvatar.name}' is inside the base avatar hierarchy. Move the phantom source outside the avatar root before building.", slot.SourceAvatar);
-                    continue;
-                }
-
-                if (slot.PrebakedRoot == null)
-                {
-                    if (!missingPrebakeReported)
-                    {
-                        state.Report.Error(
-                            $"Slot '{slot.SlotId}' has no PhantomSystem prebake result. "
-                            + "If this was started with Modular Avatar/NDMF Manual Bake, that command does not run "
-                            + "the VRChat preprocess hook required by PhantomSystem. "
-                            + "Delete the failed manual-bake clone if one was created, select the original avatar's "
-                            + "PhantomSystem component, and click 'Bake Avatar with PhantomSystem' in its Inspector. "
-                            + "VRChat SDK Build/Upload and Apply on Play continue to prepare phantom sources automatically.",
-                            system.AuthoringComponent);
-                        missingPrebakeReported = true;
-                    }
-
-                    continue;
-                }
-
-                var prebakedDescriptor = slot.PrebakedRoot.GetComponent<VRC.SDK3.Avatars.Components.VRCAvatarDescriptor>();
-                var prebakedAnimator = slot.PrebakedRoot.GetComponent<Animator>();
-                if (prebakedDescriptor == null)
-                {
-                    state.Report.Error($"Prebaked phantom '{slot.SourceAvatar.name}' has no VRCAvatarDescriptor.", slot.PrebakedRoot);
-                }
-                else
-                {
-                    slot.ValidSharedParameterNames.Clear();
-                    var resolution = PhantomParameterAnalysis.ResolveBuildSharedRules(
-                        slot.Slot,
-                        state.BaseParameters,
-                        prebakedDescriptor);
-                    slot.ValidSharedParameterNames.UnionWith(resolution.ValidNames);
-                    foreach (var warning in resolution.Warnings)
-                    {
-                        state.Report.Warning($"Slot '{slot.SlotId}': {warning}", system.AuthoringComponent);
-                    }
-                }
-
-                if (prebakedAnimator == null || !prebakedAnimator.isHuman)
-                {
-                    state.Report.Error($"Prebaked phantom '{slot.SourceAvatar.name}' has no humanoid Animator.", slot.PrebakedRoot);
-                }
-            }
-
-            state.Report.ThrowIfErrors();
+            // PreparePhantomAvatarsPass continues with cloning, so parameter resolution
+            // errors must terminate this composite pass before it mutates the avatar.
+            state.Report.AbortIfErrors();
         }
 
-        private static void ValidateCoreParameterNamespaces(PhantomBuildState state)
+        private static void ResolveParameters(BuildContext context, PhantomBuildState state)
         {
-            var owners = new System.Collections.Generic.Dictionary<string, string>(
-                System.StringComparer.Ordinal);
-
-            var system = state.System;
-            foreach (var slot in system.Slots)
+            var inputs = new System.Collections.Generic.List<PhantomParameterSlotInput>();
+            foreach (var slot in state.System.Slots)
             {
-                var activateParameter = PhantomParameterNames.Activate(slot.Slot);
-                var owner = slot.SlotId;
-                if (owners.TryGetValue(activateParameter, out var existingOwner))
+                var definitions = PhantomParameterAnalysis.ReadParametersForObject(
+                        slot.PrebakedRoot,
+                        context)
+                    .Values
+                    .ToList();
+                definitions.AddRange(
+                    PhantomParameterAnalysis.ReadPhysBonePrefixes(slot.PrebakedRoot));
+                inputs.Add(new PhantomParameterSlotInput
                 {
-                    state.Report.Error(
-                        $"Slot '{owner}' uses the same PhantomSystem core parameter namespace as "
-                        + $"'{existingOwner}' ('{activateParameter}'). Assign a unique Slot ID or Parameter Prefix.",
-                        system.AuthoringComponent);
-                    continue;
-                }
+                    Slot = slot.Slot,
+                    Identity = slot.Identity,
+                    SourceParameters = definitions
+                });
+            }
 
-                owners.Add(activateParameter, owner);
+            var resolution = PhantomParameterResolver.Resolve(state.BaseParameters, inputs);
+            foreach (var error in resolution.Errors)
+            {
+                state.Report.Error(error, state.System.AuthoringComponent);
+            }
 
-                var generatedParameters = new System.Collections.Generic.List<string>
+            for (var index = 0; index < state.System.Slots.Count && index < resolution.Slots.Count; index++)
+            {
+                var slot = state.System.Slots[index];
+                slot.ParameterResolution = resolution.Slots[index];
+                slot.ValidSharedParameterNames.Clear();
+                slot.ValidSharedParameterNames.UnionWith(resolution.Slots[index].SharedOriginalNames);
+                foreach (var rename in resolution.Slots[index].AutomaticRenames)
                 {
-                    activateParameter,
-                    PhantomParameterNames.Freeze(slot.Slot),
-                    PhantomParameterNames.PositionLock(slot.Slot)
-                };
-                if (slot.Slot.enablePhantomGrabbing)
-                {
-                    generatedParameters.Add(PhantomParameterNames.PhantomGrabbingContactLeft(slot.Slot));
-                    generatedParameters.Add(PhantomParameterNames.PhantomGrabbingContactRight(slot.Slot));
-                    generatedParameters.Add(PhantomParameterNames.PhantomGrabbingShowBones(slot.Slot));
-                }
-                if (slot.Slot.enableScaleControl)
-                {
-                    generatedParameters.Add(PhantomParameterNames.Scale(slot.Slot));
-                    generatedParameters.Add(PhantomParameterNames.Mirror(slot.Slot));
-                    generatedParameters.Add(PhantomParameterNames.ScaleReset(slot.Slot));
-                }
-                if (slot.Slot.enablePhantomView)
-                {
-                    generatedParameters.Add(PhantomParameterNames.PhantomViewEnabled(slot.Slot));
-                    generatedParameters.Add(PhantomParameterNames.PhantomViewStereoStrength(slot.Slot));
-                    generatedParameters.Add(PhantomParameterNames.PhantomViewMaskSize(slot.Slot));
-                    generatedParameters.Add(PhantomParameterNames.PhantomViewDirectWeight(slot.Slot));
-                }
-                if (slot.Slot.tryConvertAnimatorTrackingControl && !slot.Slot.removeSourceControls)
-                {
-                    generatedParameters.AddRange(
-                        PhantomTrackingControlGroups.Parameters(slot.Slot));
-                    generatedParameters.Add(PhantomParameterNames.TrackingDirectWeight(slot.Slot));
-                }
-
-                foreach (var generatedParameter in generatedParameters)
-                {
-                    if (!state.BaseParameters.ContainsKey(generatedParameter))
-                    {
-                        continue;
-                    }
-
-                    state.Report.Error(
-                        $"Slot '{owner}' generated parameter '{generatedParameter}' already exists on the base avatar. "
-                        + "Assign a different Slot ID or Parameter Prefix so PhantomSystem controls remain isolated.",
-                        system.AuthoringComponent);
+                    state.Report.Warning(
+                        $"Slot '{slot.SlotId}' parameter '{rename.OriginalName}' was renamed to "
+                        + $"'{rename.FinalName}' to avoid an incompatible collision ({rename.Reason}).",
+                        state.System.AuthoringComponent);
                 }
             }
         }
+
+        private static void ReportValidation(
+            PhantomBuildReport buildReport,
+            PhantomSourceValidationReport validation)
+        {
+            foreach (var issue in validation.GlobalIssues)
+            {
+                ReportIssue(buildReport, issue);
+            }
+
+            foreach (var slot in validation.Slots)
+            {
+                foreach (var issue in slot.Issues)
+                {
+                    ReportIssue(buildReport, issue);
+                }
+            }
+        }
+
+        private static void ReportIssue(PhantomBuildReport report, PhantomValidationIssue issue)
+        {
+            var message = string.IsNullOrEmpty(issue.Code)
+                ? issue.Message
+                : $"[{issue.Code}] {issue.Message}";
+            switch (issue.Severity)
+            {
+                case PhantomValidationSeverity.Info:
+                    report.Info(message, issue.Context);
+                    break;
+                case PhantomValidationSeverity.Warning:
+                    report.Warning(message, issue.Context);
+                    break;
+                case PhantomValidationSeverity.InternalError:
+                    report.InternalError(message, issue.Context);
+                    break;
+                default:
+                    report.Error(message, issue.Context);
+                    break;
+            }
+        }
+
     }
 
     public static class ClonePhantomAvatarPass
@@ -274,8 +217,6 @@ namespace MPCCT.PhantomSystem.Editor
             {
                 PhantomHierarchyNormalizer.Normalize(state.System, slot, state.Report);
             }
-
-            state.Report.ThrowIfErrors();
         }
     }
 
@@ -295,8 +236,6 @@ namespace MPCCT.PhantomSystem.Editor
                 ConstraintRigBuilder.Build(ctx, slot, state.Report);
                 PhantomViewBuilder.Build(ctx, state.System, slot, state.Report);
             }
-
-            state.Report.ThrowIfErrors();
         }
     }
 
@@ -323,8 +262,6 @@ namespace MPCCT.PhantomSystem.Editor
                 slot.HasTrackingControlConversion = sourceResult.HasTrackingConversion;
                 PhantomAnimatorControllerBuilder.Build(ctx, state.System, slot, state.Report);
             }
-
-            state.Report.ThrowIfErrors();
         }
     }
 
@@ -342,8 +279,6 @@ namespace MPCCT.PhantomSystem.Editor
             {
                 PhantomMenuAndParameterBuilder.Install(ctx, state.System, slot, state.Report);
             }
-
-            state.Report.ThrowIfErrors();
         }
     }
 
@@ -361,8 +296,6 @@ namespace MPCCT.PhantomSystem.Editor
             {
                 PhantomAvatarCloner.CleanupNestedAvatarComponents(slot);
             }
-
-            state.Report.ThrowIfErrors();
         }
     }
 
@@ -372,7 +305,6 @@ namespace MPCCT.PhantomSystem.Editor
         {
             var state = ctx.GetState<PhantomBuildState>();
             PhantomMergeAnimatorFinalizer.Apply(ctx, state);
-            state.Report.ThrowIfErrors();
         }
     }
 
@@ -382,7 +314,6 @@ namespace MPCCT.PhantomSystem.Editor
         {
             var state = ctx.GetState<PhantomBuildState>();
             AnimationBindingDiagnostics.InspectFinalAvatar(ctx, state);
-            state.Report.ThrowIfErrors();
         }
     }
 
@@ -392,7 +323,6 @@ namespace MPCCT.PhantomSystem.Editor
         {
             var state = ctx.GetState<PhantomBuildState>();
             PhantomAnimatorLayerControlRetargeter.Retarget(ctx, state);
-            state.Report.ThrowIfErrors();
         }
     }
 
@@ -405,8 +335,6 @@ namespace MPCCT.PhantomSystem.Editor
             {
                 Object.DestroyImmediate(state.System.AuthoringComponent);
             }
-
-            state.Report.ThrowIfErrors();
         }
     }
 
@@ -421,7 +349,6 @@ namespace MPCCT.PhantomSystem.Editor
             }
 
             PhantomArmatureRenamer.Rename(ctx, state.System);
-            state.Report.ThrowIfErrors();
         }
     }
 }

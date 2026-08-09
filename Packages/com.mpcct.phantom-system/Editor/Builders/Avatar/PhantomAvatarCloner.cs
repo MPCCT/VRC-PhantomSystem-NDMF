@@ -25,7 +25,7 @@ namespace MPCCT.PhantomSystem.Editor
                     continue;
                 }
 
-                slot.SlotRoot = new GameObject(TransformPathUtility.SafeName(slot.SlotId));
+                slot.SlotRoot = new GameObject(slot.HierarchyName);
                 slot.SlotRoot.transform.SetParent(system.SlotsRoot.transform, false);
 
                 var clone = Object.Instantiate(slot.PrebakedRoot, slot.SlotRoot.transform);

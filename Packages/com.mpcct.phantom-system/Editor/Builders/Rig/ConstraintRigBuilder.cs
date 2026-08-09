@@ -21,14 +21,14 @@ namespace MPCCT.PhantomSystem.Editor
             var baseAnimator = ctx.AvatarRootObject.GetComponent<Animator>();
             if (baseAnimator == null)
             {
-                report.Error("Base avatar Animator disappeared before constraint generation.", ctx.AvatarRootObject);
+                report.InternalError("Base avatar Animator disappeared before constraint generation.", ctx.AvatarRootObject);
                 return;
             }
 
             var baseArmature = baseAnimator.GetBoneTransform(HumanBodyBones.Hips)?.parent;
             if (baseArmature == null)
             {
-                report.Error("Base avatar armature could not be resolved from humanoid hips.", baseAnimator);
+                report.InternalError("Base avatar armature could not be resolved from humanoid hips.", baseAnimator);
                 return;
             }
 

@@ -29,7 +29,7 @@ namespace MPCCT.PhantomSystem.Editor
 
             if (!slot.CloneBones.TryGetValue(HumanBodyBones.Head, out var phantomHead))
             {
-                report.Error(
+                report.InternalError(
                     $"Slot '{slot.SlotId}' enables Phantom View, but its prebaked avatar has no Humanoid Head.",
                     slot.CloneRoot);
                 return;
@@ -37,7 +37,7 @@ namespace MPCCT.PhantomSystem.Editor
 
             if (slot.BakedAvatar == null)
             {
-                report.Error(
+                report.InternalError(
                     $"Slot '{slot.SlotId}' enables Phantom View, but its prebaked avatar descriptor is unavailable.",
                     slot.CloneRoot);
                 return;
@@ -49,7 +49,7 @@ namespace MPCCT.PhantomSystem.Editor
                 : null;
             if (baseHead == null)
             {
-                report.Error(
+                report.InternalError(
                     $"Slot '{slot.SlotId}' enables Phantom View, but the base avatar has no Humanoid Head.",
                     baseAnimator != null ? (Object)baseAnimator : context.AvatarRootObject);
                 return;
@@ -58,7 +58,7 @@ namespace MPCCT.PhantomSystem.Editor
             var shader = AssetDatabase.LoadAssetAtPath<Shader>(DisplayShaderAssetPath);
             if (shader == null)
             {
-                report.Error(
+                report.InternalError(
                     $"Phantom View display shader was not found at '{DisplayShaderAssetPath}'.",
                     slot.CloneRoot);
                 return;
@@ -67,7 +67,7 @@ namespace MPCCT.PhantomSystem.Editor
             var viewsRoot = EnsureViewsRoot(system);
             var viewRoot = ConstraintRigBuilder.EnsureChild(
                 viewsRoot.transform,
-                TransformPathUtility.SafeName(slot.SlotId));
+                slot.HierarchyName);
             viewRoot.gameObject.layer = PlayerLocalLayer;
             slot.PhantomViewRoot = viewRoot;
 

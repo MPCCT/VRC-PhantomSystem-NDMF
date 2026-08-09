@@ -1,0 +1,30 @@
+{
+  "name": "MPCCT.PhantomSystem.Editor.Tests",
+  "rootNamespace": "MPCCT.PhantomSystem.Editor.Tests",
+  "references": [
+    "MPCCT.PhantomSystem.Editor",
+    "MPCCT.PhantomSystem.Runtime",
+    "VRC.SDK3A",
+    "VRC.SDKBase",
+    "nadena.dev.ndmf",
+    "nadena.dev.ndmf.runtime",
+    "nadena.dev.modular-avatar.core"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "VRCSDK3A.dll",
+    "VRCSDKBase.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false,
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

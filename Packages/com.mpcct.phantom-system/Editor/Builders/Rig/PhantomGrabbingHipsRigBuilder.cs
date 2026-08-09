@@ -20,7 +20,7 @@ namespace MPCCT.PhantomSystem.Editor
             var baseRightHand = baseAnimator.GetBoneTransform(HumanBodyBones.RightHand);
             if (baseLeftHand == null || baseRightHand == null)
             {
-                report.Error(
+                report.InternalError(
                     $"Slot '{slot.SlotId}' enables Phantom Grabbing, but the base avatar does not expose both Humanoid hand bones.",
                     baseAnimator);
                 return;

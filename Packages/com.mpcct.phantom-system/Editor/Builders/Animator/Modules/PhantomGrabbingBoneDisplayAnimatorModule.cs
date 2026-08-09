@@ -11,7 +11,7 @@ namespace MPCCT.PhantomSystem.Editor
         {
             if (context.PhantomGrabbingBoneDisplayPath == null)
             {
-                context.Report.Error(
+                context.Report.InternalError(
                     $"Slot '{context.Slot.SlotId}' could not resolve the generated Phantom Grabbing bone display.",
                     context.ErrorContext);
                 return;

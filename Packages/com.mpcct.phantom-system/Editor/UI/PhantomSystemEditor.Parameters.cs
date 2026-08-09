@@ -50,7 +50,7 @@ namespace MPCCT.PhantomSystem.Editor
             {
                 DrawIndentedHelpBox(
                     "Parameter namespacing is disabled. Compatible same-name parameters already share their original "
-                    + "names, so selective sharing rules are not applied.",
+                    + "names. Incompatible collisions are automatically moved under this Slot's Original prefix.",
                     MessageType.Info);
                 return false;
             }

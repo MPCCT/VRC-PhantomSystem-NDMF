@@ -26,7 +26,7 @@ namespace MPCCT.PhantomSystem.Editor
                 }
             }
 
-            if (slot.Slot.renamePhantomParameters && controllers != null)
+            if (controllers != null)
             {
                 foreach (var runtimeController in controllers)
                 {
@@ -68,7 +68,6 @@ namespace MPCCT.PhantomSystem.Editor
         {
             var configs = new Dictionary<string, ParameterConfig>(StringComparer.Ordinal);
             if (slot?.Slot == null
-                || !slot.Slot.renamePhantomParameters
                 || slot.CloneRoot == null)
             {
                 return configs.Values.ToList();
@@ -82,10 +81,7 @@ namespace MPCCT.PhantomSystem.Editor
                     continue;
                 }
 
-                var finalName = PhantomParameterPolicy.FinalOriginalParameterName(
-                    slot.Slot,
-                    parameter,
-                    slot.ValidSharedParameterNames);
+                var finalName = FinalName(slot, parameter);
                 if (string.Equals(finalName, parameter, StringComparison.Ordinal))
                 {
                     continue;
@@ -125,16 +121,10 @@ namespace MPCCT.PhantomSystem.Editor
                 syncType = ConvertSyncType(parameter.valueType)
             };
 
-            if (slot.Slot.renamePhantomParameters)
+            var finalName = FinalName(slot, parameter.name);
+            if (!string.Equals(finalName, parameter.name, StringComparison.Ordinal))
             {
-                var finalName = PhantomParameterPolicy.FinalOriginalParameterName(
-                    slot.Slot,
-                    parameter.name,
-                    slot.ValidSharedParameterNames);
-                if (!string.Equals(finalName, parameter.name, StringComparison.Ordinal))
-                {
-                    config.remapTo = finalName;
-                }
+                config.remapTo = finalName;
             }
 
             configs[parameter.name] = config;
@@ -150,15 +140,15 @@ namespace MPCCT.PhantomSystem.Editor
                 return;
             }
 
+            var finalName = FinalName(slot, name);
+            if (string.Equals(finalName, name, StringComparison.Ordinal))
+            {
+                return;
+            }
             configs[name] = new ParameterConfig
             {
                 nameOrPrefix = name,
-                remapTo = slot.Slot.renamePhantomParameters
-                    ? PhantomParameterPolicy.FinalOriginalParameterName(
-                        slot.Slot,
-                        name,
-                        slot.ValidSharedParameterNames)
-                    : "",
+                remapTo = finalName,
                 syncType = ParameterSyncType.NotSynced,
                 localOnly = true,
                 saved = false
@@ -177,6 +167,15 @@ namespace MPCCT.PhantomSystem.Editor
             var prefix = PhantomParameterNames.OriginalParameterPrefix(slot.Slot);
             return slot.Slot.renamePhantomParameters
                    && name.StartsWith(prefix, StringComparison.Ordinal);
+        }
+
+        private static string FinalName(PhantomSlotBuildState slot, string originalName)
+        {
+            return slot.ParameterResolution?.FinalName(originalName, slot.Slot)
+                   ?? PhantomParameterPolicy.FinalOriginalParameterName(
+                       slot.Slot,
+                       originalName,
+                       slot.ValidSharedParameterNames);
         }
 
         private static ParameterSyncType ConvertSyncType(VRCExpressionParameters.ValueType type)

@@ -39,6 +39,8 @@ namespace MPCCT.PhantomSystem.Editor
     {
         public PhantomSlot Slot;
         public string SlotId;
+        internal PhantomSlotIdentity Identity;
+        internal string HierarchyName => Identity?.HierarchyName ?? SlotId;
         public VRCAvatarDescriptor SourceAvatar;
         public GameObject PrebakedRoot;
         public GameObject SlotRoot;
@@ -97,6 +99,20 @@ namespace MPCCT.PhantomSystem.Editor
             new List<PhantomConvertedActionLayer>();
         internal readonly HashSet<string> ValidSharedParameterNames =
             new HashSet<string>(System.StringComparer.Ordinal);
+        internal PhantomSlotParameterResolution ParameterResolution;
+        internal readonly Dictionary<AnimationClip, PhantomConvertedClipMetadata> ConvertedClips =
+            new Dictionary<AnimationClip, PhantomConvertedClipMetadata>();
+        internal readonly HashSet<AnimationClip> WarnedUnsupportedAnimatorClips =
+            new HashSet<AnimationClip>();
+        internal readonly Dictionary<HumanBodyBones, HashSet<string>> MissingHumanoidBoneClips =
+            new Dictionary<HumanBodyBones, HashSet<string>>();
+    }
+
+    internal sealed class PhantomConvertedClipMetadata
+    {
+        public string SlotId;
+        public string Playable;
+        public AnimationClip SourceClip;
     }
 
     internal readonly struct PhantomConvertedActionLayer

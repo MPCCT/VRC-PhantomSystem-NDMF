@@ -74,6 +74,7 @@ namespace MPCCT.PhantomSystem.Editor
                     AddLocalParameter(
                         output,
                         component,
+                        analysis.BaseParameters,
                         PhantomParameterNames.ScaleReset(slot),
                         AnimatorControllerParameterType.Bool,
                         0f);
@@ -91,10 +92,12 @@ namespace MPCCT.PhantomSystem.Editor
                     AddAnimatorOnlyParameter(
                         output,
                         component,
+                        analysis.BaseParameters,
                         PhantomParameterNames.PhantomGrabbingContactLeft(slot));
                     AddAnimatorOnlyParameter(
                         output,
                         component,
+                        analysis.BaseParameters,
                         PhantomParameterNames.PhantomGrabbingContactRight(slot));
                 }
 
@@ -103,24 +106,28 @@ namespace MPCCT.PhantomSystem.Editor
                     AddLocalParameter(
                         output,
                         component,
+                        analysis.BaseParameters,
                         PhantomParameterNames.PhantomViewEnabled(slot),
                         AnimatorControllerParameterType.Bool,
                         0f);
                     AddLocalParameter(
                         output,
                         component,
+                        analysis.BaseParameters,
                         PhantomParameterNames.PhantomViewStereoStrength(slot),
                         AnimatorControllerParameterType.Float,
                         PhantomViewAnimatorModule.DefaultStereoStrengthParameter);
                     AddLocalParameter(
                         output,
                         component,
+                        analysis.BaseParameters,
                         PhantomParameterNames.PhantomViewMaskSize(slot),
                         AnimatorControllerParameterType.Float,
                         PhantomViewAnimatorModule.DefaultMaskSizeParameter);
                     AddAnimatorOnlyParameter(
                         output,
                         component,
+                        analysis.BaseParameters,
                         PhantomParameterNames.PhantomViewDirectWeight(slot),
                         AnimatorControllerParameterType.Float,
                         1f);
@@ -128,7 +135,7 @@ namespace MPCCT.PhantomSystem.Editor
 
                 if (slot.tryConvertAnimatorTrackingControl && !slot.removeSourceControls)
                 {
-                    AddTrackingParameters(output, component, slot);
+                    AddTrackingParameters(output, component, analysis.BaseParameters, slot);
                 }
 
                 if (slot.removeSourceControls)
@@ -152,6 +159,28 @@ namespace MPCCT.PhantomSystem.Editor
                     }
 
                     var shared = slotAnalysis.NamesSharedWithBase.Contains(sourceParameter.Name);
+                    if (sourceParameter.IsPhysBonePrefix)
+                    {
+                        var prefixName = slotAnalysis.FinalParameterNames.TryGetValue(
+                            sourceParameter.Name,
+                            out var resolvedPrefix)
+                            ? resolvedPrefix
+                            : PhantomParameterPolicy.FinalOriginalParameterName(
+                                slot,
+                                sourceParameter.Name,
+                                slotAnalysis.NamesSharedWithBase);
+                        output.Add(new ProvidedParameter(
+                            prefixName,
+                            ParameterNamespace.PhysBonesPrefix,
+                            component,
+                            PhantomSystemPlugin.Instance,
+                            null)
+                        {
+                            IsHidden = sourceParameter.IsHidden,
+                            WantSynced = false
+                        });
+                        continue;
+                    }
                     if (shared)
                     {
                         // The base avatar already provides this exact compatible parameter. Omitting it here keeps
@@ -159,10 +188,14 @@ namespace MPCCT.PhantomSystem.Editor
                         continue;
                     }
 
-                    var finalName = PhantomParameterPolicy.FinalOriginalParameterName(
-                        slot,
+                    var finalName = slotAnalysis.FinalParameterNames.TryGetValue(
                         sourceParameter.Name,
-                        slotAnalysis.NamesSharedWithBase);
+                        out var resolvedName)
+                        ? resolvedName
+                        : PhantomParameterPolicy.FinalOriginalParameterName(
+                            slot,
+                            sourceParameter.Name,
+                            slotAnalysis.NamesSharedWithBase);
                     output.Add(new ProvidedParameter(
                         finalName,
                         ParameterNamespace.Animator,
@@ -214,11 +247,13 @@ namespace MPCCT.PhantomSystem.Editor
             AnimatorControllerParameterType parameterType,
             float defaultValue)
         {
-            if (baseParameters != null
-                && baseParameters.TryGetValue(name, out var existing)
-                && !existing.IsAnimatorOnly
-                && existing.ParameterType == parameterType
-                && existing.WantSynced)
+            if (BaseProvidesCompatibleParameter(
+                    baseParameters,
+                    name,
+                    parameterType,
+                    false,
+                    true,
+                    defaultValue))
             {
                 return;
             }
@@ -239,11 +274,13 @@ namespace MPCCT.PhantomSystem.Editor
         private static void AddAnimatorOnlyParameter(
             List<ProvidedParameter> output,
             PhantomAuthoring source,
+            IReadOnlyDictionary<string, PhantomParameterDefinition> baseParameters,
             string name)
         {
             AddAnimatorOnlyParameter(
                 output,
                 source,
+                baseParameters,
                 name,
                 AnimatorControllerParameterType.Bool,
                 0f);
@@ -252,6 +289,7 @@ namespace MPCCT.PhantomSystem.Editor
         private static void AddTrackingParameters(
             List<ProvidedParameter> output,
             PhantomAuthoring source,
+            IReadOnlyDictionary<string, PhantomParameterDefinition> baseParameters,
             PhantomSlot slot)
         {
             foreach (var parameter in PhantomTrackingControlGroups.Parameters(slot))
@@ -259,6 +297,7 @@ namespace MPCCT.PhantomSystem.Editor
                 AddAnimatorOnlyParameter(
                     output,
                     source,
+                    baseParameters,
                     parameter,
                     AnimatorControllerParameterType.Float,
                     1f);
@@ -267,6 +306,7 @@ namespace MPCCT.PhantomSystem.Editor
             AddAnimatorOnlyParameter(
                 output,
                 source,
+                baseParameters,
                 PhantomParameterNames.TrackingDirectWeight(slot),
                 AnimatorControllerParameterType.Float,
                 1f);
@@ -275,10 +315,22 @@ namespace MPCCT.PhantomSystem.Editor
         private static void AddAnimatorOnlyParameter(
             List<ProvidedParameter> output,
             PhantomAuthoring source,
+            IReadOnlyDictionary<string, PhantomParameterDefinition> baseParameters,
             string name,
             AnimatorControllerParameterType parameterType,
             float defaultValue)
         {
+            if (BaseProvidesCompatibleParameter(
+                    baseParameters,
+                    name,
+                    parameterType,
+                    true,
+                    false,
+                    defaultValue))
+            {
+                return;
+            }
+
             output.Add(new ProvidedParameter(
                 name,
                 ParameterNamespace.Animator,
@@ -296,10 +348,22 @@ namespace MPCCT.PhantomSystem.Editor
         private static void AddLocalParameter(
             List<ProvidedParameter> output,
             PhantomAuthoring source,
+            IReadOnlyDictionary<string, PhantomParameterDefinition> baseParameters,
             string name,
             AnimatorControllerParameterType parameterType,
             float defaultValue)
         {
+            if (BaseProvidesCompatibleParameter(
+                    baseParameters,
+                    name,
+                    parameterType,
+                    false,
+                    false,
+                    defaultValue))
+            {
+                return;
+            }
+
             output.Add(new ProvidedParameter(
                 name,
                 ParameterNamespace.Animator,
@@ -312,6 +376,32 @@ namespace MPCCT.PhantomSystem.Editor
                 WantSynced = false,
                 DefaultValue = defaultValue
             });
+        }
+
+        private static bool BaseProvidesCompatibleParameter(
+            IReadOnlyDictionary<string, PhantomParameterDefinition> baseParameters,
+            string name,
+            AnimatorControllerParameterType parameterType,
+            bool animatorOnly,
+            bool synced,
+            float defaultValue)
+        {
+            if (baseParameters == null || !baseParameters.TryGetValue(name, out var existing))
+            {
+                return false;
+            }
+
+            var expected = new PhantomParameterDefinition
+            {
+                Name = name,
+                ParameterType = parameterType,
+                IsAnimatorOnly = animatorOnly,
+                IsHidden = false,
+                WantSynced = synced,
+                DefaultValue = defaultValue,
+                Saved = animatorOnly ? (bool?)null : false
+            };
+            return PhantomParameterCompatibility.AreCompatible(existing, expected, out _);
         }
     }
 }

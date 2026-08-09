@@ -29,7 +29,7 @@ namespace MPCCT.PhantomSystem.Editor
             if (string.IsNullOrEmpty(context.PhantomGrabbingHipsPath)
                 || string.IsNullOrEmpty(context.PhantomGrabbingHipsConstraintPath))
             {
-                context.Report.Error(
+                context.Report.InternalError(
                     $"Slot '{context.Slot.SlotId}' could not resolve the generated "
                     + "constraint paths required by Phantom Grabbing.",
                     context.ErrorContext);

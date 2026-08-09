@@ -77,6 +77,14 @@ namespace MPCCT.PhantomSystem.Editor
                 "Each source avatar is independently prebaked through NDMF. Configure and validate each slot below; "
                 + "the original source avatar is never modified.",
                 MessageType.Info);
+
+            if (validationReport != null)
+            {
+                foreach (var issue in validationReport.GlobalIssues)
+                {
+                    DrawValidationIssue(issue, null);
+                }
+            }
         }
 
         private void ScheduleRefresh()

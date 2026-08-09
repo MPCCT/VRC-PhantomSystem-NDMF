@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using nadena.dev.ndmf;
 using UnityEditor.Animations;
 using UnityEngine;
@@ -23,6 +24,7 @@ namespace MPCCT.PhantomSystem.Editor
             }
 
             slot.ConvertedActionLayers.Clear();
+            slot.MissingHumanoidBoneClips.Clear();
             if (slot.Slot.removeSourceControls)
             {
                 return default;
@@ -43,7 +45,7 @@ namespace MPCCT.PhantomSystem.Editor
 
                 var controller = UnityEngine.Object.Instantiate(baseController);
                 controller.name = $"PhantomSystem_{slot.SlotId}_Processed{pair.Key}";
-                PrefixLayers(controller, slot.SlotId, pair.Key);
+                PrefixLayers(controller, slot.HierarchyName, pair.Key);
                 if (pair.Key == VRCAvatarDescriptor.AnimLayerType.Action)
                 {
                     RecordConvertedActionLayers(slot, controller);
@@ -68,6 +70,12 @@ namespace MPCCT.PhantomSystem.Editor
                     pair.Value.Source.Mask);
 
                 ProcessControllerBehaviours(controller, state);
+            }
+
+            var missingBoneSummary = BuildMissingBoneSummary(slot);
+            if (!string.IsNullOrEmpty(missingBoneSummary))
+            {
+                report.Warning(missingBoneSummary, slot.BakedAvatar);
             }
 
             foreach (var driver in state.CreatedDrivers)
@@ -95,6 +103,44 @@ namespace MPCCT.PhantomSystem.Editor
                     prepared,
                     VRCAvatarDescriptor.AnimLayerType.Action),
                 state.DriverCount > 0);
+        }
+
+        internal static string BuildMissingBoneSummary(PhantomSlotBuildState slot)
+        {
+            if (slot == null || slot.MissingHumanoidBoneClips.Count == 0)
+            {
+                return null;
+            }
+
+            var bones = slot.MissingHumanoidBoneClips
+                .OrderBy(pair => (int)pair.Key)
+                .ToArray();
+            var affectedClips = bones
+                .SelectMany(pair => pair.Value)
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(value => value, StringComparer.Ordinal)
+                .ToArray();
+            const int maximumDisplayedBones = 12;
+            const int maximumDisplayedClips = 5;
+            var boneSummary = string.Join(", ", bones
+                .Take(maximumDisplayedBones)
+                .Select(pair => $"{pair.Key} ({pair.Value.Count} clip(s))"));
+            if (bones.Length > maximumDisplayedBones)
+            {
+                boneSummary += $", +{bones.Length - maximumDisplayedBones} more";
+            }
+
+            var clipExamples = string.Join(", ", affectedClips.Take(maximumDisplayedClips));
+            if (affectedClips.Length > maximumDisplayedClips)
+            {
+                clipExamples += $", +{affectedClips.Length - maximumDisplayedClips} more";
+            }
+
+            return $"Slot '{slot.SlotId}' could not bake curves for {bones.Length} unavailable optional "
+                   + $"humanoid bone(s) referenced by {affectedClips.Length} converted clip(s): {boneSummary}. "
+                   + $"Affected clip examples: {clipExamples}. Curves for unavailable bones were skipped; "
+                   + "remaining animation curves were preserved. Add the missing bones to the source Humanoid "
+                   + "mapping only if those animations are required.";
         }
 
         private static Dictionary<VRCAvatarDescriptor.AnimLayerType, PhantomSourcePlayableLayer>
@@ -151,7 +197,7 @@ namespace MPCCT.PhantomSystem.Editor
                     ? $"Layer{index}"
                     : layers[index].name;
                 layers[index].name =
-                    $"PhantomSystem_{TransformPathUtility.SafeName(slotId)}_{playable}_{index}_{TransformPathUtility.SafeName(original, $"Layer{index}")}";
+                    $"PhantomSystem_{slotId}_{playable}_{index}_{TransformPathUtility.SafeName(original, $"Layer{index}")}";
                 if (index == 0)
                 {
                     layers[index].defaultWeight = 1f;
@@ -612,11 +658,18 @@ namespace MPCCT.PhantomSystem.Editor
             {
                 if (TrackingRemoved > 0)
                 {
-                    Report.Warning(
-                        TrackingConverted > 0
-                            ? $"Slot '{Slot.SlotId}' converted {TrackingConverted} Animator Tracking Control behavior(s) into {DriverCount} phantom parameter driver(s)."
-                            : $"Slot '{Slot.SlotId}' removed {TrackingRemoved} Animator Tracking Control behavior(s) without conversion.",
-                        Slot.BakedAvatar);
+                    if (TrackingConverted > 0)
+                    {
+                        Report.Info(
+                            $"Slot '{Slot.SlotId}' converted {TrackingConverted} Animator Tracking Control behavior(s) into {DriverCount} phantom parameter driver(s).",
+                            Slot.BakedAvatar);
+                    }
+                    else
+                    {
+                        Report.Warning(
+                            $"Slot '{Slot.SlotId}' removed {TrackingRemoved} Animator Tracking Control behavior(s) without conversion.",
+                            Slot.BakedAvatar);
+                    }
                 }
                 if (LocomotionRemoved > 0)
                 {
@@ -632,7 +685,7 @@ namespace MPCCT.PhantomSystem.Editor
                 }
                 if (ActionPlayableLayerConverted > 0)
                 {
-                    Report.Warning($"Slot '{Slot.SlotId}' converted {ActionPlayableLayerConverted} binary Action Playable Layer Control behavior(s) into instant controls for all Converted Action layers.", Slot.BakedAvatar);
+                    Report.Info($"Slot '{Slot.SlotId}' converted {ActionPlayableLayerConverted} binary Action Playable Layer Control behavior(s) into instant controls for all Converted Action layers.", Slot.BakedAvatar);
                 }
                 if (NonBinaryActionPlayableLayerRemoved > 0)
                 {
@@ -648,7 +701,7 @@ namespace MPCCT.PhantomSystem.Editor
                 }
                 if (LayerControlRetargeted > 0)
                 {
-                    Report.Warning($"Slot '{Slot.SlotId}' scheduled {LayerControlRetargeted} Animator Layer Control behavior(s) for final layer retargeting.", Slot.BakedAvatar);
+                    Report.Info($"Slot '{Slot.SlotId}' scheduled {LayerControlRetargeted} Animator Layer Control behavior(s) for final layer retargeting.", Slot.BakedAvatar);
                 }
                 if (LayerControlRemoved > 0)
                 {

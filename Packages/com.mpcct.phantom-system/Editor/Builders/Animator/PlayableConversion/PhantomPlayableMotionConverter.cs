@@ -145,16 +145,53 @@ namespace MPCCT.PhantomSystem.Editor
                 return sourceTree;
             }
 
-            var tree = Object.Instantiate(sourceTree);
-            tree.name = $"PhantomSystem_{slot.SlotId}_{playable}_{sourceTree.name}";
+            var tree = CreateConvertedBlendTree(
+                sourceTree,
+                convertedMotions,
+                $"PhantomSystem_{slot.SlotId}_{playable}_{sourceTree.name}");
             treeCache[sourceTree] = tree;
-            var children = tree.children;
-            for (var index = 0; index < children.Length; index++)
-            {
-                children[index].motion = convertedMotions[index];
-            }
-            tree.children = children;
             context.AssetSaver.SaveAsset(tree);
+            return tree;
+        }
+
+        internal static BlendTree CreateConvertedBlendTree(
+            BlendTree source,
+            IReadOnlyList<Motion> convertedMotions,
+            string name)
+        {
+            if (source == null)
+            {
+                throw new ArgumentNullException(nameof(source));
+            }
+
+            var sourceChildren = source.children;
+            if (convertedMotions == null || convertedMotions.Count != sourceChildren.Length)
+            {
+                throw new ArgumentException(
+                    "Converted BlendTree motion count must match the source child count.",
+                    nameof(convertedMotions));
+            }
+
+            // Do not Object.Instantiate Animator sub-assets here. Unity 2022 can emit a
+            // kStrongPPtrMask native assertion while cloning their strong object references.
+            // ChildMotion is a value type, so copying the array preserves every per-child
+            // option while allowing only the Motion references to be replaced.
+            var tree = new BlendTree();
+            tree.name = name;
+            tree.hideFlags = source.hideFlags;
+            tree.blendType = source.blendType;
+            tree.blendParameter = source.blendParameter;
+            tree.blendParameterY = source.blendParameterY;
+            tree.useAutomaticThresholds = false;
+            tree.minThreshold = source.minThreshold;
+            tree.maxThreshold = source.maxThreshold;
+
+            for (var index = 0; index < sourceChildren.Length; index++)
+            {
+                sourceChildren[index].motion = convertedMotions[index];
+            }
+            tree.children = sourceChildren;
+            tree.useAutomaticThresholds = source.useAutomaticThresholds;
             return tree;
         }
 
@@ -225,27 +262,48 @@ namespace MPCCT.PhantomSystem.Editor
             context.AssetSaver.SaveAsset(converted);
             clipCache[source] = converted;
             clipCache[clip] = converted;
+            slot.ConvertedClips[converted] = new PhantomConvertedClipMetadata
+            {
+                SlotId = slot.SlotId,
+                Playable = playable.ToString(),
+                SourceClip = clip
+            };
 
             if (result != null && result.MissingBones.Count > 0)
             {
-                report.Warning(
-                    $"Slot '{slot.SlotId}' {playable} clip '{clip.name}' could not bake "
-                    + $"{result.MissingBones.Count} humanoid bone(s): "
-                    + string.Join(", ", result.MissingBones),
-                    clip);
+                foreach (var missingBone in result.MissingBones)
+                {
+                    if (!slot.MissingHumanoidBoneClips.TryGetValue(
+                            missingBone,
+                            out var affectedClips))
+                    {
+                        affectedClips = new HashSet<string>(StringComparer.Ordinal);
+                        slot.MissingHumanoidBoneClips.Add(missingBone, affectedClips);
+                    }
+
+                    affectedClips.Add($"{playable}/{clip.name}");
+                }
             }
 
-            if (result != null && result.SkippedAnimatorBindings.Count > 0)
+            if (result != null
+                && result.SkippedAnimatorBindings.Count > 0
+                && slot.WarnedUnsupportedAnimatorClips.Add(clip))
             {
+                var propertySummary = string.Join(", ", result.SkippedAnimatorBindings
+                    .Select(binding => binding.propertyName)
+                    .Where(name => !string.IsNullOrWhiteSpace(name))
+                    .Distinct(StringComparer.Ordinal)
+                    .Take(5));
                 report.Warning(
                     $"Slot '{slot.SlotId}' {playable} clip '{clip.name}' skipped "
-                    + $"{result.SkippedAnimatorBindings.Count} unsupported Animator binding(s).",
+                    + $"{result.SkippedAnimatorBindings.Count} unsupported Animator binding(s)"
+                    + (string.IsNullOrEmpty(propertySummary) ? "." : $": {propertySummary}."),
                     clip);
             }
 
             if (result != null && result.RootMotionLocalized)
             {
-                report.Warning(
+                report.Info(
                     $"Slot '{slot.SlotId}' {playable} clip '{clip.name}' localized Root Motion to its phantom Hips.",
                     clip);
             }
@@ -264,14 +322,6 @@ namespace MPCCT.PhantomSystem.Editor
                     $"Slot '{slot.SlotId}' {playable} clip '{clip.name}' reached the "
                     + $"adaptive sampling limit ({result.SampleRate:0.###} FPS) before all bone errors "
                     + "fell within the configured tolerance.",
-                    clip);
-            }
-
-            var animatorBindingCount = bindings.Count(binding => binding.type == typeof(Animator));
-            if (result != null && animatorBindingCount > 0 && result.BakedBones.Count == 0)
-            {
-                report.Error(
-                    $"Slot '{slot.SlotId}' {playable} clip '{clip.name}' contains humanoid bindings but produced no phantom bone curves.",
                     clip);
             }
 

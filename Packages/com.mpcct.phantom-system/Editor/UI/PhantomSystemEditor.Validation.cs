@@ -81,6 +81,9 @@ namespace MPCCT.PhantomSystem.Editor
             PhantomValidationIssue issue,
             VRCAvatarDescriptor source)
         {
+            var displayMessage = string.IsNullOrEmpty(issue.Code)
+                ? issue.Message
+                : $"[{issue.Code}] {issue.Message}";
             var selectionTargets = (issue.SelectionTargets
                     ?? System.Array.Empty<UnityEngine.Object>())
                 .Where(selectionTarget => selectionTarget != null
@@ -99,7 +102,7 @@ namespace MPCCT.PhantomSystem.Editor
             var messageWidth = estimatedRowWidth
                 - (canSelect ? selectButtonWidth + columnGap : 0f);
             var messageHeight = EditorStyles.helpBox.CalcHeight(
-                new GUIContent(issue.Message),
+                new GUIContent(displayMessage),
                 Mathf.Max(80f, messageWidth - 32f));
             var rowHeight = Mathf.Max(
                 minimumRowHeight,
@@ -130,7 +133,7 @@ namespace MPCCT.PhantomSystem.Editor
 
             EditorGUI.HelpBox(
                 messageRect,
-                issue.Message,
+                displayMessage,
                 MessageTypeFor(issue.Severity));
         }
 
@@ -141,7 +144,7 @@ namespace MPCCT.PhantomSystem.Editor
                 return "Checking...";
             }
 
-            if (validationReport.Slots.Any(slot => slot.HasErrors))
+            if (validationReport.HasErrors)
             {
                 return "Has Errors";
             }
@@ -159,6 +162,16 @@ namespace MPCCT.PhantomSystem.Editor
             var result = validationReport != null && slotIndex < validationReport.Slots.Count
                 ? validationReport.Slots[slotIndex]
                 : null;
+            var bitCost = parameterAnalysis != null && slotIndex < parameterAnalysis.Slots.Count
+                ? (int?)parameterAnalysis.Slots[slotIndex].FinalContributionCost
+                : null;
+            return FormatSlotStatus(result, bitCost);
+        }
+
+        internal static string FormatSlotStatus(
+            PhantomSlotValidationResult result,
+            int? bitCost)
+        {
             if (result == null)
             {
                 return "Checking...";
@@ -169,8 +182,18 @@ namespace MPCCT.PhantomSystem.Editor
                 return "Error";
             }
 
-            return parameterAnalysis != null && slotIndex < parameterAnalysis.Slots.Count
-                ? $"{parameterAnalysis.Slots[slotIndex].FinalContributionCost} bits"
+            if (result.HasWarnings)
+            {
+                var warningCount = result.Issues.Count(issue =>
+                    issue.Severity == PhantomValidationSeverity.Warning);
+                var warningText = warningCount == 1 ? "1 warning" : $"{warningCount} warnings";
+                return bitCost.HasValue
+                    ? $"{warningText} · {bitCost.Value} bits"
+                    : warningText;
+            }
+
+            return bitCost.HasValue
+                ? $"{bitCost.Value} bits"
                 : "Ready";
         }
 
@@ -194,10 +217,13 @@ namespace MPCCT.PhantomSystem.Editor
         {
             switch (severity)
             {
-                case PhantomValidationSeverity.Error:
+                case PhantomValidationSeverity.ConfigurationError:
+                case PhantomValidationSeverity.InternalError:
                     return MessageType.Error;
                 case PhantomValidationSeverity.Warning:
                     return MessageType.Warning;
+                case PhantomValidationSeverity.Info:
+                    return MessageType.Info;
                 default:
                     return MessageType.None;
             }

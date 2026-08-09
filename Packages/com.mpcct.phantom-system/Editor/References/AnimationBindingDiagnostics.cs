@@ -126,7 +126,14 @@ namespace MPCCT.PhantomSystem.Editor
             ISet<string> visibleHumanoidBonePaths,
             ISet<string> reported)
         {
-            var converted = IsConvertedPlayableClip(clip);
+            // Strict PhantomSystem diagnostics are meaningful only for clips whose
+            // conversion provenance we recorded. Other NDMF passes can create final
+            // clips with intentionally unresolved sentinel bindings.
+            if (!IsConvertedPlayableClip(state, clip))
+            {
+                return;
+            }
+
             foreach (var binding in AnimationUtility.GetCurveBindings(clip)
                          .Concat(AnimationUtility.GetObjectReferenceCurveBindings(clip)))
             {
@@ -144,11 +151,6 @@ namespace MPCCT.PhantomSystem.Editor
                     }
                 }
 
-                if (!converted)
-                {
-                    continue;
-                }
-
                 if (binding.type == typeof(Transform)
                     && visibleHumanoidBonePaths.Contains(binding.path ?? string.Empty)
                     && IsPositionRotationOrScale(binding.propertyName))
@@ -156,7 +158,7 @@ namespace MPCCT.PhantomSystem.Editor
                     var key = $"visible-bone|{clip.GetInstanceID()}|{binding.path}|{binding.propertyName}";
                     if (reported.Add(key))
                     {
-                        state.Report.Error(
+                        state.Report.InternalError(
                             $"Converted {playable} clip '{clip.name}' still animates visible phantom humanoid bone "
                             + $"'{binding.path}' through '{binding.propertyName}'. Bone animation must target the "
                             + "Phantom Animation Driver skeleton.",
@@ -169,7 +171,7 @@ namespace MPCCT.PhantomSystem.Editor
                     var key = $"muscle|{clip.GetInstanceID()}|{binding.propertyName}";
                     if (reported.Add(key))
                     {
-                        state.Report.Error(
+                        state.Report.InternalError(
                             $"Converted {playable} clip '{clip.name}' still contains humanoid Animator binding "
                             + $"'{binding.propertyName}'.",
                             clip);
@@ -183,7 +185,7 @@ namespace MPCCT.PhantomSystem.Editor
                     var key = $"root|{clip.GetInstanceID()}|{binding.path}|{binding.propertyName}";
                     if (reported.Add(key))
                     {
-                        state.Report.Error(
+                        state.Report.InternalError(
                             $"Converted {playable} clip '{clip.name}' animates protected phantom root "
                             + $"'{binding.path}' through '{binding.propertyName}'. Root Motion must target Hips only.",
                             clip);
@@ -192,12 +194,10 @@ namespace MPCCT.PhantomSystem.Editor
             }
         }
 
-        private static bool IsConvertedPlayableClip(AnimationClip clip)
+        internal static bool IsConvertedPlayableClip(PhantomBuildState state, AnimationClip clip)
         {
-            return clip.name.StartsWith("PhantomSystem_", StringComparison.Ordinal)
-                   && (clip.name.IndexOf("_FX_", StringComparison.Ordinal) >= 0
-                       || clip.name.IndexOf("_Action_", StringComparison.Ordinal) >= 0
-                       || clip.name.IndexOf("_Gesture_", StringComparison.Ordinal) >= 0);
+            return state?.System?.Slots != null
+                   && state.System.Slots.Any(slot => slot.ConvertedClips.ContainsKey(clip));
         }
 
         private static bool IsPositionRotationOrScale(string propertyName)

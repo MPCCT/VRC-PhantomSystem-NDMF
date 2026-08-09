@@ -33,7 +33,7 @@ namespace MPCCT.PhantomSystem.Editor
                     continue;
                 }
 
-                armature.name = $"{armature.name}.Phantom_{TransformPathUtility.SafeName(slot.SlotId)}";
+                armature.name = $"{armature.name}.Phantom_{slot.HierarchyName}";
                 renamedAny = true;
             }
 

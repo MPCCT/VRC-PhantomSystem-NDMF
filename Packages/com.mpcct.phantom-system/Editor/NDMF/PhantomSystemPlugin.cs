@@ -14,23 +14,23 @@ namespace MPCCT.PhantomSystem.Editor
         protected override void Configure()
         {
             InPhase(BuildPhase.FirstChance)
-                .Run("Prepare Phantom Avatars", PreparePhantomAvatarsPass.Execute)
+                .Run("Prepare Phantom Avatars", ctx => PhantomBuildPassRunner.Run(ctx, PreparePhantomAvatarsPass.Execute))
                 .Then
-                .Run("Resolve Phantom Humanoid Rig", ResolvePhantomHumanoidRigPass.Execute);
+                .Run("Resolve Phantom Humanoid Rig", ctx => PhantomBuildPassRunner.Run(ctx, ResolvePhantomHumanoidRigPass.Execute));
 
             InPhase(BuildPhase.Generating)
                 .BeforePlugin("nadena.dev.modular-avatar")
-                .Run("Generate Phantom Constraint Rig", GenerateConstraintRigPass.Execute)
+                .Run("Generate Phantom Constraint Rig", ctx => PhantomBuildPassRunner.Run(ctx, GenerateConstraintRigPass.Execute))
                 .Then
-                .Run("Generate Phantom Animator Assets", GenerateAnimatorAssetsPass.Execute)
+                .Run("Generate Phantom Animator Assets", ctx => PhantomBuildPassRunner.Run(ctx, GenerateAnimatorAssetsPass.Execute))
                 .Then
-                .Run("Install Phantom Menus and Parameters", InstallMenuAndParameterPass.Execute)
+                .Run("Install Phantom Menus and Parameters", ctx => PhantomBuildPassRunner.Run(ctx, InstallMenuAndParameterPass.Execute))
                 .Then
-                .Run("Cleanup Prebaked Avatar Metadata", CleanupPrebakedAvatarMetadataPass.Execute);
+                .Run("Cleanup Prebaked Avatar Metadata", ctx => PhantomBuildPassRunner.Run(ctx, CleanupPrebakedAvatarMetadataPass.Execute));
 
             InPhase(BuildPhase.Transforming)
                 .BeforePlugin("nadena.dev.modular-avatar")
-                .Run("Finalize Phantom Merge Animators", FinalizeMergeAnimatorsPass.Execute);
+                .Run("Finalize Phantom Merge Animators", ctx => PhantomBuildPassRunner.Run(ctx, FinalizeMergeAnimatorsPass.Execute));
 
             var postModularAvatar = InPhase(BuildPhase.Transforming)
                 .AfterPlugin("nadena.dev.modular-avatar")
@@ -38,16 +38,16 @@ namespace MPCCT.PhantomSystem.Editor
 
             postModularAvatar.WithRequiredExtension(typeof(AnimatorServicesContext), sequence =>
             {
-                sequence.Run("Rename Phantom Armatures", RenamePhantomArmaturesPass.Execute)
+                sequence.Run("Rename Phantom Armatures", ctx => PhantomBuildPassRunner.Run(ctx, RenamePhantomArmaturesPass.Execute))
                     .Then
-                    .Run("Cleanup Phantom Authoring Components", CleanupAuthoringComponentsPass.Execute);
+                    .Run("Cleanup Phantom Authoring Components", ctx => PhantomBuildPassRunner.Run(ctx, CleanupAuthoringComponentsPass.Execute));
             });
 
             InPhase(BuildPhase.Optimizing)
                 .AfterPlugin("nadena.dev.modular-avatar")
-                .Run("Retarget Phantom Animator Layer Controls", RetargetPhantomAnimatorLayerControlsPass.Execute)
+                .Run("Retarget Phantom Animator Layer Controls", ctx => PhantomBuildPassRunner.Run(ctx, RetargetPhantomAnimatorLayerControlsPass.Execute))
                 .Then
-                .Run("Validate Phantom Animation Bindings", ValidatePhantomAnimationBindingsPass.Execute);
+                .Run("Validate Phantom Animation Bindings", ctx => PhantomBuildPassRunner.Run(ctx, ValidatePhantomAnimationBindingsPass.Execute));
         }
     }
 }

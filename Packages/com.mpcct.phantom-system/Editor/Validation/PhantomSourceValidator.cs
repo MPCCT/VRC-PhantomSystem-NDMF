@@ -11,8 +11,10 @@ namespace MPCCT.PhantomSystem.Editor
 {
     internal enum PhantomValidationSeverity
     {
+        Info,
         Warning,
-        Error
+        ConfigurationError,
+        InternalError
     }
 
     internal enum PhantomCompatibilityStatus
@@ -24,8 +26,11 @@ namespace MPCCT.PhantomSystem.Editor
 
     internal sealed class PhantomValidationIssue
     {
+        public string Code;
         public PhantomValidationSeverity Severity;
         public string Message;
+        public UnityEngine.Object Context;
+        public int SlotIndex = -1;
         public UnityEngine.Object[] SelectionTargets;
     }
 
@@ -38,19 +43,34 @@ namespace MPCCT.PhantomSystem.Editor
         public int UnclassifiedComponentCount { get; set; }
         public int UnclassifiedComponentTypeCount { get; set; }
 
-        public bool HasErrors => Issues.Any(issue => issue.Severity == PhantomValidationSeverity.Error);
+        public bool HasErrors => Issues.Any(issue =>
+            issue.Severity == PhantomValidationSeverity.ConfigurationError
+            || issue.Severity == PhantomValidationSeverity.InternalError);
         public bool HasWarnings => Issues.Any(issue => issue.Severity == PhantomValidationSeverity.Warning);
+        public bool HasInfo => Issues.Any(issue => issue.Severity == PhantomValidationSeverity.Info);
     }
 
     internal sealed class PhantomSourceValidationReport
     {
+        public List<PhantomValidationIssue> GlobalIssues { get; } =
+            new List<PhantomValidationIssue>();
         public List<PhantomSlotValidationResult> Slots { get; } =
             new List<PhantomSlotValidationResult>();
+
+        public bool HasErrors => GlobalIssues.Any(issue =>
+                                     issue.Severity == PhantomValidationSeverity.ConfigurationError
+                                     || issue.Severity == PhantomValidationSeverity.InternalError)
+                                 || Slots.Any(slot => slot.HasErrors);
     }
 
     internal static class PhantomSourceValidator
     {
         public static PhantomSourceValidationReport Validate(PhantomAuthoring authoring)
+        {
+            return ValidateAuthoring(authoring);
+        }
+
+        public static PhantomSourceValidationReport ValidateAuthoring(PhantomAuthoring authoring)
         {
             var report = new PhantomSourceValidationReport();
             if (authoring == null)
@@ -65,13 +85,107 @@ namespace MPCCT.PhantomSystem.Editor
             }
 
             var baseDescriptor = FindAvatarDescriptor(authoring.transform);
+            ValidateBaseAvatar(baseDescriptor, authoring, slots, report);
             AddDuplicateSlotIdIssues(slots, report, authoring);
+            AddDuplicateHierarchyNameIssues(slots, report, authoring);
             AddDuplicateNamespaceIssues(slots, report, authoring);
 
             for (var index = 0; index < slots.Count; index++)
             {
                 ValidateSlot(slots[index], report.Slots[index], baseDescriptor, authoring);
             }
+
+            var parameterAnalysis = PhantomParameterAnalysis.Analyze(authoring);
+            foreach (var error in parameterAnalysis.ResolutionErrors.Where(error =>
+                         error == null
+                         || error.IndexOf("use the same core parameter prefix", StringComparison.Ordinal) < 0))
+            {
+                AddGlobal(report, PhantomValidationSeverity.ConfigurationError, "PHS200", error, authoring);
+            }
+            for (var index = 0; index < report.Slots.Count && index < parameterAnalysis.Slots.Count; index++)
+            {
+                foreach (var rename in parameterAnalysis.Slots[index].AutomaticRenames)
+                {
+                    Add(
+                        report.Slots[index],
+                        PhantomValidationSeverity.Warning,
+                        "PHS201",
+                        $"Parameter '{rename.OriginalName}' will be renamed to '{rename.FinalName}' "
+                        + $"to avoid an incompatible collision ({rename.Reason}).",
+                        authoring);
+                }
+            }
+
+            AssignSlotIndices(report);
+
+            return report;
+        }
+
+        public static PhantomSourceValidationReport ValidatePrebakedState(PhantomBuildState state)
+        {
+            var report = new PhantomSourceValidationReport();
+            var system = state?.System;
+            if (system == null)
+            {
+                return report;
+            }
+
+            foreach (var unused in system.Slots)
+            {
+                report.Slots.Add(new PhantomSlotValidationResult());
+            }
+
+            if (system.Slots.Count == 0)
+            {
+                AddGlobal(
+                    report,
+                    PhantomValidationSeverity.ConfigurationError,
+                    "PHS300",
+                    $"PhantomSystem on '{system.AuthoringComponent.name}' has no slots.",
+                    system.AuthoringComponent);
+                return report;
+            }
+
+            for (var index = 0; index < system.Slots.Count; index++)
+            {
+                var slot = system.Slots[index];
+                var result = report.Slots[index];
+                if (slot.PrebakedRoot == null)
+                {
+                    Add(
+                        result,
+                        PhantomValidationSeverity.ConfigurationError,
+                        "PHS301",
+                        $"Slot '{slot.SlotId}' has no PhantomSystem prebake result. Manual Bake commands do not "
+                        + "run the VRChat preprocess hook; use 'Bake Avatar with PhantomSystem' or VRChat SDK Build/Upload.",
+                        system.AuthoringComponent);
+                    continue;
+                }
+
+                var descriptor = slot.PrebakedRoot.GetComponent<VRCAvatarDescriptor>();
+                if (descriptor == null)
+                {
+                    Add(
+                        result,
+                        PhantomValidationSeverity.InternalError,
+                        "PHS302",
+                        $"Prebaked phantom for Slot '{slot.SlotId}' has no VRCAvatarDescriptor.",
+                        slot.PrebakedRoot);
+                }
+
+                var animator = slot.PrebakedRoot.GetComponent<Animator>();
+                if (animator == null || !animator.isHuman)
+                {
+                    Add(
+                        result,
+                        PhantomValidationSeverity.InternalError,
+                        "PHS303",
+                        $"Prebaked phantom for Slot '{slot.SlotId}' has no Humanoid Animator.",
+                        slot.PrebakedRoot);
+                }
+            }
+
+            AssignSlotIndices(report);
 
             return report;
         }
@@ -84,7 +198,7 @@ namespace MPCCT.PhantomSystem.Editor
         {
             if (slot == null)
             {
-                Add(result, PhantomValidationSeverity.Error, "The slot data is missing.", authoring);
+                Add(result, PhantomValidationSeverity.ConfigurationError, "PHS001", "The slot data is missing.", authoring);
                 return;
             }
 
@@ -92,59 +206,16 @@ namespace MPCCT.PhantomSystem.Editor
             {
                 Add(
                     result,
-                    PhantomValidationSeverity.Error,
-                    "Slot Name is empty. Assign a unique name before building.",
+                    PhantomValidationSeverity.Info,
+                    "PHS002",
+                    $"Slot Name is empty; it will be resolved as '{PhantomSlot.DefaultId}'.",
                     authoring);
-            }
-
-            if (slot.enablePhantomGrabbing)
-            {
-                var baseAnimator = baseDescriptor != null
-                    ? baseDescriptor.GetComponent<Animator>()
-                    : null;
-                if (baseAnimator == null)
-                {
-                    Add(
-                        result,
-                        PhantomValidationSeverity.Error,
-                        "Phantom Grabbing requires the base avatar root to have an Animator.",
-                        baseDescriptor != null
-                            ? (UnityEngine.Object)baseDescriptor
-                            : authoring);
-                }
-                else if (baseAnimator.avatar == null)
-                {
-                    Add(
-                        result,
-                        PhantomValidationSeverity.Error,
-                        "Phantom Grabbing requires the base Animator to have an Avatar asset.",
-                        baseAnimator);
-                }
-                else if (!baseAnimator.avatar.isValid
-                         || !baseAnimator.avatar.isHuman
-                         || !baseAnimator.isHuman)
-                {
-                    Add(
-                        result,
-                        PhantomValidationSeverity.Error,
-                        "Phantom Grabbing requires the base Animator to use a valid Humanoid Avatar.",
-                        baseAnimator);
-                }
-                else if (!HasHumanoidBone(baseAnimator, HumanBodyBones.LeftHand)
-                         || !HasHumanoidBone(baseAnimator, HumanBodyBones.RightHand))
-                {
-                    Add(
-                        result,
-                        PhantomValidationSeverity.Error,
-                        "Phantom Grabbing requires the base avatar to expose both Humanoid hand bones.",
-                        baseAnimator);
-                }
             }
 
             var source = slot.phantomAvatar;
             if (source == null)
             {
-                Add(result, PhantomValidationSeverity.Error, "No phantom avatar is assigned.", authoring);
+                Add(result, PhantomValidationSeverity.ConfigurationError, "PHS010", "No phantom avatar is assigned.", authoring);
                 return;
             }
 
@@ -152,7 +223,8 @@ namespace MPCCT.PhantomSystem.Editor
             {
                 Add(
                     result,
-                    PhantomValidationSeverity.Error,
+                    PhantomValidationSeverity.ConfigurationError,
+                    "PHS011",
                     "The slot references the base avatar itself.",
                     source);
                 return;
@@ -162,7 +234,8 @@ namespace MPCCT.PhantomSystem.Editor
             {
                 Add(
                     result,
-                    PhantomValidationSeverity.Error,
+                    PhantomValidationSeverity.ConfigurationError,
+                    "PHS012",
                     "The phantom source is inside the base avatar hierarchy.",
                     source);
             }
@@ -172,7 +245,8 @@ namespace MPCCT.PhantomSystem.Editor
             {
                 Add(
                     result,
-                    PhantomValidationSeverity.Error,
+                    PhantomValidationSeverity.ConfigurationError,
+                    "PHS013",
                     "The phantom source root has no Animator.",
                     source);
             }
@@ -180,7 +254,8 @@ namespace MPCCT.PhantomSystem.Editor
             {
                 Add(
                     result,
-                    PhantomValidationSeverity.Error,
+                    PhantomValidationSeverity.ConfigurationError,
+                    "PHS014",
                     "The phantom source Animator has no Avatar asset.",
                     animator);
             }
@@ -188,7 +263,8 @@ namespace MPCCT.PhantomSystem.Editor
             {
                 Add(
                     result,
-                    PhantomValidationSeverity.Error,
+                    PhantomValidationSeverity.ConfigurationError,
+                    "PHS015",
                     "The phantom source Animator is not a valid Humanoid.",
                     animator);
             }
@@ -196,8 +272,18 @@ namespace MPCCT.PhantomSystem.Editor
             {
                 Add(
                     result,
-                    PhantomValidationSeverity.Error,
+                    PhantomValidationSeverity.ConfigurationError,
+                    "PHS016",
                     "The phantom source Humanoid has no resolvable Hips bone.",
+                    animator);
+            }
+            else if (slot.enablePhantomView && !HasHumanoidBone(animator, HumanBodyBones.Head))
+            {
+                Add(
+                    result,
+                    PhantomValidationSeverity.ConfigurationError,
+                    "PHS017",
+                    "Phantom View requires the phantom source Humanoid to expose a Head bone.",
                     animator);
             }
 
@@ -206,22 +292,79 @@ namespace MPCCT.PhantomSystem.Editor
             {
                 Add(
                     result,
-                    PhantomValidationSeverity.Error,
+                    PhantomValidationSeverity.ConfigurationError,
+                    "PHS018",
                     $"The phantom source contains {nestedSystems.Length} nested PhantomSystem component(s).",
                     nestedSystems[0]);
             }
 
-            var missingScriptCount = CountMissingScripts(source.gameObject);
+            var missingScriptObjects = FindMissingScriptGameObjects(
+                source.gameObject,
+                out var missingScriptCount);
             if (missingScriptCount > 0)
             {
                 Add(
                     result,
                     PhantomValidationSeverity.Warning,
-                    $"The phantom source contains {missingScriptCount} missing script(s).",
-                    source);
+                    "PHS020",
+                    $"The phantom source contains {missingScriptCount} missing script(s) on "
+                    + $"{missingScriptObjects.Length} GameObject(s).",
+                    source,
+                    missingScriptObjects);
             }
 
             ScanComponentCompatibility(source, result);
+        }
+
+        private static void ValidateBaseAvatar(
+            VRCAvatarDescriptor baseDescriptor,
+            PhantomAuthoring authoring,
+            IReadOnlyList<PhantomSlot> slots,
+            PhantomSourceValidationReport report)
+        {
+            var context = baseDescriptor != null ? (UnityEngine.Object)baseDescriptor : authoring;
+            var animator = baseDescriptor != null ? baseDescriptor.GetComponent<Animator>() : null;
+            if (baseDescriptor == null)
+            {
+                AddGlobal(report, PhantomValidationSeverity.ConfigurationError, "PHS100",
+                    "PhantomSystem must be placed under a VRCAvatarDescriptor.", authoring);
+                return;
+            }
+
+            if (animator == null)
+            {
+                AddGlobal(report, PhantomValidationSeverity.ConfigurationError, "PHS101",
+                    "The base avatar root has no Animator.", context);
+                return;
+            }
+
+            if (animator.avatar == null || !animator.avatar.isValid || !animator.avatar.isHuman || !animator.isHuman)
+            {
+                AddGlobal(report, PhantomValidationSeverity.ConfigurationError, "PHS102",
+                    "The base avatar Animator must use a valid Humanoid Avatar.", animator);
+                return;
+            }
+
+            if (!HasHumanoidBone(animator, HumanBodyBones.Hips))
+            {
+                AddGlobal(report, PhantomValidationSeverity.ConfigurationError, "PHS103",
+                    "The base avatar Humanoid has no resolvable Hips bone.", animator);
+            }
+
+            if (slots.Any(slot => slot != null && slot.enablePhantomView)
+                && !HasHumanoidBone(animator, HumanBodyBones.Head))
+            {
+                AddGlobal(report, PhantomValidationSeverity.ConfigurationError, "PHS104",
+                    "Phantom View requires the base avatar Humanoid to expose a Head bone.", animator);
+            }
+
+            if (slots.Any(slot => slot != null && slot.enablePhantomGrabbing)
+                && (!HasHumanoidBone(animator, HumanBodyBones.LeftHand)
+                    || !HasHumanoidBone(animator, HumanBodyBones.RightHand)))
+            {
+                AddGlobal(report, PhantomValidationSeverity.ConfigurationError, "PHS105",
+                    "Phantom Grabbing requires both Humanoid hand bones on the base avatar.", animator);
+            }
         }
 
         private static void ScanComponentCompatibility(
@@ -268,6 +411,7 @@ namespace MPCCT.PhantomSystem.Editor
                 Add(
                     result,
                     PhantomValidationSeverity.Warning,
+                    "PHS021",
                     $"Component type '{componentType.FullName}' does not implement INDMFEditorOnly;"
                     + $"phantom prebake compatibility cannot be verified.",
                     components[0],
@@ -281,11 +425,17 @@ namespace MPCCT.PhantomSystem.Editor
 
         private static bool IsVrcSdkComponent(Type componentType)
         {
-            var componentNamespace = componentType?.Namespace;
-            return string.Equals(componentNamespace, "VRC", StringComparison.Ordinal)
-                   || (componentNamespace?.StartsWith(
-                       "VRC.",
-                       StringComparison.Ordinal) ?? false);
+            if (componentType == null)
+            {
+                return false;
+            }
+
+            var assemblyName = componentType.Assembly.GetName().Name;
+            return !string.IsNullOrEmpty(assemblyName)
+                   && (assemblyName.StartsWith("VRC.", StringComparison.Ordinal)
+                       || assemblyName.StartsWith("VRCSDK", StringComparison.Ordinal)
+                       || assemblyName.StartsWith("nadena.dev.ndmf", StringComparison.Ordinal)
+                       || assemblyName.StartsWith("nadena.dev.modular-avatar", StringComparison.Ordinal));
         }
 
         private static void AddDuplicateSlotIdIssues(
@@ -297,10 +447,9 @@ namespace MPCCT.PhantomSystem.Editor
                 .Select((slot, index) => new
                 {
                     Index = index,
-                    Name = string.IsNullOrWhiteSpace(slot?.id) ? null : slot.id.Trim()
+                    Name = PhantomSlotIdentity.Create(slot).SlotId
                 })
-                .Where(item => item.Name != null)
-                .GroupBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+                .GroupBy(item => item.Name, StringComparer.Ordinal)
                 .Where(group => group.Count() > 1);
 
             foreach (var group in groups)
@@ -309,7 +458,8 @@ namespace MPCCT.PhantomSystem.Editor
                 {
                     Add(
                         report.Slots[item.Index],
-                        PhantomValidationSeverity.Error,
+                        PhantomValidationSeverity.ConfigurationError,
+                        "PHS030",
                         $"Slot Name '{group.Key}' is duplicated.",
                         authoring);
                 }
@@ -325,10 +475,14 @@ namespace MPCCT.PhantomSystem.Editor
                 .Select((slot, index) => new
                 {
                     Index = index,
+                    Identity = PhantomSlotIdentity.Create(slot),
                     Name = PhantomParameterNames.Activate(slot)
                 })
                 .GroupBy(item => item.Name, StringComparer.Ordinal)
-                .Where(group => group.Count() > 1);
+                .Where(group => group
+                    .Select(item => item.Identity.SlotId)
+                    .Distinct(StringComparer.Ordinal)
+                    .Count() > 1);
 
             foreach (var group in groups)
             {
@@ -336,22 +490,64 @@ namespace MPCCT.PhantomSystem.Editor
                 {
                     Add(
                         report.Slots[item.Index],
-                        PhantomValidationSeverity.Error,
+                        PhantomValidationSeverity.ConfigurationError,
+                        "PHS032",
                         $"The core parameter namespace is duplicated ('{group.Key}').",
                         authoring);
                 }
             }
         }
 
-        private static int CountMissingScripts(GameObject root)
+        private static void AddDuplicateHierarchyNameIssues(
+            IReadOnlyList<PhantomSlot> slots,
+            PhantomSourceValidationReport report,
+            PhantomAuthoring authoring)
         {
-            var count = 0;
+            var groups = slots
+                .Select((slot, index) => new
+                {
+                    Index = index,
+                    Identity = PhantomSlotIdentity.Create(slot)
+                })
+                .GroupBy(item => item.Identity.HierarchyName, StringComparer.Ordinal)
+                .Where(group => group
+                    .Select(item => item.Identity.SlotId)
+                    .Distinct(StringComparer.Ordinal)
+                    .Count() > 1);
+
+            foreach (var group in groups)
+            {
+                foreach (var item in group)
+                {
+                    Add(
+                        report.Slots[item.Index],
+                        PhantomValidationSeverity.ConfigurationError,
+                        "PHS031",
+                        $"Slot hierarchy name '{group.Key}' is duplicated after invalid path characters are normalized.",
+                        authoring);
+                }
+            }
+        }
+
+        private static UnityEngine.Object[] FindMissingScriptGameObjects(
+            GameObject root,
+            out int missingScriptCount)
+        {
+            missingScriptCount = 0;
+            var gameObjects = new List<UnityEngine.Object>();
             foreach (var transform in root.GetComponentsInChildren<Transform>(true))
             {
-                count += GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(transform.gameObject);
+                var count = GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(transform.gameObject);
+                if (count <= 0)
+                {
+                    continue;
+                }
+
+                missingScriptCount += count;
+                gameObjects.Add(transform.gameObject);
             }
 
-            return count;
+            return gameObjects.ToArray();
         }
 
         private static bool HasHumanoidBone(Animator animator, HumanBodyBones bone)
@@ -395,19 +591,52 @@ namespace MPCCT.PhantomSystem.Editor
         private static void Add(
             PhantomSlotValidationResult result,
             PhantomValidationSeverity severity,
+            string code,
             string message,
             UnityEngine.Object context,
             UnityEngine.Object[] selectionTargets = null)
         {
             result.Issues.Add(new PhantomValidationIssue
             {
+                Code = code,
                 Severity = severity,
                 Message = message,
+                Context = context,
                 SelectionTargets = selectionTargets
                     ?? (context != null
                         ? new[] { context }
                         : Array.Empty<UnityEngine.Object>())
             });
+        }
+
+        private static void AddGlobal(
+            PhantomSourceValidationReport report,
+            PhantomValidationSeverity severity,
+            string code,
+            string message,
+            UnityEngine.Object context)
+        {
+            report.GlobalIssues.Add(new PhantomValidationIssue
+            {
+                Code = code,
+                Severity = severity,
+                Message = message,
+                Context = context,
+                SelectionTargets = context != null
+                    ? new[] { context }
+                    : Array.Empty<UnityEngine.Object>()
+            });
+        }
+
+        private static void AssignSlotIndices(PhantomSourceValidationReport report)
+        {
+            for (var index = 0; index < report.Slots.Count; index++)
+            {
+                foreach (var issue in report.Slots[index].Issues)
+                {
+                    issue.SlotIndex = index;
+                }
+            }
         }
     }
 }

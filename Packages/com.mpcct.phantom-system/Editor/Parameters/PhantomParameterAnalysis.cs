@@ -6,6 +6,7 @@ using nadena.dev.ndmf.preview;
 using UnityEngine;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.ScriptableObjects;
+using VRC.SDK3.Dynamics.PhysBone.Components;
 using PhantomAuthoring = MPCCT.PhantomSystem.PhantomSystem;
 
 namespace MPCCT.PhantomSystem.Editor
@@ -16,8 +17,10 @@ namespace MPCCT.PhantomSystem.Editor
         public AnimatorControllerParameterType? ParameterType;
         public bool IsAnimatorOnly;
         public bool IsHidden;
+        public bool IsPhysBonePrefix;
         public bool WantSynced;
         public float? DefaultValue;
+        public bool? Saved;
         public Component SourceComponent;
         public PluginBase SourcePlugin;
 
@@ -54,6 +57,9 @@ namespace MPCCT.PhantomSystem.Editor
         public int SharedParameterSavings;
         public int GeneratedParameterCost;
         public int FinalContributionCost;
+        public Dictionary<string, string> FinalParameterNames =
+            new Dictionary<string, string>(StringComparer.Ordinal);
+        public List<PhantomParameterRename> AutomaticRenames = new List<PhantomParameterRename>();
     }
 
     internal sealed class PhantomSystemParameterAnalysis
@@ -62,12 +68,7 @@ namespace MPCCT.PhantomSystem.Editor
             new Dictionary<string, PhantomParameterDefinition>(StringComparer.Ordinal);
 
         public List<PhantomSlotParameterAnalysis> Slots = new List<PhantomSlotParameterAnalysis>();
-    }
-
-    internal sealed class PhantomSharedRuleResolution
-    {
-        public HashSet<string> ValidNames = new HashSet<string>(StringComparer.Ordinal);
-        public List<string> Warnings = new List<string>();
+        public List<string> ResolutionErrors = new List<string>();
     }
 
     internal static class PhantomParameterAnalysis
@@ -97,6 +98,28 @@ namespace MPCCT.PhantomSystem.Editor
                 analysis.Slots.Add(AnalyzeSlot(slot, analysis.BaseParameters));
             }
 
+            var parameterResolution = PhantomParameterResolver.Resolve(
+                analysis.BaseParameters,
+                analysis.Slots.Select(slotAnalysis => new PhantomParameterSlotInput
+                {
+                    Slot = slotAnalysis.Slot,
+                    Identity = PhantomSlotIdentity.Create(slotAnalysis.Slot),
+                    SourceParameters = slotAnalysis.SourceParameters
+                }).ToList());
+            analysis.ResolutionErrors.AddRange(parameterResolution.Errors);
+            for (var index = 0; index < analysis.Slots.Count && index < parameterResolution.Slots.Count; index++)
+            {
+                var slotAnalysis = analysis.Slots[index];
+                var resolved = parameterResolution.Slots[index];
+                slotAnalysis.GeneratedParameterCost = resolved.GeneratedParameterCost;
+                slotAnalysis.SourceParameterCost = resolved.SourceParameterCost;
+                slotAnalysis.SharedParameterSavings = resolved.SharedParameterSavings;
+                slotAnalysis.FinalContributionCost = resolved.FinalContributionCost;
+                slotAnalysis.NamesSharedWithBase = resolved.SharedOriginalNames;
+                slotAnalysis.FinalParameterNames = resolved.FinalNames;
+                slotAnalysis.AutomaticRenames = resolved.AutomaticRenames;
+            }
+
             return analysis;
         }
 
@@ -107,56 +130,32 @@ namespace MPCCT.PhantomSystem.Editor
             return ReadParameters(avatarRoot, context, true);
         }
 
-        public static PhantomSharedRuleResolution ResolveBuildSharedRules(
-            PhantomSlot slot,
-            IReadOnlyDictionary<string, PhantomParameterDefinition> baseParameters,
-            VRCAvatarDescriptor prebakedDescriptor)
+        public static Dictionary<string, PhantomParameterDefinition> ReadParametersForObject(
+            GameObject root,
+            BuildContext context)
         {
-            var resolution = new PhantomSharedRuleResolution();
-            if (slot == null
-                || slot.removeSourceControls
-                || !slot.renamePhantomParameters
-                || slot.sharedParameterNames == null
-                || slot.sharedParameterNames.Count == 0)
+            return ReadParameters(root, context, true);
+        }
+
+        public static List<PhantomParameterDefinition> ReadPhysBonePrefixes(GameObject root)
+        {
+            if (root == null)
             {
-                return resolution;
+                return new List<PhantomParameterDefinition>();
             }
 
-            var sourceParameters = ReadDescriptorParameters(prebakedDescriptor);
-            foreach (var name in slot.sharedParameterNames
-                         .Where(name => !string.IsNullOrWhiteSpace(name))
-                         .Distinct(StringComparer.Ordinal))
-            {
-                if (PhantomParameterPolicy.IsVrcReserved(name))
+            return root.GetComponentsInChildren<VRCPhysBone>(true)
+                .Select(physBone => physBone.parameter)
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Distinct(StringComparer.Ordinal)
+                .Select(name => new PhantomParameterDefinition
                 {
-                    continue;
-                }
-
-                if (!sourceParameters.TryGetValue(name, out var source))
-                {
-                    resolution.Warnings.Add(
-                        $"Shared parameter '{name}' no longer exists in the prebaked phantom expression parameters; it will remain namespaced.");
-                    continue;
-                }
-
-                if (baseParameters == null || !baseParameters.TryGetValue(name, out var baseParameter))
-                {
-                    resolution.Warnings.Add(
-                        $"Shared parameter '{name}' no longer exists on the base avatar; it will remain namespaced.");
-                    continue;
-                }
-
-                if (!AreShareCompatible(baseParameter, source, out var reason))
-                {
-                    resolution.Warnings.Add(
-                        $"Shared parameter '{name}' is no longer compatible with the base avatar ({reason}); it will remain namespaced.");
-                    continue;
-                }
-
-                resolution.ValidNames.Add(name);
-            }
-
-            return resolution;
+                    Name = name,
+                    IsPhysBonePrefix = true,
+                    IsAnimatorOnly = true,
+                    WantSynced = false
+                })
+                .ToList();
         }
 
         public static Dictionary<string, PhantomParameterDefinition> ReadDescriptorParameters(
@@ -184,6 +183,7 @@ namespace MPCCT.PhantomSystem.Editor
                     IsHidden = false,
                     WantSynced = parameter.networkSynced,
                     DefaultValue = parameter.defaultValue,
+                    Saved = parameter.saved,
                     SourceComponent = descriptor
                 };
             }
@@ -214,6 +214,10 @@ namespace MPCCT.PhantomSystem.Editor
                 .Where(parameter => parameter != null
                                     && !string.IsNullOrWhiteSpace(parameter.Name)
                                     && !PhantomParameterPolicy.IsVrcReserved(parameter.Name))
+                .OrderBy(parameter => parameter.Name, StringComparer.Ordinal)
+                .ToList();
+            sourceParameters.AddRange(ReadPhysBonePrefixes(slot.phantomAvatar.gameObject));
+            sourceParameters = sourceParameters
                 .OrderBy(parameter => parameter.Name, StringComparer.Ordinal)
                 .ToList();
             analysis.SourceParameters = sourceParameters;
@@ -251,7 +255,9 @@ namespace MPCCT.PhantomSystem.Editor
 
         private static int GeneratedParameterCost(PhantomSlot slot)
         {
-            return 3 + (slot != null && slot.enableScaleControl ? 9 : 0);
+            return 3
+                   + (slot != null && slot.enablePhantomGrabbing ? 1 : 0)
+                   + (slot != null && slot.enableScaleControl ? 9 : 0);
         }
 
         private static Dictionary<string, PhantomParameterDefinition> ReadParameters(
@@ -296,6 +302,19 @@ namespace MPCCT.PhantomSystem.Editor
                         SourcePlugin = parameter.Plugin
                     };
                 }
+
+                var descriptorDefinitions = ReadDescriptorParameters(
+                    root.GetComponent<VRCAvatarDescriptor>());
+                foreach (var pair in descriptorDefinitions)
+                {
+                    if (!result.TryGetValue(pair.Key, out var definition))
+                    {
+                        continue;
+                    }
+
+                    definition.Saved = pair.Value.Saved;
+                    definition.DefaultValue = pair.Value.DefaultValue;
+                }
             }
             finally
             {
@@ -326,40 +345,10 @@ namespace MPCCT.PhantomSystem.Editor
             PhantomParameterDefinition sourceParameter,
             out string reason)
         {
-            if (baseParameter == null || sourceParameter == null)
-            {
-                reason = "parameter information is missing";
-                return false;
-            }
-
-            if (baseParameter.IsAnimatorOnly || sourceParameter.IsAnimatorOnly)
-            {
-                reason = "one side is animator-only";
-                return false;
-            }
-
-            if (baseParameter.ParameterType == null || sourceParameter.ParameterType == null)
-            {
-                reason = "the parameter type is unknown";
-                return false;
-            }
-
-            if (baseParameter.ParameterType != sourceParameter.ParameterType)
-            {
-                reason = $"type mismatch: base {baseParameter.ParameterType}, phantom {sourceParameter.ParameterType}";
-                return false;
-            }
-
-            if (baseParameter.WantSynced != sourceParameter.WantSynced)
-            {
-                reason = baseParameter.WantSynced
-                    ? "the base parameter is network-synced but the phantom parameter is local-only"
-                    : "the base parameter is local-only but the phantom parameter is network-synced";
-                return false;
-            }
-
-            reason = null;
-            return true;
+            return PhantomParameterCompatibility.AreCompatible(
+                baseParameter,
+                sourceParameter,
+                out reason);
         }
 
         private static AnimatorControllerParameterType ConvertType(VRCExpressionParameters.ValueType type)

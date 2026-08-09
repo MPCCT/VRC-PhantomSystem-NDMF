@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using nadena.dev.ndmf;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -7,9 +9,13 @@ namespace MPCCT.PhantomSystem.Editor
 {
     public sealed class PhantomBuildReport
     {
-        public List<string> Errors { get; } = new List<string>();
+        private readonly List<PhantomBuildIssue> issues = new List<PhantomBuildIssue>();
 
-        private readonly List<UnityEngine.Object> errorContexts = new List<UnityEngine.Object>();
+        public IReadOnlyList<string> Errors => issues.Select(issue => issue.Message).ToList();
+        internal IReadOnlyList<PhantomBuildIssue> Issues => issues;
+        public bool HasErrors => issues.Count > 0;
+        public bool IsAborted { get; private set; }
+
         private int reportedErrorCount;
 
         public void Warning(string message, UnityEngine.Object context = null)
@@ -17,54 +23,116 @@ namespace MPCCT.PhantomSystem.Editor
             Debug.LogWarning("[PhantomSystem] " + message, context);
         }
 
+        public void Info(string message, UnityEngine.Object context = null)
+        {
+            Debug.Log("[PhantomSystem] " + message, context);
+        }
+
         public void Error(string message, UnityEngine.Object context = null)
         {
-            Errors.Add(message);
-            errorContexts.Add(context);
-            Debug.LogError("[PhantomSystem] " + message, context);
+            issues.Add(new PhantomBuildIssue(
+                PhantomValidationSeverity.ConfigurationError,
+                message,
+                context,
+                null));
+        }
+
+        public void InternalError(
+            string message,
+            UnityEngine.Object context = null,
+            System.Exception exception = null)
+        {
+            issues.Add(new PhantomBuildIssue(
+                PhantomValidationSeverity.InternalError,
+                "Internal build error: " + message,
+                context,
+                exception));
+        }
+
+        public bool BeginPass()
+        {
+            return !IsAborted;
         }
 
         public void ThrowIfErrors()
         {
-            if (Errors.Count == 0)
+            AbortIfErrors();
+        }
+
+        public void AbortIfErrors()
+        {
+            if (!HasErrors || IsAborted)
             {
                 return;
             }
 
+            IsAborted = true;
             ReportPendingErrorsToNdmf();
-            throw new System.InvalidOperationException("PhantomSystem build failed. See the NDMF Console for details.");
+            throw new PhantomBuildAbortException();
         }
 
         private void ReportPendingErrorsToNdmf()
         {
-            for (var i = reportedErrorCount; i < Errors.Count; i++)
+            for (var i = reportedErrorCount; i < issues.Count; i++)
             {
-                var context = i < errorContexts.Count ? errorContexts[i] : null;
-                if (context != null)
+                var issue = issues[i];
+                if (issue.Context != null)
                 {
-                    using (ErrorReport.WithContextObject(context))
+                    using (ErrorReport.WithContextObject(issue.Context))
                     {
-                        ErrorReport.ReportError(new PhantomBuildError(Errors[i]));
+                        ErrorReport.ReportError(new PhantomBuildError(issue));
                     }
                 }
                 else
                 {
-                    ErrorReport.ReportError(new PhantomBuildError(Errors[i]));
+                    ErrorReport.ReportError(new PhantomBuildError(issue));
                 }
             }
 
-            reportedErrorCount = Errors.Count;
+            reportedErrorCount = issues.Count;
+        }
+    }
+
+    internal sealed class PhantomBuildIssue
+    {
+        public PhantomValidationSeverity Severity { get; }
+        public string Message { get; }
+        public UnityEngine.Object Context { get; }
+        public Exception Exception { get; }
+
+        public PhantomBuildIssue(
+            PhantomValidationSeverity severity,
+            string message,
+            UnityEngine.Object context,
+            Exception exception)
+        {
+            Severity = severity;
+            Message = message;
+            Context = context;
+            Exception = exception;
+        }
+
+        public string DiagnosticMessage => Exception == null
+            ? Message
+            : $"{Message}\n{Exception}";
+    }
+
+    internal sealed class PhantomBuildAbortException : System.InvalidOperationException
+    {
+        public PhantomBuildAbortException()
+            : base("PhantomSystem build failed. See the NDMF Console for details.")
+        {
         }
     }
 
     internal sealed class PhantomBuildError : IError
     {
         private const string Title = "PhantomSystem build failed";
-        private readonly string message;
+        private readonly PhantomBuildIssue issue;
 
-        public PhantomBuildError(string message)
+        public PhantomBuildError(PhantomBuildIssue issue)
         {
-            this.message = message;
+            this.issue = issue;
         }
 
         public ErrorSeverity Severity => ErrorSeverity.Error;
@@ -82,13 +150,13 @@ namespace MPCCT.PhantomSystem.Editor
             title.style.unityFontStyleAndWeight = FontStyle.Bold;
 
             root.Add(title);
-            root.Add(new Label(message));
+            root.Add(new Label(issue.DiagnosticMessage));
             return root;
         }
 
         public string ToMessage()
         {
-            return $"[PhantomSystem] {message}";
+            return $"[PhantomSystem] {issue.DiagnosticMessage}";
         }
     }
 }
