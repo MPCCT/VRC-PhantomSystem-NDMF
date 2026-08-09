@@ -6,6 +6,7 @@ namespace MPCCT.PhantomSystem.Editor
     internal sealed class PhantomSystemGlobalSettingsWindow : EditorWindow
     {
         private const string MenuPath = "Tools/PhantomSystem/Global Settings";
+        private const float ConversionValueWidth = 120f;
         private static readonly string[] TextureSizeLabels =
             { "256", "512", "1024", "2048", "4096" };
 
@@ -114,9 +115,16 @@ namespace MPCCT.PhantomSystem.Editor
             PhantomSystemProjectSettings settings)
         {
             EditorGUI.BeginChangeCheck();
-            var value = EditorGUILayout.FloatField(
-                new GUIContent($"{label} ({unit})", tooltip),
-                current);
+            float value;
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                EditorGUILayout.LabelField(
+                    new GUIContent($"{label} ({unit})", tooltip));
+                value = EditorGUILayout.FloatField(
+                    current,
+                    GUILayout.Width(ConversionValueWidth));
+            }
+
             if (EditorGUI.EndChangeCheck())
             {
                 assign(Mathf.Clamp(value, minimum, maximum));

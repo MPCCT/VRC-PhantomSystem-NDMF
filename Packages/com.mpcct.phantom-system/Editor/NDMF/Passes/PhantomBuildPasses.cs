@@ -93,10 +93,14 @@ namespace MPCCT.PhantomSystem.Editor
 
             ReportValidation(
                 state.Report,
-                PhantomSourceValidator.ValidateAuthoring(state.System.AuthoringComponent));
+                PhantomSourceValidator.ValidateAuthoring(state.System.AuthoringComponent),
+                includeNonErrors: false);
             state.Report.AbortIfErrors();
 
-            ReportValidation(state.Report, PhantomSourceValidator.ValidatePrebakedState(state));
+            ReportValidation(
+                state.Report,
+                PhantomSourceValidator.ValidatePrebakedState(state),
+                includeNonErrors: true);
             state.Report.AbortIfErrors();
             ResolveParameters(ctx, state);
 
@@ -137,36 +141,40 @@ namespace MPCCT.PhantomSystem.Editor
                 slot.ParameterResolution = resolution.Slots[index];
                 slot.ValidSharedParameterNames.Clear();
                 slot.ValidSharedParameterNames.UnionWith(resolution.Slots[index].SharedOriginalNames);
-                foreach (var rename in resolution.Slots[index].AutomaticRenames)
-                {
-                    state.Report.Warning(
-                        $"Slot '{slot.SlotId}' parameter '{rename.OriginalName}' was renamed to "
-                        + $"'{rename.FinalName}' to avoid an incompatible collision ({rename.Reason}).",
-                        state.System.AuthoringComponent);
-                }
             }
         }
 
         private static void ReportValidation(
             PhantomBuildReport buildReport,
-            PhantomSourceValidationReport validation)
+            PhantomSourceValidationReport validation,
+            bool includeNonErrors)
         {
             foreach (var issue in validation.GlobalIssues)
             {
-                ReportIssue(buildReport, issue);
+                ReportIssue(buildReport, issue, includeNonErrors);
             }
 
             foreach (var slot in validation.Slots)
             {
                 foreach (var issue in slot.Issues)
                 {
-                    ReportIssue(buildReport, issue);
+                    ReportIssue(buildReport, issue, includeNonErrors);
                 }
             }
         }
 
-        private static void ReportIssue(PhantomBuildReport report, PhantomValidationIssue issue)
+        private static void ReportIssue(
+            PhantomBuildReport report,
+            PhantomValidationIssue issue,
+            bool includeNonErrors)
         {
+            if (!includeNonErrors
+                && (issue.Severity == PhantomValidationSeverity.Info
+                    || issue.Severity == PhantomValidationSeverity.Warning))
+            {
+                return;
+            }
+
             var message = string.IsNullOrEmpty(issue.Code)
                 ? issue.Message
                 : $"[{issue.Code}] {issue.Message}";

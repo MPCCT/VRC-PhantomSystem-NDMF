@@ -112,6 +112,10 @@ namespace MPCCT.PhantomSystem.Editor
             var rotationToleranceDegrees = NormalizeTolerance(
                 options.RotationErrorToleranceDegrees,
                 0.25f);
+            var sourceSettings = AnimationUtility.GetAnimationClipSettings(source);
+            var effectiveMirror = ResolveEffectiveMirror(
+                sourceSettings.mirror,
+                options.InheritedMirror);
 
             var animatorBindings = AnimationUtility.GetCurveBindings(source)
                 .Where(binding => binding.type == typeof(Animator))
@@ -147,6 +151,10 @@ namespace MPCCT.PhantomSystem.Editor
                     && TryResolveHumanoidBinding(binding, out var bone, out var forcePosition))
                 {
                     resolvedHumanoidBindingCount++;
+                    if (effectiveMirror)
+                    {
+                        bone = MirrorHumanoidBone(bone);
+                    }
                     affectedBones.Add(bone);
                     if (forcePosition)
                     {
@@ -170,23 +178,51 @@ namespace MPCCT.PhantomSystem.Editor
             var bakedBones = new List<HumanBodyBones>();
             var missingBones = new List<HumanBodyBones>();
             var samplingDiagnostics = default(SamplingDiagnostics);
-            if (affectedBones.Count > 0)
+            AnimationClip mirroredEvaluationClip = null;
+            try
             {
-                samplingDiagnostics = BakeHumanoidCurves(
-                    source,
-                    sourceAnimator.avatar,
-                    humanoidRoot.transform,
-                    output,
-                    sampleRate,
-                    affectedBones,
-                    forcePositionBones,
-                    options.LocalizeRootMotionToHips && hasRootMotion,
-                    options,
-                    positionTolerance,
-                    rotationToleranceDegrees,
-                    relevantBindings,
-                    bakedBones,
-                    missingBones);
+                var evaluationClip = source;
+                if (options.InheritedMirror)
+                {
+                    mirroredEvaluationClip = Object.Instantiate(source);
+                    mirroredEvaluationClip.name = $"{source.name}_PhantomMirrorEvaluation";
+                    var evaluationSettings = AnimationUtility.GetAnimationClipSettings(
+                        mirroredEvaluationClip);
+                    evaluationSettings.mirror = ResolveEffectiveMirror(
+                        evaluationSettings.mirror,
+                        true);
+                    AnimationUtility.SetAnimationClipSettings(
+                        mirroredEvaluationClip,
+                        evaluationSettings);
+                    evaluationClip = mirroredEvaluationClip;
+                }
+
+                if (affectedBones.Count > 0)
+                {
+                    samplingDiagnostics = BakeHumanoidCurves(
+                        evaluationClip,
+                        sourceAnimator.avatar,
+                        humanoidRoot.transform,
+                        output,
+                        sampleRate,
+                        affectedBones,
+                        forcePositionBones,
+                        options.LocalizeRootMotionToHips && hasRootMotion,
+                        options,
+                        positionTolerance,
+                        rotationToleranceDegrees,
+                        relevantBindings,
+                        effectiveMirror,
+                        bakedBones,
+                        missingBones);
+                }
+            }
+            finally
+            {
+                if (mirroredEvaluationClip != null)
+                {
+                    Object.DestroyImmediate(mirroredEvaluationClip);
+                }
             }
 
             output.EnsureQuaternionContinuity();
@@ -220,13 +256,52 @@ namespace MPCCT.PhantomSystem.Editor
                 localBounds = source.localBounds
             };
 
-            AnimationUtility.SetAnimationClipSettings(
-                output,
-                AnimationUtility.GetAnimationClipSettings(source));
+            var outputSettings = AnimationUtility.GetAnimationClipSettings(source);
+            // The output contains ordinary Transform curves. Humanoid mirroring has
+            // already been consumed while sampling and no longer applies to this clip.
+            outputSettings.mirror = false;
+            AnimationUtility.SetAnimationClipSettings(output, outputSettings);
             AnimationUtility.SetAnimationEvents(
                 output,
                 AnimationUtility.GetAnimationEvents(source));
             return output;
+        }
+
+        internal static bool ResolveEffectiveMirror(
+            bool clipMirror,
+            bool inheritedMirror)
+        {
+            return clipMirror ^ inheritedMirror;
+        }
+
+        internal static HumanBodyBones MirrorHumanoidBone(HumanBodyBones bone)
+        {
+            if (bone < 0 || bone >= HumanBodyBones.LastBone)
+            {
+                return bone;
+            }
+
+            var name = bone.ToString();
+            string mirroredName;
+            if (name.StartsWith("Left", StringComparison.Ordinal))
+            {
+                mirroredName = "Right" + name.Substring("Left".Length);
+            }
+            else if (name.StartsWith("Right", StringComparison.Ordinal))
+            {
+                mirroredName = "Left" + name.Substring("Right".Length);
+            }
+            else
+            {
+                return bone;
+            }
+
+            return Enum.TryParse(mirroredName, false, out HumanBodyBones mirrored)
+                   && mirrored >= 0
+                   && mirrored < HumanBodyBones.LastBone
+                   && string.Equals(mirrored.ToString(), mirroredName, StringComparison.Ordinal)
+                ? mirrored
+                : bone;
         }
 
         private static void CopyNonHumanoidCurves(
@@ -278,6 +353,7 @@ namespace MPCCT.PhantomSystem.Editor
             float positionTolerance,
             float rotationToleranceDegrees,
             IReadOnlyList<EditorCurveBinding> relevantBindings,
+            bool mirrorBindings,
             List<HumanBodyBones> bakedBones,
             List<HumanBodyBones> missingBones)
         {
@@ -341,7 +417,7 @@ namespace MPCCT.PhantomSystem.Editor
                     ? CollectSourceCandidateTimes(source, relevantBindings)
                     : EnumerateSampleTimes(source.length, sampleRate).ToList();
                 var constantIntervalsByBone = options.SamplingMode == PhantomHumanoidSamplingMode.Adaptive
-                    ? CollectConstantIntervals(source, relevantBindings)
+                    ? CollectConstantIntervals(source, relevantBindings, mirrorBindings)
                     : new Dictionary<HumanBodyBones, List<TimeInterval>>();
                 var samples = new SortedDictionary<float, BonePose[]>();
 
@@ -546,7 +622,8 @@ namespace MPCCT.PhantomSystem.Editor
 
         private static Dictionary<HumanBodyBones, List<TimeInterval>> CollectConstantIntervals(
             AnimationClip source,
-            IReadOnlyList<EditorCurveBinding> relevantBindings)
+            IReadOnlyList<EditorCurveBinding> relevantBindings,
+            bool mirrorBindings)
         {
             var intervals = new Dictionary<HumanBodyBones, List<TimeInterval>>();
             foreach (var binding in relevantBindings)
@@ -566,6 +643,11 @@ namespace MPCCT.PhantomSystem.Editor
                 else
                 {
                     continue;
+                }
+
+                if (mirrorBindings)
+                {
+                    bone = MirrorHumanoidBone(bone);
                 }
 
                 var curve = AnimationUtility.GetEditorCurve(source, binding);
@@ -1530,6 +1612,7 @@ namespace MPCCT.PhantomSystem.Editor
         public float PositionErrorTolerance { get; set; } = 0.0005f;
         public float RotationErrorToleranceDegrees { get; set; } = 0.25f;
         public bool LocalizeRootMotionToHips { get; set; } = true;
+        public bool InheritedMirror { get; set; }
         public IReadOnlyDictionary<HumanBodyBones, string> OutputBonePaths { get; set; }
         public IReadOnlyDictionary<HumanBodyBones, string> OutputBoneParentPaths { get; set; }
     }

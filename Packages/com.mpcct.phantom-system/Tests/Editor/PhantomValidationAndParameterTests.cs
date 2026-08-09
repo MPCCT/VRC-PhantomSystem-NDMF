@@ -460,7 +460,7 @@ namespace MPCCT.PhantomSystem.Editor.Tests
         }
 
         [Test]
-        public void BlendTreeConversion_RebuildsTreeAndPreservesChildSettings()
+        public void BlendTreeConversion_RebuildsTreeAndConsumesChildMirror()
         {
             var source = new BlendTree();
             var originalClip = new AnimationClip();
@@ -514,7 +514,8 @@ namespace MPCCT.PhantomSystem.Editor.Tests
                 Assert.AreEqual(sourceChild.timeScale, convertedChild.timeScale);
                 Assert.AreEqual(sourceChild.cycleOffset, convertedChild.cycleOffset);
                 Assert.AreEqual(sourceChild.directBlendParameter, convertedChild.directBlendParameter);
-                Assert.AreEqual(sourceChild.mirror, convertedChild.mirror);
+                Assert.IsTrue(sourceChild.mirror);
+                Assert.IsFalse(convertedChild.mirror);
             }
             finally
             {
@@ -525,6 +526,55 @@ namespace MPCCT.PhantomSystem.Editor.Tests
                 Object.DestroyImmediate(source);
                 Object.DestroyImmediate(originalClip);
                 Object.DestroyImmediate(convertedClip);
+            }
+        }
+
+        [TestCase(false, false, false)]
+        [TestCase(false, true, true)]
+        [TestCase(true, false, true)]
+        [TestCase(true, true, false)]
+        public void MirrorContexts_CombineUsingExclusiveOr(
+            bool inheritedMirror,
+            bool localMirror,
+            bool expected)
+        {
+            Assert.AreEqual(
+                expected,
+                PhantomPlayableMotionConverter.CombineMirror(
+                    inheritedMirror,
+                    localMirror));
+            Assert.AreEqual(
+                expected,
+                PhantomHumanoidClipBaker.ResolveEffectiveMirror(
+                    inheritedMirror,
+                    localMirror));
+        }
+
+        [TestCase(HumanBodyBones.LeftUpperLeg, HumanBodyBones.RightUpperLeg)]
+        [TestCase(HumanBodyBones.RightLowerLeg, HumanBodyBones.LeftLowerLeg)]
+        [TestCase(HumanBodyBones.LeftFoot, HumanBodyBones.RightFoot)]
+        [TestCase(HumanBodyBones.RightToes, HumanBodyBones.LeftToes)]
+        [TestCase(HumanBodyBones.LeftHand, HumanBodyBones.RightHand)]
+        [TestCase(HumanBodyBones.RightIndexDistal, HumanBodyBones.LeftIndexDistal)]
+        [TestCase(HumanBodyBones.Hips, HumanBodyBones.Hips)]
+        [TestCase(HumanBodyBones.Chest, HumanBodyBones.Chest)]
+        public void HumanoidMirror_MapsBoneToOppositeSide(
+            HumanBodyBones source,
+            HumanBodyBones expected)
+        {
+            Assert.AreEqual(expected, PhantomHumanoidClipBaker.MirrorHumanoidBone(source));
+        }
+
+        [Test]
+        public void HumanoidMirror_IsAnInvolutionForEveryBone()
+        {
+            foreach (HumanBodyBones bone in System.Enum.GetValues(typeof(HumanBodyBones)))
+            {
+                Assert.AreEqual(
+                    bone,
+                    PhantomHumanoidClipBaker.MirrorHumanoidBone(
+                        PhantomHumanoidClipBaker.MirrorHumanoidBone(bone)),
+                    bone.ToString());
             }
         }
 

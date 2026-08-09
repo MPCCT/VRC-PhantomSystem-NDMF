@@ -19,10 +19,16 @@ namespace MPCCT.PhantomSystem.Editor
         private readonly PhantomBuildReport report;
         private readonly VRCAvatarDescriptor.AnimLayerType playable;
         private readonly List<Dictionary<AnimationClip, AnimationClip>> overrideChain;
-        private readonly Dictionary<AnimationClip, AnimationClip> clipCache =
-            new Dictionary<AnimationClip, AnimationClip>();
-        private readonly Dictionary<BlendTree, BlendTree> treeCache =
-            new Dictionary<BlendTree, BlendTree>();
+        private readonly Dictionary<AnimationClip, AnimationClip>[] clipCaches =
+        {
+            new Dictionary<AnimationClip, AnimationClip>(),
+            new Dictionary<AnimationClip, AnimationClip>()
+        };
+        private readonly Dictionary<BlendTree, BlendTree>[] treeCaches =
+        {
+            new Dictionary<BlendTree, BlendTree>(),
+            new Dictionary<BlendTree, BlendTree>()
+        };
 
         private PhantomPlayableMotionConverter(
             BuildContext context,
@@ -82,6 +88,21 @@ namespace MPCCT.PhantomSystem.Editor
             }
             controller.layers = layers;
 
+            var states = layers
+                .Where(layer => layer.stateMachine != null)
+                .SelectMany(layer => EnumerateStates(layer.stateMachine))
+                .Distinct()
+                .ToArray();
+            var stateMirrors = states.ToDictionary(state => state, state => state.mirror);
+            foreach (var state in states.Where(state => state.mirrorParameterActive))
+            {
+                report.Warning(
+                    $"Slot '{slot.SlotId}' {playable} state '{state.name}' uses parameter-driven Humanoid Mirror "
+                    + $"('{state.mirrorParameter}'). PhantomSystem baked the state's default Mirror value "
+                    + $"({state.mirror}) and will ignore runtime changes to that Mirror parameter.",
+                    state);
+            }
+
             var processedStateMachines = new HashSet<AnimatorStateMachine>();
             layers = controller.layers;
             for (var layerIndex = 0; layerIndex < layers.Length; layerIndex++)
@@ -96,7 +117,7 @@ namespace MPCCT.PhantomSystem.Editor
                         var effective = controller.GetStateEffectiveMotion(state, layerIndex);
                         controller.SetStateEffectiveMotion(
                             state,
-                            ConvertMotion(effective),
+                            ConvertMotion(effective, stateMirrors[state]),
                             layerIndex);
                     }
                     continue;
@@ -107,17 +128,24 @@ namespace MPCCT.PhantomSystem.Editor
                 {
                     foreach (var state in EnumerateStates(layer.stateMachine))
                     {
-                        state.motion = ConvertMotion(state.motion);
+                        state.motion = ConvertMotion(state.motion, stateMirrors[state]);
                     }
                 }
             }
+
+            foreach (var state in states)
+            {
+                state.mirror = false;
+                state.mirrorParameterActive = false;
+                state.mirrorParameter = string.Empty;
+            }
         }
 
-        private Motion ConvertMotion(Motion motion)
+        private Motion ConvertMotion(Motion motion, bool inheritedMirror)
         {
             if (motion is AnimationClip clip)
             {
-                return ConvertClip(clip);
+                return ConvertClip(clip, inheritedMirror);
             }
 
             if (!(motion is BlendTree sourceTree))
@@ -125,6 +153,7 @@ namespace MPCCT.PhantomSystem.Editor
                 return motion;
             }
 
+            var treeCache = treeCaches[inheritedMirror ? 1 : 0];
             if (treeCache.TryGetValue(sourceTree, out var existingTree))
             {
                 return existingTree;
@@ -135,7 +164,9 @@ namespace MPCCT.PhantomSystem.Editor
             var changed = false;
             for (var index = 0; index < sourceChildren.Length; index++)
             {
-                convertedMotions[index] = ConvertMotion(sourceChildren[index].motion);
+                convertedMotions[index] = ConvertMotion(
+                    sourceChildren[index].motion,
+                    CombineMirror(inheritedMirror, sourceChildren[index].mirror));
                 changed |= convertedMotions[index] != sourceChildren[index].motion;
             }
 
@@ -148,7 +179,8 @@ namespace MPCCT.PhantomSystem.Editor
             var tree = CreateConvertedBlendTree(
                 sourceTree,
                 convertedMotions,
-                $"PhantomSystem_{slot.SlotId}_{playable}_{sourceTree.name}");
+                $"PhantomSystem_{slot.SlotId}_{playable}_{sourceTree.name}"
+                + (inheritedMirror ? "_Mirrored" : string.Empty));
             treeCache[sourceTree] = tree;
             context.AssetSaver.SaveAsset(tree);
             return tree;
@@ -189,19 +221,26 @@ namespace MPCCT.PhantomSystem.Editor
             for (var index = 0; index < sourceChildren.Length; index++)
             {
                 sourceChildren[index].motion = convertedMotions[index];
+                sourceChildren[index].mirror = false;
             }
             tree.children = sourceChildren;
             tree.useAutomaticThresholds = source.useAutomaticThresholds;
             return tree;
         }
 
-        private AnimationClip ConvertClip(AnimationClip source)
+        internal static bool CombineMirror(bool inheritedMirror, bool localMirror)
+        {
+            return inheritedMirror ^ localMirror;
+        }
+
+        private AnimationClip ConvertClip(AnimationClip source, bool inheritedMirror)
         {
             if (source == null)
             {
                 return null;
             }
 
+            var clipCache = clipCaches[inheritedMirror ? 1 : 0];
             if (clipCache.TryGetValue(source, out var existing))
             {
                 return existing;
@@ -243,6 +282,7 @@ namespace MPCCT.PhantomSystem.Editor
                         PositionErrorTolerance = projectSettings.PositionErrorTolerance,
                         RotationErrorToleranceDegrees = projectSettings.RotationErrorToleranceDegrees,
                         LocalizeRootMotionToHips = true,
+                        InheritedMirror = inheritedMirror,
                         OutputBonePaths = slot.AnimationDriverBones.ToDictionary(
                             pair => pair.Key,
                             pair => TransformPathUtility.GetRelativePath(
@@ -258,7 +298,8 @@ namespace MPCCT.PhantomSystem.Editor
             }
 
             RedirectBoneBindings(converted);
-            converted.name = $"PhantomSystem_{slot.SlotId}_{playable}_{clip.name}";
+            converted.name = $"PhantomSystem_{slot.SlotId}_{playable}_{clip.name}"
+                             + (inheritedMirror ? "_Mirrored" : string.Empty);
             context.AssetSaver.SaveAsset(converted);
             clipCache[source] = converted;
             clipCache[clip] = converted;
