@@ -51,6 +51,16 @@ namespace MPCCT.PhantomSystem.Editor
                 maskSizeParameter,
                 DefaultMaskSizeParameter);
             AddFloatParameter(context.Controller, directWeightParameter, 1f);
+            if (slot.enableScaleControl)
+            {
+                // Phantom View controls are merged through a standalone controller.
+                // Declare the Core scale parameter here too so pre-merge controller
+                // inspection does not report an unresolved BlendTree parameter.
+                AddFloatParameter(
+                    context.Controller,
+                    PhantomParameterNames.Scale(slot),
+                    ScaleControlAnimatorModule.DefaultScaleParameter);
+            }
 
             var directTree = CreateDirectTree(context, "PhantomViewControlsDirect");
             AddDirectChild(

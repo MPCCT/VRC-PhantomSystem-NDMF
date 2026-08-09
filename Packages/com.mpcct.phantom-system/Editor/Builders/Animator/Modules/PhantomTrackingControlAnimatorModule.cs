@@ -19,6 +19,17 @@ namespace MPCCT.PhantomSystem.Editor
                 return;
             }
 
+            // This controller is merged separately from the Core controller. Keep
+            // every referenced parameter declared locally as well, because other
+            // NDMF plugins may inspect it before Modular Avatar performs the merge.
+            AddBoolParameter(
+                context.Controller,
+                PhantomParameterNames.Activate(slot),
+                false);
+            AddBoolParameter(
+                context.Controller,
+                PhantomParameterNames.Freeze(slot),
+                false);
             foreach (var group in PhantomTrackingControlGroups.All)
             {
                 AddFloatParameter(
