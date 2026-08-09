@@ -2,11 +2,55 @@
 
 # PhantomSystem
 
-PhantomSystem 是一个基于 NDMF、用于为 VRChat Avatar 添加分身（Phantom Avatar）的
-系统。它会在构建时预处理分身源 Avatar，将其加入本体 Avatar，并自动生成控制菜单、
-参数和 Humanoid 骨骼约束。
+PhantomSystem 是一个基于 NDMF 的 VRChat Avatar 分身系统。它可以把一个或多个 Humanoid
+Avatar 作为分身加入本体，并在构建时自动准备动画、参数、菜单和控制结构。
 
-目前插件的 Inspector 和生成的 Expression Menu 暂未进行本地化，界面文本均为英文。
+通过生成的 Expression Menu，可以让分身跟随本体、冻结在场景中、抓取和摆放身体、调整大小，
+也可以从分身的位置观察周围。分身源原有的菜单与常用动画控制也可以一并保留。
+
+> Inspector 和生成的 Expression Menu 目前使用英文界面。
+
+## 主要功能
+
+### 多分身与独立控制
+
+- 一个 Avatar 可以配置多个独立 Slot，并为每个 Slot 指定不同的分身源。
+- 每个分身可以单独启用、冻结和切换位置锁定方式。
+- 可以指定分身的初始生成位置，并选择是否把分身源菜单加入最终菜单。
+
+### 保留分身源的动画与菜单
+
+- 自动 Prebake 分身源，并整合其 FX、Gesture、Action、Expression Parameters 和 Expression
+  Menu。
+- 支持常见 Humanoid 动画、Avatar Mask、BlendTree、Animator Override Controller、Root
+  Motion 和镜像动画。
+- 可尝试把 Animator Tracking Control 转换为适用于分身的身体部位同步控制。
+- 不需要分身源控制时，可以只保留 PhantomSystem 自身的控制菜单。
+
+### Phantom Grabbing
+
+- 分身冻结时，可以通过手势抓取并移动其 Hips。
+- 自动生成身体 PhysBone 代理，使分身身体可以被碰触和摆姿势。
+- 可显示简化骨骼，方便确认和操作身体位置；骨骼显示不会出现在 VRChat 镜子和相机中。
+
+### 缩放与镜像
+
+- 每个 Slot 可以独立调整整体大小，并一键恢复默认比例。
+- 可以沿 Slot 本地 X 轴镜像整个分身。
+
+### Phantom View
+
+- 从分身头部生成仅本地可见的立体视角。
+- 可以调整立体强度和中心视野遮罩大小。
+- 同一时间只显示一个 Slot 的 Phantom View，避免视野相互覆盖。
+
+### 参数管理与构建检查
+
+- 自动为分身参数添加命名空间，并同步处理 Animator、菜单和 PhysBone 参数引用。
+- 兼容的同名参数可以共享；不兼容的冲突参数会自动改名。
+- Inspector 会预览每个 Slot 的同步参数占用、共享节省和最终参数名称。
+- **Review Any Alerts** 会在构建前检查 Humanoid 骨骼、Slot 名称、参数冲突、Missing
+  Script 和无法确认兼容性的组件。
 
 ## 环境要求
 
@@ -23,80 +67,65 @@ PhantomSystem 是一个基于 NDMF、用于为 VRChat Avatar 添加分身（Phan
 https://mpcct.github.io/VRC-PhantomSystem-NDMF/index.json
 ```
 
-## 简单配置
+## 快速配置
 
-1. 将分身源模型作为独立的 Avatar 根节点放在场景中，不要放进本体层级。
-2. 右键本体 Avatar 根节点，选择
-   `PhantomSystem > Setup PhantomSystem`。
-3. 选中生成的 `PhantomSystem` 子物体，在 Slot 的 **Phantom Avatar** 中指定
-   分身源模型的 `VRCAvatarDescriptor`。
-4. 根据需要调整 Slot 选项，并处理 **Review Any Alerts** 中的错误。
-5. 正常使用 VRChat SDK 进行 Build & Test 或上传。分身源会在构建前自动 Prebake。
+1. 将分身源作为独立的 Avatar 根节点放在场景中，不要放进本体 Avatar 的层级。
+2. 右键本体 Avatar 根节点，选择 `PhantomSystem > Setup PhantomSystem`。
+3. 选中生成的 `PhantomSystem` 子物体，在 Slot 的 **Phantom Avatar** 中指定分身源的
+   `VRCAvatarDescriptor`。
+4. 根据需要启用 Phantom Grabbing、Scale Control、Phantom View 或分身源菜单。
+5. 检查 **Review Any Alerts**，修正 Error，并确认需要关注的 Warning。
+6. 正常使用 VRChat SDK 执行 Build & Test 或上传。分身源会在构建前自动 Prebake。
 
-如需使用 NDMF 的手动 Bake，请使用组件中的
-**Bake Avatar with PhantomSystem**，不要直接使用 Modular Avatar 的普通 Manual Bake。
+如需生成供检查使用的手动 Bake，请使用组件中的 **Bake Avatar with PhantomSystem**。
+普通 Modular Avatar Manual Bake 不会执行 PhantomSystem 所需的分身源 Prebake。
 
-## Inspector 选项
-
-### System Options
+## 常用选项
 
 - **Install Phantom Menu**：生成并安装 PhantomSystem 的 Expression Menu。
-- **Select Core Menu Location**：选择生成菜单在本体菜单中的安装位置。
-- **Bake Avatar with PhantomSystem**：先 Prebake 所有分身源，再执行手动 Avatar Bake。
+- **Slot Name**：设置 Slot 身份和默认参数前缀；多个 Slot 的最终名称必须唯一。
+- **Spawn Override**：指定分身的初始位置和旋转。
+- **Include Phantom Menu**：把分身源最终生成的 Expression Menu 加入 Slot 菜单。
+- **Enable Phantom Grabbing**：启用抓取、身体代理和骨骼显示。
+- **Enable Scale Control**：启用整体缩放、重置和镜像。
+- **Enable Phantom View**：启用仅本地可见的分身视角。
+- **Namespace Phantom Parameters**：为分身源参数使用独立命名空间。
+- **Same-name Parameter Sharing**：选择可以与本体共享的兼容参数。
+- **Remove Source Controls**：排除分身源的 FX、Action、Gesture、参数和菜单，只保留
+  PhantomSystem 控制。
+- **Use Rotation Constraint**：本体与分身骨架比例或朝向略有差异时，可尝试改善骨骼跟随。
+- **Try Convert Animator Tracking Control**：尝试保留分身源的身体部位 Tracking 控制。
 
-### Slot
+新建 Slot 默认启用 Phantom Grabbing、Scale Control、Phantom View 和 Tracking Control 转换。
 
-- **Slot Name**：Slot 名称，同时用于默认参数命名空间。多个 Slot 必须使用不同名称。
-- **Phantom Avatar**：需要生成分身的 Humanoid Avatar。
-- **Spawn Override**：指定分身的初始位置和旋转；留空时使用本体根节点。
-- **Include Phantom Menu**：将分身源最终生成的 Expression Menu 加入 Slot 菜单。
-- **Enable Phantom Grabbing**：生成 Hips 抓取、PhysBone 身体代理和骨骼显示功能。
-- **Enable Scale Control**：添加缩放、恢复缩放和 X 轴镜像控制。
-- **Enable Phantom View**：添加仅本地可见的分身立体视角。
+## Global Settings
 
-新建 Slot 默认启用 Phantom Grabbing 和 Scale Control。
+通过组件中的 **Open Global Settings**，或菜单
+`Tools > PhantomSystem > Global Settings` 打开项目级设置：
 
-### Parameter Settings
+- **Phantom View Texture Size**：设置所有分身视角使用的渲染分辨率。
+- **Humanoid Animation Conversion**：设置动画转换的最高采样率和位置、旋转误差容限。
 
-- **Parameter Prefix**：覆盖默认的 `PhantomSystem/<Slot Name>` 参数前缀。
-- **Namespace Phantom Parameters**：为分身源参数添加独立命名空间，同时处理
-  PhysBone 的 `_IsGrabbed`、`_IsPosed` 等派生参数。
-- **Same-name Parameter Sharing**：让选中的兼容参数继续与本体同名参数共享。
+默认值适合一般项目。只有在动画细节不足、Clip 体积过大或 Phantom View 性能不足时，才建议调整。
 
-### Advanced
-
-- **Remove Original FX**：不加入分身源的 FX、参数和菜单，只保留 PhantomSystem 控制。
-- **Use Rotation Constraint**：非 Hips 骨骼使用 Rotation Constraint 代替 Parent
-  Constraint。适合本体与分身的骨架结构或比例存在少量差异的 Avatar。
-- **Rotation Solve In World Space**：让上述 Rotation Constraint 在世界空间求解，
-  用于处理本体与分身骨骼定向不同的情况；启用后分身不能再保持独立于本体的朝向。
-- **Override PhysBone Immobile Type**：将 Slot 内 PhysBone 的 Immobile Type 改为
-  `All Motion`。这可能改变原模型的 PhysBone 表现。
-- **Try Convert Animator Tracking Control**：尝试把源 FX 中的 Animator Tracking
-  Control 转换为分身骨骼组同步控制。眼睑、口型和面部 BlendShape 不会被转换。
-
-## Expression Menu
+## 生成的菜单控制
 
 - **Activate**：显示或关闭分身。
-- **Freeze**：停止分身骨骼正常跟随，使其保持在当前状态。
-- **Position Lock**：切换分身的位置锁定方式。
-- **Scale**：在 `0.2x` 到 `1.8x` 之间调整整个 Slot 的大小。
-- **Reset Scale**：恢复到 `1.0x`。
-- **Mirror**：沿 Slot 本地 X 轴镜像分身。
-- **Bone Display**：Freeze 时显示生成的八面体骨骼网格；不会显示在镜子或 VRChat 相机中。
-- **Settings > Phantom View**：启用 **Enable Phantom View** 后可用的仅本地视角控制。
-  - **Enabled**：显示当前 Slot 的分身视角。开启任意一个 Slot 的 Phantom View 时，
-    其他 Slot 的 Phantom View 会自动关闭。
-  - **Stereo Strength**：调整左右相机间距。启用 Scale Control 时，间距会随分身比例变化。
-  - **Mask Size**：调整中心视角遮罩的角度大小；边缘会平滑淡出到周围视野。
+- **Freeze**：停止正常骨骼跟随并保持当前状态。
+- **Position Lock**：切换位置锁定方式。
+- **Scale / Reset Scale / Mirror**：调整大小、恢复比例或镜像整个 Slot。
+- **Bone Display**：在 Freeze 时显示可操作的简化骨骼。
+- **Settings > Phantom View**：启用分身视角并调整 Stereo Strength 与 Mask Size。
 
-## 注意事项
+## 使用限制
 
-- 本体和分身源都必须是有效的 Humanoid Avatar。
+- 本体和所有分身源都必须是有效的 Humanoid Avatar，并能解析必要的 Humanoid 骨骼。
 - 一个本体只能包含一个 PhantomSystem 组件。
-- 分身源不能位于本体层级内，也不能包含另一个 PhantomSystem。
-- PhantomSystem 会移除不适合在分身 FX 中运行的 Avatar 全局 State Behavior；
-  相关信息会显示在 NDMF Console 中。
+- 分身源必须位于本体层级外，并且不能包含另一个 PhantomSystem。
+- 部分只适用于玩家本体的 Animator State Behaviour 无法直接用于分身；PhantomSystem 会转换
+  支持的行为，并对被移除或部分转换的内容给出构建警告。
+- 参数驱动的 Animator State Mirror 暂不支持运行时变化；构建时会使用该 State 的默认 Mirror
+  值并给出警告。
 - 可通过 `Tools > PhantomSystem > Delete Prebake Assets` 清理生成的 Prebake 资产。
 
 ## License

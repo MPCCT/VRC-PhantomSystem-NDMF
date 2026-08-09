@@ -2,13 +2,69 @@
 
 # PhantomSystem
 
-PhantomSystem is an NDMF-based system for adding a controllable Phantom Avatar
-to a VRChat avatar. During the build, it prebakes each phantom source and
-generates the menus, parameters, and Humanoid bone constraints required to
-control it.
+PhantomSystem is an NDMF-based phantom avatar system for VRChat. It adds one or
+more Humanoid avatars to a base avatar and automatically prepares their
+animation, parameters, menus, and controls during the build.
 
-The Inspector and generated Expression Menus are not localized yet and currently
-use English interface text only.
+The generated Expression Menu can make a phantom follow the base avatar, freeze
+it in the scene, pose its body, change its scale, or show a view from its
+position. The source avatar's menus and common animation controls can also be
+retained.
+
+> The Inspector and generated Expression Menus currently use English interface
+> text only.
+
+## Main features
+
+### Multiple independent phantoms
+
+- Configure multiple Slots on one avatar and assign a different phantom source
+  to each Slot.
+- Activate, freeze, and change position locking independently for each phantom.
+- Choose an initial spawn transform and whether to include the source avatar's
+  menu.
+
+### Source animation and menu integration
+
+- Prebakes and integrates source FX, Gesture, Action, Expression Parameters,
+  and Expression Menu content.
+- Supports common Humanoid animation, Avatar Masks, BlendTrees, Animator
+  Override Controllers, Root Motion, and mirrored animation.
+- Can translate Animator Tracking Control into body-part synchronization suited
+  to a phantom.
+- Source controls can be omitted when only the PhantomSystem controls are
+  needed.
+
+### Phantom Grabbing
+
+- Move a frozen phantom's Hips with a hand gesture.
+- Generates PhysBone body proxies so the phantom can react to touches and be
+  posed.
+- Shows a simplified bone display for positioning. The display is hidden from
+  VRChat mirrors and cameras.
+
+### Scale and mirror
+
+- Adjust each Slot's overall scale independently and reset it to the default.
+- Mirror the whole phantom along the Slot's local X axis.
+
+### Phantom View
+
+- Displays a local-only stereo view captured from the phantom's head.
+- Adjusts stereo strength and the size of the central view mask.
+- Only one Slot's Phantom View is shown at a time to prevent overlapping views.
+
+### Parameter management and validation
+
+- Namespaces source parameters and updates their Animator, menu, and PhysBone
+  references consistently.
+- Shares compatible same-name parameters and automatically renames incompatible
+  collisions.
+- Previews each Slot's synchronization cost, sharing savings, and final parameter
+  names in the Inspector.
+- **Review Any Alerts** checks Humanoid bones, Slot names, parameter conflicts,
+  missing scripts, and components whose compatibility cannot be verified before
+  the build.
 
 ## Requirements
 
@@ -26,103 +82,88 @@ project:
 https://mpcct.github.io/VRC-PhantomSystem-NDMF/index.json
 ```
 
-## Basic setup
+## Quick setup
 
-1. Place each phantom source in the scene as a separate avatar root, outside the
+1. Place each phantom source in the scene as a separate avatar root outside the
    base avatar hierarchy.
 2. Right-click the base avatar root and select
    `PhantomSystem > Setup PhantomSystem`.
-3. Select the generated `PhantomSystem` child. In the Slot, assign the source
+3. Select the generated `PhantomSystem` child. In its Slot, assign the source
    `VRCAvatarDescriptor` to **Phantom Avatar**.
-4. Configure the Slot and resolve errors under **Review Any Alerts**.
-5. Build or upload through the VRChat SDK normally. Phantom sources are prebaked
-   automatically before the main build.
+4. Enable Phantom Grabbing, Scale Control, Phantom View, or the source menu as
+   needed.
+5. Review **Review Any Alerts**, resolve Errors, and check relevant Warnings.
+6. Build, test, or upload through the VRChat SDK normally. Phantom sources are
+   prebaked automatically before the main build.
 
-For an NDMF manual bake, use **Bake Avatar with PhantomSystem** on the component
-instead of Modular Avatar's regular Manual Bake command.
+For an inspectable manual bake, use **Bake Avatar with PhantomSystem** on the
+component. A regular Modular Avatar Manual Bake does not run the source-avatar
+prebake required by PhantomSystem.
 
-## Inspector options
-
-### System Options
+## Common options
 
 - **Install Phantom Menu**: Generates and installs the PhantomSystem Expression
   Menu.
-- **Select Core Menu Location**: Selects its installation location in the base
-  avatar menu.
-- **Bake Avatar with PhantomSystem**: Prebakes all phantom sources and then runs
-  a manual avatar bake.
-
-### Slot
-
-- **Slot Name**: Identifies the Slot and its default parameter namespace. Slot
+- **Slot Name**: Sets the Slot identity and default parameter prefix. Final Slot
   names must be unique.
-- **Phantom Avatar**: The Humanoid avatar used as the phantom source.
-- **Spawn Override**: Overrides the initial position and rotation. When empty,
-  the base avatar root is used.
+- **Spawn Override**: Sets the phantom's initial position and rotation.
 - **Include Phantom Menu**: Adds the source avatar's final Expression Menu to the
   Slot menu.
-- **Enable Phantom Grabbing**: Generates Hips grabbing, PhysBone body proxies,
-  and the bone display.
-- **Enable Scale Control**: Adds scale, reset, and X-axis mirror controls.
-- **Enable Phantom View**: Adds a local-only stereo view captured from the
-  phantom.
+- **Enable Phantom Grabbing**: Enables grabbing, body proxies, and the bone
+  display.
+- **Enable Scale Control**: Enables overall scale, reset, and mirror controls.
+- **Enable Phantom View**: Enables the local-only view from the phantom.
+- **Namespace Phantom Parameters**: Places source parameters in an independent
+  namespace.
+- **Same-name Parameter Sharing**: Selects compatible parameters that may remain
+  shared with the base avatar.
+- **Remove Source Controls**: Excludes source FX, Action, Gesture, parameters,
+  and menu while retaining PhantomSystem controls.
+- **Use Rotation Constraint**: May improve following when the base and phantom
+  skeleton proportions or orientations differ slightly.
+- **Try Convert Animator Tracking Control**: Attempts to retain body-part
+  Tracking controls from the source avatar.
 
-New Slots enable Phantom Grabbing and Scale Control by default.
+New Slots enable Phantom Grabbing, Scale Control, Phantom View, and Tracking
+Control conversion by default.
 
-### Parameter Settings
+## Global Settings
 
-- **Parameter Prefix**: Overrides the default `PhantomSystem/<Slot Name>` prefix.
-- **Namespace Phantom Parameters**: Namespaces source parameters, including
-  PhysBone-derived parameters such as `_IsGrabbed` and `_IsPosed`.
-- **Same-name Parameter Sharing**: Allows selected compatible parameters to
-  remain shared with same-name parameters on the base avatar.
+Open project-wide settings with **Open Global Settings** on the component or
+`Tools > PhantomSystem > Global Settings`:
 
-### Advanced
+- **Phantom View Texture Size** sets the render resolution shared by phantom
+  views.
+- **Humanoid Animation Conversion** sets the maximum sampling rate and position
+  and rotation error tolerances.
 
-- **Remove Original FX**: Excludes the source FX, parameters, and menu while
-  retaining PhantomSystem controls.
-- **Use Rotation Constraint**: Uses Rotation Constraints instead of Parent
-  Constraints for non-Hips bones. This is useful when the base and phantom
-  avatars have slightly different skeleton structures or proportions.
-- **Rotation Solve In World Space**: Solves those Rotation Constraints in world
-  space to handle different bone orientations between the base and phantom.
-  When enabled, the phantom can no longer maintain an orientation independent
-  of the base avatar.
-- **Override PhysBone Immobile Type**: Changes PhysBones in the Slot to `All
-  Motion`. This may alter the source avatar's intended PhysBone behavior.
-- **Try Convert Animator Tracking Control**: Converts supported source Tracking
-  Control values into phantom bone-group synchronization. Eyelids, visemes, and
-  facial blend shapes are not converted.
+The defaults suit most projects. Adjust them only when animation detail, Clip
+size, or Phantom View performance needs tuning.
 
-## Expression Menu
+## Generated menu controls
 
-- **Activate**: Enables or disables the phantom.
-- **Freeze**: Stops normal bone following and holds the phantom.
-- **Position Lock**: Switches the generated position-lock behavior.
-- **Scale**: Scales the entire Slot from `0.2x` to `1.8x`.
-- **Reset Scale**: Restores `1.0x` scale.
-- **Mirror**: Mirrors the phantom on the Slot's local X axis.
-- **Bone Display**: Shows the generated octahedral bone mesh while frozen. It
-  is hidden from mirrors and VRChat cameras.
-- **Settings > Phantom View**: Local-only view controls, available when
-  **Enable Phantom View** is enabled.
-  - **Enabled**: Displays the selected phantom's view. Enabling one Slot's
-    Phantom View automatically disables every other Slot's Phantom View.
-  - **Stereo Strength**: Adjusts left/right camera separation. When Scale
-    Control is enabled, separation scales proportionally with the phantom.
-  - **Mask Size**: Adjusts the angular size of the central view mask; its edge
-    fades smoothly into the surrounding view.
+- **Activate** enables or disables the phantom.
+- **Freeze** stops normal bone following and holds the current state.
+- **Position Lock** changes the generated position-lock behavior.
+- **Scale / Reset Scale / Mirror** resizes, resets, or mirrors the whole Slot.
+- **Bone Display** shows the simplified poseable skeleton while frozen.
+- **Settings > Phantom View** enables the view and adjusts Stereo Strength and
+  Mask Size.
 
-## Notes
+## Limitations
 
-- The base avatar and every phantom source must be valid Humanoid avatars.
+- The base avatar and all phantom sources must be valid Humanoid avatars with
+  the required Humanoid bones.
 - A base avatar can contain only one PhantomSystem component.
 - A phantom source must remain outside the base avatar hierarchy and cannot
   contain another PhantomSystem.
-- Avatar-global State Behaviors that cannot safely run in a phantom FX are
-  removed and reported in the NDMF Console.
-- Use `Tools > PhantomSystem > Delete Prebake Assets` to remove generated prebake
-  assets.
+- Some Animator State Behaviours apply only to the player avatar and cannot run
+  directly on a phantom. PhantomSystem converts supported behaviours and reports
+  removed or partially converted content during the build.
+- Parameter-driven Animator State Mirror changes are not supported at runtime.
+  The State's default Mirror value is baked and a build warning is reported.
+- Use `Tools > PhantomSystem > Delete Prebake Assets` to remove generated
+  prebake assets.
 
 ## License
 
