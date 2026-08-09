@@ -291,6 +291,7 @@ namespace MPCCT.PhantomSystem.Editor
 
             foreach (var slot in state.System.Slots)
             {
+                PhantomAnimationDriverRigBuilder.Build(slot);
                 ConstraintRigBuilder.Build(ctx, slot, state.Report);
                 PhantomViewBuilder.Build(ctx, state.System, slot, state.Report);
             }

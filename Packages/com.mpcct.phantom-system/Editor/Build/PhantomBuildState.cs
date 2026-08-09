@@ -46,6 +46,7 @@ namespace MPCCT.PhantomSystem.Editor
         public VRCAvatarDescriptor BakedAvatar;
         public Animator CloneAnimator;
         public Transform CloneArmature;
+        public Transform AnimationDriverRoot;
         public Transform BaseAvatarPosition;
         public Transform ArmatureConstraintTarget;
         public Transform PhantomGrabbingHipsConstraintHost;
@@ -57,6 +58,14 @@ namespace MPCCT.PhantomSystem.Editor
         public Transform PhantomViewDisplayHost;
         public readonly Dictionary<HumanBodyBones, Transform> CloneBones = new Dictionary<HumanBodyBones, Transform>();
         public readonly Dictionary<HumanBodyBones, string> CloneBoneAvatarPaths = new Dictionary<HumanBodyBones, string>();
+        public readonly Dictionary<HumanBodyBones, Transform> AnimationDriverBones =
+            new Dictionary<HumanBodyBones, Transform>();
+        public readonly Dictionary<string, string> CloneToAnimationDriverPaths =
+            new Dictionary<string, string>(System.StringComparer.Ordinal);
+        public readonly Dictionary<string, string> AnimationDriverToClonePaths =
+            new Dictionary<string, string>(System.StringComparer.Ordinal);
+        public readonly Dictionary<HumanBodyBones, string> AnimationDriverPoseParentClonePaths =
+            new Dictionary<HumanBodyBones, string>();
         public readonly Dictionary<HumanBodyBones, global::System.Type> CloneBoneConstraintTypes =
             new Dictionary<HumanBodyBones, global::System.Type>();
         public readonly Dictionary<HumanBodyBones, Transform> PhantomGrabbingBodyProxyBones =

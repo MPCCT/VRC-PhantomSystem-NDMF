@@ -258,8 +258,25 @@ namespace MPCCT.PhantomSystem.Editor
                         continue;
                     }
 
-                    var path = GetRelativePath(target, sampleRoot.transform);
+                    var path = options.OutputBonePaths != null
+                               && options.OutputBonePaths.TryGetValue(bone, out var outputPath)
+                        ? outputPath
+                        : GetRelativePath(target, sampleRoot.transform);
                     if (path == null)
+                    {
+                        missingBones.Add(bone);
+                        continue;
+                    }
+
+                    var poseParent = target.parent;
+                    if (options.OutputBoneParentPaths != null
+                        && options.OutputBoneParentPaths.TryGetValue(bone, out var parentPath))
+                    {
+                        poseParent = string.IsNullOrEmpty(parentPath)
+                            ? sampleRoot.transform
+                            : sampleRoot.transform.Find(parentPath);
+                    }
+                    if (poseParent == null)
                     {
                         missingBones.Add(bone);
                         continue;
@@ -268,6 +285,7 @@ namespace MPCCT.PhantomSystem.Editor
                     recorders.Add(new BoneRecorder(
                         bone,
                         target,
+                        poseParent,
                         path,
                         forcePositionBones.Contains(bone),
                         localizeRootMotion && bone == HumanBodyBones.Hips
@@ -1157,6 +1175,7 @@ namespace MPCCT.PhantomSystem.Editor
         private sealed class BoneRecorder
         {
             private readonly Transform _target;
+            private readonly Transform _poseParent;
             private readonly string _path;
             private readonly Vector3 _bindPosition;
             private readonly bool _forcePosition;
@@ -1169,23 +1188,26 @@ namespace MPCCT.PhantomSystem.Editor
             public BoneRecorder(
                 HumanBodyBones bone,
                 Transform target,
+                Transform poseParent,
                 string path,
                 bool forcePosition,
                 Transform rootMotionSource)
             {
                 Bone = bone;
                 _target = target;
+                _poseParent = poseParent;
                 _path = path;
-                _bindPosition = target.localPosition;
+                _bindPosition = ReadRelativePose().Position;
                 _forcePosition = forcePosition;
                 _rootMotionSource = rootMotionSource;
             }
 
             public BonePose ReadPose()
             {
-                var position = _target.localPosition;
-                var rotation = _target.localRotation;
-                if (_rootMotionSource != null && _target.parent != null)
+                var relativePose = ReadRelativePose();
+                var position = relativePose.Position;
+                var rotation = relativePose.Rotation;
+                if (_rootMotionSource != null)
                 {
                     var rootMatrix = _rootMotionSource.localToWorldMatrix;
                     if (!_hasRootReference)
@@ -1196,7 +1218,7 @@ namespace MPCCT.PhantomSystem.Editor
 
                     var rootInverse = rootMatrix.inverse;
                     var rootDelta = _rootReference.inverse * rootMatrix;
-                    var parentRelativeToRoot = rootInverse * _target.parent.localToWorldMatrix;
+                    var parentRelativeToRoot = rootInverse * _poseParent.localToWorldMatrix;
                     var targetRelativeToRoot = rootInverse * _target.localToWorldMatrix;
                     var localized = parentRelativeToRoot.inverse
                                     * rootDelta
@@ -1206,6 +1228,19 @@ namespace MPCCT.PhantomSystem.Editor
                 }
 
                 return new BonePose(position, NormalizeQuaternion(rotation));
+            }
+
+            private BonePose ReadRelativePose()
+            {
+                if (_poseParent == _target.parent)
+                {
+                    return new BonePose(_target.localPosition, _target.localRotation);
+                }
+
+                var relative = _poseParent.worldToLocalMatrix * _target.localToWorldMatrix;
+                return new BonePose(
+                    relative.GetColumn(3),
+                    RotationFromMatrix(relative));
             }
 
             private static Quaternion RotationFromMatrix(Matrix4x4 matrix)
@@ -1400,5 +1435,7 @@ namespace MPCCT.PhantomSystem.Editor
         public float PositionErrorTolerance { get; set; } = 0.0005f;
         public float RotationErrorToleranceDegrees { get; set; } = 0.25f;
         public bool LocalizeRootMotionToHips { get; set; } = true;
+        public IReadOnlyDictionary<HumanBodyBones, string> OutputBonePaths { get; set; }
+        public IReadOnlyDictionary<HumanBodyBones, string> OutputBoneParentPaths { get; set; }
     }
 }

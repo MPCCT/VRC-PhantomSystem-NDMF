@@ -87,9 +87,16 @@ namespace MPCCT.PhantomSystem.Editor
                     continue;
                 }
 
+                slot.AnimationDriverBones.TryGetValue(bone, out var driverBone);
+
                 if (!slot.Slot.useRotationConstraint || bone == HumanBodyBones.Hips)
                 {
-                    var constraint = AddParentConstraint(cloneBone.gameObject, baseBone, true, true);
+                    var constraint = AddParentConstraint(
+                        cloneBone.gameObject,
+                        baseBone,
+                        true,
+                        true,
+                        driverBone);
                     slot.CloneBoneConstraintTypes[bone] = typeof(VRCParentConstraint);
                     if (bone == HumanBodyBones.Hips
                         && slot.Slot.enablePhantomGrabbing)
@@ -107,7 +114,8 @@ namespace MPCCT.PhantomSystem.Editor
                     AddRotationConstraint(
                         cloneBone.gameObject,
                         baseBone,
-                        !slot.Slot.rotationSolveInWorldSpace);
+                        !slot.Slot.rotationSolveInWorldSpace,
+                        driverBone);
                     slot.CloneBoneConstraintTypes[bone] = typeof(VRCRotationConstraint);
                 }
             }
@@ -132,30 +140,57 @@ namespace MPCCT.PhantomSystem.Editor
             return child.transform;
         }
 
-        private static VRCParentConstraint AddParentConstraint(GameObject target, Transform source, bool active, bool solveInLocalSpace)
+        private static VRCParentConstraint AddParentConstraint(
+            GameObject target,
+            Transform source,
+            bool active,
+            bool solveInLocalSpace,
+            Transform animationDriver = null)
         {
             var constraint = target.AddComponent<VRCParentConstraint>();
             constraint.Locked = true;
             constraint.IsActive = active;
             constraint.SolveInLocalSpace = solveInLocalSpace;
-            constraint.Sources = new VRCConstraintSourceKeyableList
+            var sources = new VRCConstraintSourceKeyableList
             {
                 new VRCConstraintSource { SourceTransform = source, Weight = 1f }
             };
+            if (animationDriver != null)
+            {
+                sources.Add(new VRCConstraintSource
+                {
+                    SourceTransform = animationDriver,
+                    Weight = 0f
+                });
+            }
+            constraint.Sources = sources;
             constraint.enabled = true;
             return constraint;
         }
 
-        private static VRCRotationConstraint AddRotationConstraint(GameObject target, Transform source, bool solveInLocalSpace)
+        private static VRCRotationConstraint AddRotationConstraint(
+            GameObject target,
+            Transform source,
+            bool solveInLocalSpace,
+            Transform animationDriver)
         {
             var constraint = target.AddComponent<VRCRotationConstraint>();
             constraint.Locked = false;
             constraint.IsActive = true;
             constraint.SolveInLocalSpace = solveInLocalSpace;
-            constraint.Sources = new VRCConstraintSourceKeyableList
+            var sources = new VRCConstraintSourceKeyableList
             {
                 new VRCConstraintSource { SourceTransform = source, Weight = 1f }
             };
+            if (animationDriver != null)
+            {
+                sources.Add(new VRCConstraintSource
+                {
+                    SourceTransform = animationDriver,
+                    Weight = 0f
+                });
+            }
+            constraint.Sources = sources;
             constraint.TryBakeCurrentOffsets(VRCConstraintBase.BakeOptions.BakeOffsets);
             constraint.Locked = true;
             constraint.enabled = true;

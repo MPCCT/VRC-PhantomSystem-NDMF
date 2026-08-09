@@ -7,11 +7,9 @@ using static MPCCT.PhantomSystem.Editor.PhantomAnimatorGraphUtility;
 
 namespace MPCCT.PhantomSystem.Editor
 {
-    /// <summary>Maps converted tracking parameters to generated bone constraint component switches.</summary>
+    /// <summary>Maps converted tracking parameters to base/animation constraint source weights.</summary>
     internal static class PhantomTrackingControlAnimatorModule
     {
-        private const string ConstraintEnabled = "m_Enabled";
-
         public static void Build(PhantomAnimatorBuildContext context)
         {
             var slot = context.Slot.Slot;
@@ -44,8 +42,14 @@ namespace MPCCT.PhantomSystem.Editor
                     disabledClip,
                     binding.Path,
                     binding.ConstraintType,
-                    ConstraintEnabled,
-                    true);
+                    SourceWeight(0),
+                    1f);
+                SetFloat(
+                    disabledClip,
+                    binding.Path,
+                    binding.ConstraintType,
+                    SourceWeight(1),
+                    0f);
             }
 
             var disabledTree = CreateDisabledDirectTree(
@@ -120,8 +124,30 @@ namespace MPCCT.PhantomSystem.Editor
                         continue;
                     }
 
-                    SetFloat(offClip, binding.Path, binding.ConstraintType, ConstraintEnabled, false);
-                    SetFloat(onClip, binding.Path, binding.ConstraintType, ConstraintEnabled, true);
+                    SetFloat(
+                        offClip,
+                        binding.Path,
+                        binding.ConstraintType,
+                        SourceWeight(0),
+                        0f);
+                    SetFloat(
+                        offClip,
+                        binding.Path,
+                        binding.ConstraintType,
+                        SourceWeight(1),
+                        1f);
+                    SetFloat(
+                        onClip,
+                        binding.Path,
+                        binding.ConstraintType,
+                        SourceWeight(0),
+                        1f);
+                    SetFloat(
+                        onClip,
+                        binding.Path,
+                        binding.ConstraintType,
+                        SourceWeight(1),
+                        0f);
                 }
 
                 var groupTree = context.CreateBlendTree(
@@ -168,7 +194,8 @@ namespace MPCCT.PhantomSystem.Editor
                 foreach (var bone in PhantomTrackingControlGroups.Bones(group))
                 {
                     if (!context.Slot.CloneBoneAvatarPaths.TryGetValue(bone, out var path)
-                        || !context.Slot.CloneBoneConstraintTypes.TryGetValue(bone, out var constraintType))
+                        || !context.Slot.CloneBoneConstraintTypes.TryGetValue(bone, out var constraintType)
+                        || !context.Slot.AnimationDriverBones.ContainsKey(bone))
                     {
                         continue;
                     }

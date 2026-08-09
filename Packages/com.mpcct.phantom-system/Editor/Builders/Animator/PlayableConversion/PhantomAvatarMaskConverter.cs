@@ -35,9 +35,14 @@ namespace MPCCT.PhantomSystem.Editor
                 var path = TransformPathUtility.GetRelativePath(
                     transform,
                     slot.CloneRoot.transform) ?? string.Empty;
+                var sourcePath = slot.AnimationDriverToClonePaths.TryGetValue(
+                    path,
+                    out var clonePath)
+                    ? clonePath
+                    : path;
                 var part = FindNearestBodyPart(transform, slot.CloneRoot.transform, boneParts);
-                var active = IsActive(descriptorMask, path, part)
-                             && IsActive(layerMask, path, part);
+                var active = IsActive(descriptorMask, sourcePath, part)
+                             && IsActive(layerMask, sourcePath, part);
                 result.SetTransformPath(index, path);
                 result.SetTransformActive(index, active);
             }
@@ -50,6 +55,14 @@ namespace MPCCT.PhantomSystem.Editor
         {
             var result = new Dictionary<Transform, AvatarMaskBodyPart>();
             foreach (var pair in slot.CloneBones)
+            {
+                if (pair.Value != null && TryGetBodyPart(pair.Key, out var part))
+                {
+                    result[pair.Value] = part;
+                }
+            }
+
+            foreach (var pair in slot.AnimationDriverBones)
             {
                 if (pair.Value != null && TryGetBodyPart(pair.Key, out var part))
                 {

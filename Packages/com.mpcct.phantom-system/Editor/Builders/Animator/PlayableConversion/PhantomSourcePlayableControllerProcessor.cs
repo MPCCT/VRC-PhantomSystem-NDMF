@@ -57,19 +57,15 @@ namespace MPCCT.PhantomSystem.Editor
             {
                 state.OwnerPlayable = pair.Key;
                 var controller = pair.Value.Controller;
-                if (pair.Key == VRCAvatarDescriptor.AnimLayerType.Gesture
-                    || pair.Key == VRCAvatarDescriptor.AnimLayerType.Action)
-                {
-                    PhantomPlayableMotionConverter.Convert(
-                        context,
-                        slot,
-                        projectSettings,
-                        report,
-                        pair.Key,
-                        pair.Value.Source.Controller,
-                        controller,
-                        pair.Value.Source.Mask);
-                }
+                PhantomPlayableMotionConverter.Convert(
+                    context,
+                    slot,
+                    projectSettings,
+                    report,
+                    pair.Key,
+                    pair.Value.Source.Controller,
+                    controller,
+                    pair.Value.Source.Mask);
 
                 ProcessControllerBehaviours(controller, state);
             }
@@ -90,23 +86,14 @@ namespace MPCCT.PhantomSystem.Editor
             state.ReportSummary();
             return new PhantomSourcePlayableProcessingResult(
                 BuildOutput(
-                    context,
                     prepared,
-                    VRCAvatarDescriptor.AnimLayerType.FX,
-                    slot.SlotId,
-                    preserveOverrides: true),
+                    VRCAvatarDescriptor.AnimLayerType.FX),
                 BuildOutput(
-                    context,
                     prepared,
-                    VRCAvatarDescriptor.AnimLayerType.Gesture,
-                    slot.SlotId,
-                    preserveOverrides: false),
+                    VRCAvatarDescriptor.AnimLayerType.Gesture),
                 BuildOutput(
-                    context,
                     prepared,
-                    VRCAvatarDescriptor.AnimLayerType.Action,
-                    slot.SlotId,
-                    preserveOverrides: false),
+                    VRCAvatarDescriptor.AnimLayerType.Action),
                 state.DriverCount > 0);
         }
 
@@ -187,25 +174,15 @@ namespace MPCCT.PhantomSystem.Editor
         }
 
         private static RuntimeAnimatorController BuildOutput(
-            BuildContext context,
             IReadOnlyDictionary<VRCAvatarDescriptor.AnimLayerType, PreparedController> prepared,
-            VRCAvatarDescriptor.AnimLayerType playable,
-            string slotId,
-            bool preserveOverrides)
+            VRCAvatarDescriptor.AnimLayerType playable)
         {
             if (!prepared.TryGetValue(playable, out var value))
             {
                 return null;
             }
 
-            return preserveOverrides
-                ? ApplyOverrides(
-                    context,
-                    value.Source.Controller,
-                    value.Controller,
-                    slotId,
-                    playable)
-                : value.Controller;
+            return value.Controller;
         }
 
         private static bool TryGetBaseController(
@@ -226,40 +203,6 @@ namespace MPCCT.PhantomSystem.Editor
 
             controller = current as AnimatorController;
             return controller != null;
-        }
-
-        private static RuntimeAnimatorController ApplyOverrides(
-            BuildContext context,
-            RuntimeAnimatorController source,
-            AnimatorController processedController,
-            string slotId,
-            VRCAvatarDescriptor.AnimLayerType playable)
-        {
-            var overrideChain = new List<AnimatorOverrideController>();
-            var current = source;
-            while (current is AnimatorOverrideController sourceOverride)
-            {
-                overrideChain.Add(sourceOverride);
-                current = sourceOverride.runtimeAnimatorController;
-            }
-
-            RuntimeAnimatorController output = processedController;
-            for (var index = overrideChain.Count - 1; index >= 0; index--)
-            {
-                var sourceOverride = overrideChain[index];
-                var rebuilt = new AnimatorOverrideController(output)
-                {
-                    name = $"PhantomSystem_{slotId}_Processed{playable}Overrides_{index}"
-                };
-                var overrides = new List<KeyValuePair<AnimationClip, AnimationClip>>(
-                    sourceOverride.overridesCount);
-                sourceOverride.GetOverrides(overrides);
-                rebuilt.ApplyOverrides(overrides);
-                context.AssetSaver.SaveAsset(rebuilt);
-                output = rebuilt;
-            }
-
-            return output;
         }
 
         private static void ProcessControllerBehaviours(

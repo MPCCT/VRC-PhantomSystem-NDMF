@@ -178,34 +178,55 @@ namespace MPCCT.PhantomSystem.Editor
             }
 
             var bindings = AnimationUtility.GetCurveBindings(clip);
+            var objectBindings = AnimationUtility.GetObjectReferenceCurveBindings(clip);
             var requiresBake = clip.humanMotion
                                || bindings.Any(binding => binding.type == typeof(Animator))
                                || bindings.Any(binding => binding.type == typeof(Transform)
                                                           && string.IsNullOrEmpty(binding.path));
-            if (!requiresBake)
+            var requiresDriverRedirect = bindings.Any(RequiresDriverRedirect)
+                                         || objectBindings.Any(RequiresDriverRedirect);
+            if (!requiresBake && !requiresDriverRedirect)
             {
                 clipCache[source] = clip;
                 clipCache[clip] = clip;
                 return clip;
             }
 
-            var result = PhantomHumanoidClipBaker.Bake(
-                clip,
-                slot.CloneRoot,
-                new PhantomHumanoidClipBakeOptions
-                {
-                    SamplingMode = PhantomHumanoidSamplingMode.Adaptive,
-                    SampleRate = projectSettings.MaximumAdaptiveSampleRate,
-                    PositionErrorTolerance = projectSettings.PositionErrorTolerance,
-                    RotationErrorToleranceDegrees = projectSettings.RotationErrorToleranceDegrees,
-                    LocalizeRootMotionToHips = true
-                });
-            result.Clip.name = $"PhantomSystem_{slot.SlotId}_{playable}_{clip.name}";
-            context.AssetSaver.SaveAsset(result.Clip);
-            clipCache[source] = result.Clip;
-            clipCache[clip] = result.Clip;
+            PhantomHumanoidClipBakeResult result = null;
+            AnimationClip converted;
+            if (requiresBake)
+            {
+                result = PhantomHumanoidClipBaker.Bake(
+                    clip,
+                    slot.CloneRoot,
+                    new PhantomHumanoidClipBakeOptions
+                    {
+                        SamplingMode = PhantomHumanoidSamplingMode.Adaptive,
+                        SampleRate = projectSettings.MaximumAdaptiveSampleRate,
+                        PositionErrorTolerance = projectSettings.PositionErrorTolerance,
+                        RotationErrorToleranceDegrees = projectSettings.RotationErrorToleranceDegrees,
+                        LocalizeRootMotionToHips = true,
+                        OutputBonePaths = slot.AnimationDriverBones.ToDictionary(
+                            pair => pair.Key,
+                            pair => TransformPathUtility.GetRelativePath(
+                                pair.Value,
+                                slot.CloneRoot.transform)),
+                        OutputBoneParentPaths = slot.AnimationDriverPoseParentClonePaths
+                    });
+                converted = result.Clip;
+            }
+            else
+            {
+                converted = Object.Instantiate(clip);
+            }
 
-            if (result.MissingBones.Count > 0)
+            RedirectBoneBindings(converted);
+            converted.name = $"PhantomSystem_{slot.SlotId}_{playable}_{clip.name}";
+            context.AssetSaver.SaveAsset(converted);
+            clipCache[source] = converted;
+            clipCache[clip] = converted;
+
+            if (result != null && result.MissingBones.Count > 0)
             {
                 report.Warning(
                     $"Slot '{slot.SlotId}' {playable} clip '{clip.name}' could not bake "
@@ -214,7 +235,7 @@ namespace MPCCT.PhantomSystem.Editor
                     clip);
             }
 
-            if (result.SkippedAnimatorBindings.Count > 0)
+            if (result != null && result.SkippedAnimatorBindings.Count > 0)
             {
                 report.Warning(
                     $"Slot '{slot.SlotId}' {playable} clip '{clip.name}' skipped "
@@ -222,14 +243,14 @@ namespace MPCCT.PhantomSystem.Editor
                     clip);
             }
 
-            if (result.RootMotionLocalized)
+            if (result != null && result.RootMotionLocalized)
             {
                 report.Warning(
                     $"Slot '{slot.SlotId}' {playable} clip '{clip.name}' localized Root Motion to its phantom Hips.",
                     clip);
             }
 
-            if (result.IgnoredRootScaleBindings.Count > 0)
+            if (result != null && result.IgnoredRootScaleBindings.Count > 0)
             {
                 report.Warning(
                     $"Slot '{slot.SlotId}' {playable} clip '{clip.name}' ignored "
@@ -237,7 +258,7 @@ namespace MPCCT.PhantomSystem.Editor
                     clip);
             }
 
-            if (result.HitSampleRateLimit)
+            if (result != null && result.HitSampleRateLimit)
             {
                 report.Warning(
                     $"Slot '{slot.SlotId}' {playable} clip '{clip.name}' reached the "
@@ -247,14 +268,51 @@ namespace MPCCT.PhantomSystem.Editor
             }
 
             var animatorBindingCount = bindings.Count(binding => binding.type == typeof(Animator));
-            if (animatorBindingCount > 0 && result.BakedBones.Count == 0)
+            if (result != null && animatorBindingCount > 0 && result.BakedBones.Count == 0)
             {
                 report.Error(
                     $"Slot '{slot.SlotId}' {playable} clip '{clip.name}' contains humanoid bindings but produced no phantom bone curves.",
                     clip);
             }
 
-            return result.Clip;
+            return converted;
+        }
+
+        private bool RequiresDriverRedirect(EditorCurveBinding binding)
+        {
+            return binding.type == typeof(Transform)
+                   && slot.CloneToAnimationDriverPaths.ContainsKey(binding.path ?? string.Empty);
+        }
+
+        private void RedirectBoneBindings(AnimationClip clip)
+        {
+            foreach (var binding in AnimationUtility.GetCurveBindings(clip))
+            {
+                if (!RequiresDriverRedirect(binding))
+                {
+                    continue;
+                }
+
+                var curve = AnimationUtility.GetEditorCurve(clip, binding);
+                AnimationUtility.SetEditorCurve(clip, binding, null);
+                var redirected = binding;
+                redirected.path = slot.CloneToAnimationDriverPaths[binding.path ?? string.Empty];
+                AnimationUtility.SetEditorCurve(clip, redirected, curve);
+            }
+
+            foreach (var binding in AnimationUtility.GetObjectReferenceCurveBindings(clip))
+            {
+                if (!RequiresDriverRedirect(binding))
+                {
+                    continue;
+                }
+
+                var curve = AnimationUtility.GetObjectReferenceCurve(clip, binding);
+                AnimationUtility.SetObjectReferenceCurve(clip, binding, null);
+                var redirected = binding;
+                redirected.path = slot.CloneToAnimationDriverPaths[binding.path ?? string.Empty];
+                AnimationUtility.SetObjectReferenceCurve(clip, redirected, curve);
+            }
         }
 
         private AnimationClip ResolveOverride(AnimationClip source)

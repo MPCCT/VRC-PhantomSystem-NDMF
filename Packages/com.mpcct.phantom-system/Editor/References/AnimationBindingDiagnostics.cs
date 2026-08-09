@@ -33,10 +33,33 @@ namespace MPCCT.PhantomSystem.Editor
                 string.Empty,
                 phantomRootPath
             };
+            var visibleHumanoidBonePaths = new HashSet<string>(StringComparer.Ordinal);
             foreach (var slot in state.System.Slots)
             {
                 AddPath(prohibitedRootPaths, slot.SlotRoot, context.AvatarRootTransform);
                 AddPath(prohibitedRootPaths, slot.CloneRoot, context.AvatarRootTransform);
+                if (slot.AnimationDriverRoot != null)
+                {
+                    AddPath(
+                        prohibitedRootPaths,
+                        slot.AnimationDriverRoot.gameObject,
+                        context.AvatarRootTransform);
+                }
+                foreach (var bone in slot.CloneBones.Values)
+                {
+                    if (bone == null)
+                    {
+                        continue;
+                    }
+
+                    var path = TransformPathUtility.GetRelativePath(
+                        bone,
+                        context.AvatarRootTransform);
+                    if (path != null)
+                    {
+                        visibleHumanoidBonePaths.Add(path);
+                    }
+                }
             }
 
             var reported = new HashSet<string>();
@@ -51,6 +74,7 @@ namespace MPCCT.PhantomSystem.Editor
                         clip,
                         phantomRootPath,
                         prohibitedRootPaths,
+                        visibleHumanoidBonePaths,
                         reported);
                 }
             }
@@ -99,6 +123,7 @@ namespace MPCCT.PhantomSystem.Editor
             AnimationClip clip,
             string phantomRootPath,
             ISet<string> prohibitedRootPaths,
+            ISet<string> visibleHumanoidBonePaths,
             ISet<string> reported)
         {
             var converted = IsConvertedPlayableClip(clip);
@@ -122,6 +147,21 @@ namespace MPCCT.PhantomSystem.Editor
                 if (!converted)
                 {
                     continue;
+                }
+
+                if (binding.type == typeof(Transform)
+                    && visibleHumanoidBonePaths.Contains(binding.path ?? string.Empty)
+                    && IsPositionRotationOrScale(binding.propertyName))
+                {
+                    var key = $"visible-bone|{clip.GetInstanceID()}|{binding.path}|{binding.propertyName}";
+                    if (reported.Add(key))
+                    {
+                        state.Report.Error(
+                            $"Converted {playable} clip '{clip.name}' still animates visible phantom humanoid bone "
+                            + $"'{binding.path}' through '{binding.propertyName}'. Bone animation must target the "
+                            + "Phantom Animation Driver skeleton.",
+                            clip);
+                    }
                 }
 
                 if (binding.type == typeof(Animator))
@@ -155,7 +195,8 @@ namespace MPCCT.PhantomSystem.Editor
         private static bool IsConvertedPlayableClip(AnimationClip clip)
         {
             return clip.name.StartsWith("PhantomSystem_", StringComparison.Ordinal)
-                   && (clip.name.IndexOf("_Action_", StringComparison.Ordinal) >= 0
+                   && (clip.name.IndexOf("_FX_", StringComparison.Ordinal) >= 0
+                       || clip.name.IndexOf("_Action_", StringComparison.Ordinal) >= 0
                        || clip.name.IndexOf("_Gesture_", StringComparison.Ordinal) >= 0);
         }
 
