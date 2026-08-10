@@ -54,13 +54,18 @@ namespace MPCCT.PhantomSystem.Editor
 
     internal static class PhantomParameterResolver
     {
-        private static readonly (string Suffix, AnimatorControllerParameterType Type)[] PhysBoneSubParameters =
+        // Modular Avatar exposes PhysBones and Raycasts through one legacy prefix namespace and
+        // expands either kind over the complete set when rewriting Animator parameters.
+        private static readonly (string Suffix, AnimatorControllerParameterType Type)[] DynamicSubParameters =
         {
             ("_IsGrabbed", AnimatorControllerParameterType.Bool),
             ("_IsPosed", AnimatorControllerParameterType.Bool),
             ("_Angle", AnimatorControllerParameterType.Float),
             ("_Stretch", AnimatorControllerParameterType.Float),
-            ("_Squish", AnimatorControllerParameterType.Float)
+            ("_Squish", AnimatorControllerParameterType.Float),
+            ("_Hit", AnimatorControllerParameterType.Bool),
+            ("_Ratio", AnimatorControllerParameterType.Float),
+            ("_Distance", AnimatorControllerParameterType.Float)
         };
 
         public static PhantomParameterResolution Resolve(
@@ -97,7 +102,7 @@ namespace MPCCT.PhantomSystem.Editor
                 foreach (var source in (input.SourceParameters ?? Array.Empty<PhantomParameterDefinition>())
                              .Where(parameter => parameter != null
                                                  && !string.IsNullOrWhiteSpace(parameter.Name))
-                             .OrderByDescending(parameter => parameter.IsPhysBonePrefix)
+                             .OrderByDescending(parameter => parameter.IsParameterPrefix)
                              .ThenBy(parameter => parameter.Name, StringComparer.Ordinal))
                 {
                     var originalName = source.Name;
@@ -112,9 +117,9 @@ namespace MPCCT.PhantomSystem.Editor
                         continue;
                     }
 
-                    if (source.IsPhysBonePrefix)
+                    if (source.IsParameterPrefix)
                     {
-                        ResolvePhysBonePrefix(input, source, slotResult, occupied);
+                        ResolveParameterPrefix(input, source, slotResult, occupied);
                         continue;
                     }
 
@@ -165,28 +170,31 @@ namespace MPCCT.PhantomSystem.Editor
             return result;
         }
 
-        private static void ResolvePhysBonePrefix(
+        private static void ResolveParameterPrefix(
             PhantomParameterSlotInput input,
             PhantomParameterDefinition source,
             PhantomSlotParameterResolution slotResult,
             IDictionary<string, PhantomParameterDefinition> occupied)
         {
+            var subParameters = PrefixSubParameters(source).ToArray();
             var preferred = input.Slot.renamePhantomParameters
                 ? input.Identity.OriginalParameterName(source.Name)
                 : source.Name;
             var finalPrefix = preferred;
-            if (!IsPhysBonePrefixAvailable(finalPrefix, occupied))
+            if (!IsParameterPrefixAvailable(finalPrefix, subParameters, occupied))
             {
                 var fallback = input.Identity.OriginalParameterName(source.Name);
                 finalPrefix = fallback;
-                for (var suffix = 2; !IsPhysBonePrefixAvailable(finalPrefix, occupied); suffix++)
+                for (var suffix = 2;
+                     !IsParameterPrefixAvailable(finalPrefix, subParameters, occupied);
+                     suffix++)
                 {
                     finalPrefix = $"{fallback}~{suffix}";
                 }
             }
 
             slotResult.FinalNames[source.Name] = finalPrefix;
-            foreach (var subParameter in PhysBoneSubParameters)
+            foreach (var subParameter in subParameters)
             {
                 var originalName = source.Name + subParameter.Suffix;
                 var finalName = finalPrefix + subParameter.Suffix;
@@ -207,16 +215,31 @@ namespace MPCCT.PhantomSystem.Editor
                 {
                     OriginalName = source.Name,
                     FinalName = finalPrefix,
-                    Reason = "one or more derived PhysBone parameters already exist"
+                    Reason = "one or more derived dynamic parameters already exist"
                 });
             }
         }
 
-        private static bool IsPhysBonePrefixAvailable(
+        private static IEnumerable<(string Suffix, AnimatorControllerParameterType Type)>
+            PrefixSubParameters(PhantomParameterDefinition source)
+        {
+            if (!source.IsParameterPrefix)
+            {
+                yield break;
+            }
+
+            foreach (var parameter in DynamicSubParameters)
+            {
+                yield return parameter;
+            }
+        }
+
+        private static bool IsParameterPrefixAvailable(
             string prefix,
+            IReadOnlyCollection<(string Suffix, AnimatorControllerParameterType Type)> subParameters,
             IDictionary<string, PhantomParameterDefinition> occupied)
         {
-            return PhysBoneSubParameters.All(subParameter =>
+            return subParameters.All(subParameter =>
                 !occupied.ContainsKey(prefix + subParameter.Suffix));
         }
 

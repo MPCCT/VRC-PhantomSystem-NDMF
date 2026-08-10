@@ -159,7 +159,7 @@ namespace MPCCT.PhantomSystem.Editor
                     }
 
                     var shared = slotAnalysis.NamesSharedWithBase.Contains(sourceParameter.Name);
-                    if (sourceParameter.IsPhysBonePrefix)
+                    if (sourceParameter.IsParameterPrefix)
                     {
                         var prefixName = slotAnalysis.FinalParameterNames.TryGetValue(
                             sourceParameter.Name,

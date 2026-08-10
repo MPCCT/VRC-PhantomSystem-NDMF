@@ -18,6 +18,8 @@ namespace MPCCT.PhantomSystem.Editor
         public bool IsAnimatorOnly;
         public bool IsHidden;
         public bool IsPhysBonePrefix;
+        public bool IsRaycastPrefix;
+        public bool IsParameterPrefix => IsPhysBonePrefix || IsRaycastPrefix;
         public bool WantSynced;
         public float? DefaultValue;
         public bool? Saved;
@@ -137,14 +139,14 @@ namespace MPCCT.PhantomSystem.Editor
             return ReadParameters(root, context, true);
         }
 
-        public static List<PhantomParameterDefinition> ReadPhysBonePrefixes(GameObject root)
+        public static List<PhantomParameterDefinition> ReadDynamicParameterPrefixes(GameObject root)
         {
             if (root == null)
             {
                 return new List<PhantomParameterDefinition>();
             }
 
-            return root.GetComponentsInChildren<VRCPhysBone>(true)
+            var result = root.GetComponentsInChildren<VRCPhysBone>(true)
                 .Select(physBone => physBone.parameter)
                 .Where(name => !string.IsNullOrWhiteSpace(name))
                 .Distinct(StringComparer.Ordinal)
@@ -155,6 +157,28 @@ namespace MPCCT.PhantomSystem.Editor
                     IsAnimatorOnly = true,
                     WantSynced = false
                 })
+                .ToList();
+
+            result.AddRange(root.GetComponentsInChildren<VRCRaycast>(true)
+                .Select(raycast => raycast.Parameter)
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Distinct(StringComparer.Ordinal)
+                .Select(name => new PhantomParameterDefinition
+                {
+                    Name = name,
+                    IsRaycastPrefix = true,
+                    IsAnimatorOnly = true,
+                    WantSynced = false
+                }));
+
+            return result
+                .GroupBy(parameter => parameter.Name, StringComparer.Ordinal)
+                .Select(group => group.Aggregate((combined, next) =>
+                {
+                    combined.IsPhysBonePrefix |= next.IsPhysBonePrefix;
+                    combined.IsRaycastPrefix |= next.IsRaycastPrefix;
+                    return combined;
+                }))
                 .ToList();
         }
 
@@ -216,7 +240,7 @@ namespace MPCCT.PhantomSystem.Editor
                                     && !PhantomParameterPolicy.IsVrcReserved(parameter.Name))
                 .OrderBy(parameter => parameter.Name, StringComparer.Ordinal)
                 .ToList();
-            sourceParameters.AddRange(ReadPhysBonePrefixes(slot.phantomAvatar.gameObject));
+            sourceParameters.AddRange(ReadDynamicParameterPrefixes(slot.phantomAvatar.gameObject));
             sourceParameters = sourceParameters
                 .OrderBy(parameter => parameter.Name, StringComparer.Ordinal)
                 .ToList();

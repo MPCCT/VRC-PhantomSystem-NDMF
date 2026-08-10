@@ -13,7 +13,7 @@
   "documentationUrl": "https://github.com/MPCCT/VRC-PhantomSystem-NDMF#readme",
   "changelogUrl": "https://github.com/MPCCT/VRC-PhantomSystem-NDMF/blob/master/Packages/com.mpcct.phantom-system/CHANGELOG.md",
   "vpmDependencies": {
-    "com.vrchat.avatars": ">=3.10.0",
+    "com.vrchat.avatars": ">=3.10.3",
     "nadena.dev.ndmf": ">=1.14.0",
     "nadena.dev.modular-avatar": ">=1.15.0"
   }

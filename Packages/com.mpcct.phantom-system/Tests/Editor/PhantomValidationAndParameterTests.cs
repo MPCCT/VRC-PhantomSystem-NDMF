@@ -5,6 +5,7 @@ using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
 using UnityEngine.TestTools;
+using VRC.SDK3.Dynamics.Contact.Components;
 
 namespace MPCCT.PhantomSystem.Editor.Tests
 {
@@ -374,6 +375,83 @@ namespace MPCCT.PhantomSystem.Editor.Tests
             Assert.AreEqual(
                 "PhantomSystem/Slot1/Original/PB_IsGrabbed",
                 resolution.FinalNames["PB_IsGrabbed"]);
+        }
+
+        [Test]
+        public void ParameterResolver_RenamesConflictingRaycastPrefixAndDerivedNames()
+        {
+            var slot = new PhantomSlot { id = "Slot1", renamePhantomParameters = false };
+            var prefix = new PhantomParameterDefinition
+            {
+                Name = "Ray",
+                IsRaycastPrefix = true,
+                IsAnimatorOnly = true
+            };
+            var baseParameters = new Dictionary<string, PhantomParameterDefinition>
+            {
+                ["Ray_Hit"] = Definition(
+                    "Ray_Hit",
+                    AnimatorControllerParameterType.Int,
+                    false,
+                    0f,
+                    false)
+            };
+
+            var resolution = Resolve(baseParameters, slot, prefix);
+
+            Assert.AreEqual("PhantomSystem/Slot1/Original/Ray", resolution.FinalNames["Ray"]);
+            Assert.AreEqual(
+                "PhantomSystem/Slot1/Original/Ray_Hit",
+                resolution.FinalNames["Ray_Hit"]);
+            Assert.AreEqual(
+                "PhantomSystem/Slot1/Original/Ray_Ratio",
+                resolution.FinalNames["Ray_Ratio"]);
+            Assert.AreEqual(
+                "PhantomSystem/Slot1/Original/Ray_Distance",
+                resolution.FinalNames["Ray_Distance"]);
+            Assert.AreEqual(
+                "PhantomSystem/Slot1/Original/Ray_IsGrabbed",
+                resolution.FinalNames["Ray_IsGrabbed"]);
+        }
+
+        [Test]
+        public void CloneMappings_RemapContactEvenWhenSourceControlsAreRemoved()
+        {
+            var cloneRoot = new GameObject("CloneRoot");
+            try
+            {
+                var contact = cloneRoot.AddComponent<VRCContactReceiver>();
+                contact.parameter = "ContactValue";
+                var slot = new PhantomSlot
+                {
+                    id = "Slot1",
+                    renamePhantomParameters = true,
+                    removeSourceControls = true
+                };
+                var state = new PhantomSlotBuildState
+                {
+                    Slot = slot,
+                    SlotId = "Slot1",
+                    CloneRoot = cloneRoot,
+                    ParameterResolution = Resolve(
+                        new Dictionary<string, PhantomParameterDefinition>(),
+                        slot)
+                };
+
+                var configs = PhantomParameterConfigBuilder.BuildCloneMappings(
+                    state,
+                    new RuntimeAnimatorController[0]);
+                var config = configs.Single(item =>
+                    !item.isPrefix && item.nameOrPrefix == "ContactValue");
+
+                Assert.AreEqual(
+                    "PhantomSystem/Slot1/Original/ContactValue",
+                    config.remapTo);
+            }
+            finally
+            {
+                Object.DestroyImmediate(cloneRoot);
+            }
         }
 
         [Test]

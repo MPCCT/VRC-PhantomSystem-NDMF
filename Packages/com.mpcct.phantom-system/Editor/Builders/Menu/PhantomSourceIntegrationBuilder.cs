@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using nadena.dev.modular_avatar.core;
 using nadena.dev.ndmf;
 using UnityEngine;
@@ -16,7 +17,13 @@ namespace MPCCT.PhantomSystem.Editor
             PhantomSlotBuildState slot,
             PhantomBuildReport report)
         {
-            InstallPhysBoneParameterMappings(slot);
+            var sourceControllers = new[]
+            {
+                slot.ProcessedFxController,
+                slot.ProcessedActionController,
+                slot.ProcessedGestureController
+            };
+            InstallCloneParameterMappings(slot, sourceControllers);
 
             var descriptor = slot.BakedAvatar;
             if (descriptor == null || slot.Slot == null || slot.Slot.removeSourceControls)
@@ -48,12 +55,7 @@ namespace MPCCT.PhantomSystem.Editor
 
             var parameterConfigs = PhantomParameterConfigBuilder.Build(
                 slot,
-                new[]
-                {
-                    slot.ProcessedFxController,
-                    slot.ProcessedActionController,
-                    slot.ProcessedGestureController
-                });
+                sourceControllers);
             if (parameterConfigs.Count > 0)
             {
                 var parameters = host.AddComponent<ModularAvatarParameters>();
@@ -97,9 +99,11 @@ namespace MPCCT.PhantomSystem.Editor
             return mergeAnimator;
         }
 
-        private static void InstallPhysBoneParameterMappings(PhantomSlotBuildState slot)
+        private static void InstallCloneParameterMappings(
+            PhantomSlotBuildState slot,
+            IEnumerable<RuntimeAnimatorController> controllers)
         {
-            var parameterConfigs = PhantomParameterConfigBuilder.BuildPhysBonePrefixes(slot);
+            var parameterConfigs = PhantomParameterConfigBuilder.BuildCloneMappings(slot, controllers);
             if (parameterConfigs.Count == 0 || slot.CloneRoot == null)
             {
                 return;
@@ -116,10 +120,19 @@ namespace MPCCT.PhantomSystem.Editor
                 parameters.parameters = new List<ParameterConfig>();
             }
 
+            foreach (var prefixConfig in parameterConfigs.Where(config => config.isPrefix))
+            {
+                parameters.parameters.RemoveAll(existing =>
+                    !existing.isPrefix
+                    && PhantomParameterConfigBuilder.IsDerivedDynamicParameter(
+                        prefixConfig.nameOrPrefix,
+                        existing.nameOrPrefix));
+            }
+
             foreach (var config in parameterConfigs)
             {
                 var existingIndex = parameters.parameters.FindIndex(existing =>
-                    existing.isPrefix
+                    existing.isPrefix == config.isPrefix
                     && string.Equals(
                         existing.nameOrPrefix,
                         config.nameOrPrefix,

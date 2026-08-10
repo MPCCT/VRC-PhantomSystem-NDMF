@@ -120,7 +120,7 @@ namespace MPCCT.PhantomSystem.Editor
                     .Values
                     .ToList();
                 definitions.AddRange(
-                    PhantomParameterAnalysis.ReadPhysBonePrefixes(slot.PrebakedRoot));
+                    PhantomParameterAnalysis.ReadDynamicParameterPrefixes(slot.PrebakedRoot));
                 inputs.Add(new PhantomParameterSlotInput
                 {
                     Slot = slot.Slot,

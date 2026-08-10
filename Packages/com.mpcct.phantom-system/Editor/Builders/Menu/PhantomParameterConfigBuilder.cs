@@ -4,7 +4,9 @@ using System.Linq;
 using nadena.dev.modular_avatar.core;
 using UnityEditor.Animations;
 using UnityEngine;
+using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.ScriptableObjects;
+using VRC.SDK3.Dynamics.Contact.Components;
 using VRC.SDK3.Dynamics.PhysBone.Components;
 
 namespace MPCCT.PhantomSystem.Editor
@@ -12,11 +14,85 @@ namespace MPCCT.PhantomSystem.Editor
     /// <summary>Converts prebaked avatar parameter definitions into Modular Avatar mappings.</summary>
     internal static class PhantomParameterConfigBuilder
     {
+        // Modular Avatar uses the legacy PhysBonesPrefix namespace for both PhysBones and Raycasts,
+        // and expands a prefix mapping over this complete suffix set.
+        private static readonly string[] DynamicParameterSuffixes =
+        {
+            "_IsGrabbed", "_IsPosed", "_Angle", "_Stretch", "_Squish",
+            "_Hit", "_Ratio", "_Distance"
+        };
+
         public static List<ParameterConfig> Build(
             PhantomSlotBuildState slot,
             IEnumerable<RuntimeAnimatorController> controllers)
         {
-            var configs = new Dictionary<string, ParameterConfig>();
+            return BuildStandardMappings(slot, controllers).Values.ToList();
+        }
+
+        public static List<ParameterConfig> BuildCloneMappings(
+            PhantomSlotBuildState slot,
+            IEnumerable<RuntimeAnimatorController> controllers)
+        {
+            var configs = slot?.Slot != null && !slot.Slot.removeSourceControls
+                ? BuildStandardMappings(slot, controllers)
+                : new Dictionary<string, ParameterConfig>(StringComparer.Ordinal);
+            var prefixConfigs = new Dictionary<string, ParameterConfig>(StringComparer.Ordinal);
+
+            if (slot?.ParameterResolution != null)
+            {
+                foreach (var originalName in slot.ParameterResolution.FinalNames.Keys)
+                {
+                    AddRemapOnlyParameter(configs, originalName, slot);
+                }
+            }
+
+            if (slot?.CloneRoot != null)
+            {
+                foreach (var contact in slot.CloneRoot.GetComponentsInChildren<VRCContactReceiver>(true))
+                {
+                    AddRemapOnlyParameter(configs, contact.parameter, slot);
+                }
+
+                foreach (var animator in slot.CloneRoot.GetComponentsInChildren<Animator>(true))
+                {
+                    var controller = GetBaseController(animator.runtimeAnimatorController);
+                    if (controller == null)
+                    {
+                        continue;
+                    }
+
+                    foreach (var parameter in controller.parameters)
+                    {
+                        AddRemapOnlyParameter(configs, parameter.name, slot);
+                    }
+                }
+            }
+
+            foreach (var prefixConfig in BuildDynamicParameterPrefixes(slot))
+            {
+                foreach (var suffix in PrefixSuffixes(slot.CloneRoot, prefixConfig.nameOrPrefix))
+                {
+                    configs.Remove(prefixConfig.nameOrPrefix + suffix);
+                }
+                prefixConfigs[prefixConfig.nameOrPrefix] = prefixConfig;
+            }
+
+            return configs.Values.Concat(prefixConfigs.Values).ToList();
+        }
+
+        public static bool IsDerivedDynamicParameter(string prefix, string parameterName)
+        {
+            return !string.IsNullOrEmpty(prefix)
+                   && !string.IsNullOrEmpty(parameterName)
+                   && DynamicParameterSuffixes.Any(suffix =>
+                       string.Equals(prefix + suffix, parameterName, StringComparison.Ordinal));
+        }
+
+        private static Dictionary<string, ParameterConfig> BuildStandardMappings(
+            PhantomSlotBuildState slot,
+            IEnumerable<RuntimeAnimatorController> controllers)
+        {
+            var configs = new Dictionary<string, ParameterConfig>(StringComparer.Ordinal);
             var parameters = slot.BakedAvatar != null ? slot.BakedAvatar.expressionParameters : null;
             if (parameters?.parameters != null)
             {
@@ -43,7 +119,7 @@ namespace MPCCT.PhantomSystem.Editor
                 }
             }
 
-            return configs.Values.ToList();
+            return configs;
         }
 
         private static AnimatorController GetBaseController(
@@ -64,7 +140,7 @@ namespace MPCCT.PhantomSystem.Editor
             return current as AnimatorController;
         }
 
-        public static List<ParameterConfig> BuildPhysBonePrefixes(PhantomSlotBuildState slot)
+        private static List<ParameterConfig> BuildDynamicParameterPrefixes(PhantomSlotBuildState slot)
         {
             var configs = new Dictionary<string, ParameterConfig>(StringComparer.Ordinal);
             if (slot?.Slot == null
@@ -98,7 +174,54 @@ namespace MPCCT.PhantomSystem.Editor
                 };
             }
 
+            foreach (var raycast in slot.CloneRoot.GetComponentsInChildren<VRCRaycast>(true))
+            {
+                var parameter = raycast.Parameter;
+                if (ShouldSkipOriginalParameter(parameter, slot))
+                {
+                    continue;
+                }
+
+                var finalName = FinalName(slot, parameter);
+                if (string.Equals(finalName, parameter, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                configs[parameter] = new ParameterConfig
+                {
+                    nameOrPrefix = parameter,
+                    remapTo = finalName,
+                    isPrefix = true,
+                    syncType = ParameterSyncType.NotSynced,
+                    localOnly = true,
+                    saved = false
+                };
+            }
+
             return configs.Values.ToList();
+        }
+
+        private static IEnumerable<string> PrefixSuffixes(GameObject root, string prefix)
+        {
+            if (root == null)
+            {
+                yield break;
+            }
+
+            var hasDynamicPrefix = root.GetComponentsInChildren<VRCPhysBone>(true).Any(physBone =>
+                string.Equals(physBone.parameter, prefix, StringComparison.Ordinal));
+
+            hasDynamicPrefix |= root.GetComponentsInChildren<VRCRaycast>(true).Any(raycast =>
+                string.Equals(raycast.Parameter, prefix, StringComparison.Ordinal));
+
+            if (hasDynamicPrefix)
+            {
+                foreach (var suffix in DynamicParameterSuffixes)
+                {
+                    yield return suffix;
+                }
+            }
         }
 
         private static void AddExpressionParameterConfig(
