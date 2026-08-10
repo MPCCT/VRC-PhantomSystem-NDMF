@@ -65,6 +65,25 @@ namespace MPCCT.PhantomSystem.Editor
 
     internal static class PhantomSourceValidator
     {
+        // VRChat SDK components are distributed across several assemblies.
+        // Match the known assembly names explicitly to avoid treating SDK components as third-party.
+        private static readonly HashSet<string> KnownVrcSdkAssemblyNames =
+            new HashSet<string>(StringComparer.Ordinal)
+            {
+                "VRCCore-Editor",
+                "VRCSDKBase",
+                "VRCSDKBase-Editor",
+                "VRCSDK3A",
+                "VRC.SDKBase",
+                "VRC.SDKBase.Editor",
+                "VRC.SDK3A",
+                "VRC.Dynamics",
+                "VRC.SDK3.Dynamics.Contact",
+                "VRC.SDK3.Dynamics.PhysBone",
+                "VRC.SDK3.Dynamics.Constraint",
+                "VRC.SDK3.Dynamics.Raycast"
+            };
+
         public static PhantomSourceValidationReport Validate(PhantomAuthoring authoring)
         {
             return ValidateAuthoring(authoring);
@@ -386,7 +405,7 @@ namespace MPCCT.PhantomSystem.Editor
                 }
 
                 var componentType = component.GetType();
-                if (IsVrcSdkComponent(componentType))
+                if (IsKnownFrameworkComponent(componentType))
                 {
                     continue;
                 }
@@ -423,7 +442,7 @@ namespace MPCCT.PhantomSystem.Editor
                 : PhantomCompatibilityStatus.Compatible;
         }
 
-        private static bool IsVrcSdkComponent(Type componentType)
+        private static bool IsKnownFrameworkComponent(Type componentType)
         {
             if (componentType == null)
             {
@@ -432,8 +451,7 @@ namespace MPCCT.PhantomSystem.Editor
 
             var assemblyName = componentType.Assembly.GetName().Name;
             return !string.IsNullOrEmpty(assemblyName)
-                   && (assemblyName.StartsWith("VRC.", StringComparison.Ordinal)
-                       || assemblyName.StartsWith("VRCSDK", StringComparison.Ordinal)
+                   && (KnownVrcSdkAssemblyNames.Contains(assemblyName)
                        || assemblyName.StartsWith("nadena.dev.ndmf", StringComparison.Ordinal)
                        || assemblyName.StartsWith("nadena.dev.modular-avatar", StringComparison.Ordinal));
         }
