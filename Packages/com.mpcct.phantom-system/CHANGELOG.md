@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.2.1
+
+### Added
+
+- Added a per-Slot **Phantom View Near Clip** setting under Advanced options. The configured distance represents the value at 1x scale and follows Phantom Scale automatically, allowing enlarged phantoms to clip nearby facial geometry without changing the capture viewpoint.
+
+### Changed
+
+- Source FX, Gesture, and Action conversion is now isolated per Slot through NDMF Animator Services. Multiple Slots can reference the same source avatar while retaining independent layers, motions, State Behaviours, Avatar Masks, Tracking Control conversion, and parameter targets.
+- Freeze now preserves the phantom's current pose instead of switching its tracking rig back to live base-avatar motion.
+- Source parameter ownership is collected before generated Rig components are added. Known source references are remapped consistently, while unknown names remain unchanged and produce one non-blocking summary warning per Slot instead of receiving an automatic `Original/` prefix.
+- Generated PhantomSystem Animator layers now include their Slot name, making multi-Slot controllers easier to inspect and diagnose.
+- **Override PhysBone Immobile Type** is enabled by default for newly created Slots so physbones on frozen phantoms are less likely to inherit unintended base-avatar movement. Existing serialized Slot settings are unchanged.
+- Raised the minimum VRChat SDK - Avatars dependency to `3.10.3`.
+
+### Fixed
+
+- Fixed multiple Slots referencing the same source avatar sharing converted playable state, which could leave Tracking Control generated only once or targeting the first Slot.
+- Fixed parameter remapping for retained source Contacts, PhysBones, VRCRaycast components, Animator Parameter Drivers, transitions, BlendTrees, and `VRCAnimatorPlayAudio`. 
+- Fixed standalone Phantom View and Tracking controllers temporarily referencing Core parameters that were not declared in those controllers.
+- Fixed `VRC.Core.PipelineManager` being reported as an unknown source component by the compatibility check.
+
 ## 0.2.0
 
 ### Added

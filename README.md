@@ -42,11 +42,13 @@ Avatar 作为分身加入本体，并在构建时自动准备动画、参数、�
 
 - 从分身头部生成仅本地可见的立体视角。
 - 可以调整立体强度和中心视野遮罩大小。
+- 可以在 Advanced 中调整相机 Near Clip；该距离会跟随分身缩放，避免放大后的脸部遮挡视野。
 - 同一时间只显示一个 Slot 的 Phantom View，避免视野相互覆盖。
 
 ### 参数管理与构建检查
 
-- 自动为分身参数添加命名空间，并同步处理 Animator、菜单和 PhysBone 参数引用。
+- 自动为分身参数添加命名空间，并同步处理 Animator、菜单、Contact、PhysBone、VRCRaycast
+  和 Play Audio 等参数引用。
 - 兼容的同名参数可以共享；不兼容的冲突参数会自动改名。
 - Inspector 会预览每个 Slot 的同步参数占用、共享节省和最终参数名称。
 - **Review Any Alerts** 会在构建前检查 Humanoid 骨骼、Slot 名称、参数冲突、Missing
@@ -55,7 +57,7 @@ Avatar 作为分身加入本体，并在构建时自动准备动画、参数、�
 ## 环境要求
 
 - Unity 2022.3
-- VRChat SDK - Avatars 3.10.0 或更高
+- VRChat SDK - Avatars 3.10.3 或更高
 - NDMF 1.14.0 或更高
 - Modular Avatar 1.15.0 或更高
 
@@ -94,9 +96,14 @@ https://mpcct.github.io/VRC-PhantomSystem-NDMF/index.json
 - **Remove Source Controls**：排除分身源的 FX、Action、Gesture、参数和菜单，只保留
   PhantomSystem 控制。
 - **Use Rotation Constraint**：本体与分身骨架比例或朝向略有差异时，可尝试改善骨骼跟随。
+- **Override PhysBone Immobile Type**：把分身 PhysBone 的 Immobile Type 设为 All Motion，减少
+  Freeze 后仍随本体移动的情况。
 - **Try Convert Animator Tracking Control**：尝试保留分身源的身体部位 Tracking 控制。
+- **Phantom View Near Clip (Advanced)**：设置 1 倍大小时的相机近裁剪距离；启用 Scale
+  Control 时会自动随分身大小变化。
 
-新建 Slot 默认启用 Phantom Grabbing、Scale Control、Phantom View 和 Tracking Control 转换。
+新建 Slot 默认启用 Phantom Grabbing、Scale Control、Phantom View、Tracking Control 转换和
+PhysBone Immobile Type 覆盖。
 
 ## Global Settings
 

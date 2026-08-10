@@ -45,11 +45,14 @@ PhantomSystem は、VRChat アバターに 1 体以上の Humanoid 分身（Phan
 
 - 分身の頭部から見たローカル専用のステレオビューを表示します。
 - ステレオの強さと中央ビューマスクの大きさを調整できます。
+- Advanced の Camera Near Clip は Phantom Scale に合わせて変化し、拡大した分身の顔が
+  ビューを遮る場合に調整できます。
 - ビューが重ならないよう、同時に表示される Phantom View は 1 つの Slot だけです。
 
 ### パラメーター管理とビルド前チェック
 
-- 分身元パラメーターを名前空間化し、Animator、メニュー、PhysBone の参照を一貫して更新します。
+- 分身元パラメーターを名前空間化し、Animator、メニュー、Contact、PhysBone、VRCRaycast、
+  Play Audio などの参照を一貫して更新します。
 - 互換性のある同名パラメーターは共有し、互換性のない競合は自動的に別名へ変更します。
 - Inspector で Slot ごとの同期コスト、共有による節約、最終パラメーター名を確認できます。
 - **Review Any Alerts** で Humanoid ボーン、Slot 名、パラメーター競合、Missing Script、
@@ -58,7 +61,7 @@ PhantomSystem は、VRChat アバターに 1 体以上の Humanoid 分身（Phan
 ## 必要環境
 
 - Unity 2022.3
-- VRChat SDK - Avatars 3.10.0 以降
+- VRChat SDK - Avatars 3.10.3 以降
 - NDMF 1.14.0 以降
 - Modular Avatar 1.15.0 以降
 
@@ -103,11 +106,15 @@ Prebake は実行されません。
   PhantomSystem の制御だけを残します。
 - **Use Rotation Constraint**：本体と分身のボーン比率や向きが少し異なる場合に、追従を改善
   できることがあります。
+- **Override PhysBone Immobile Type**：分身の PhysBone を All Motion に設定し、Freeze 中も
+  本体の移動を引き継いでしまう現象を軽減します。
 - **Try Convert Animator Tracking Control**：分身元の身体部位 Tracking 制御の維持を
   試みます。
+- **Phantom View Near Clip (Advanced)**：1 倍スケール時のカメラ近接クリップ距離を設定します。
+  Scale Control が有効な場合は分身の大きさに合わせて変化します。
 
 新しい Slot では Phantom Grabbing、Scale Control、Phantom View、Tracking Control
-変換が既定で有効です。
+変換、および PhysBone Immobile Type の上書きが既定で有効です。
 
 ## Global Settings
 

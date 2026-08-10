@@ -52,12 +52,14 @@ retained.
 
 - Displays a local-only stereo view captured from the phantom's head.
 - Adjusts stereo strength and the size of the central view mask.
+- Provides an Advanced camera Near Clip setting that follows Phantom Scale to
+  keep an enlarged phantom's face from obscuring the view.
 - Only one Slot's Phantom View is shown at a time to prevent overlapping views.
 
 ### Parameter management and validation
 
-- Namespaces source parameters and updates their Animator, menu, and PhysBone
-  references consistently.
+- Namespaces source parameters and consistently updates references used by
+  Animators, menus, Contacts, PhysBones, VRCRaycast, and Play Audio behaviours.
 - Shares compatible same-name parameters and automatically renames incompatible
   collisions.
 - Previews each Slot's synchronization cost, sharing savings, and final parameter
@@ -69,7 +71,7 @@ retained.
 ## Requirements
 
 - Unity 2022.3
-- VRChat SDK - Avatars 3.10.0 or newer
+- VRChat SDK - Avatars 3.10.3 or newer
 - NDMF 1.14.0 or newer
 - Modular Avatar 1.15.0 or newer
 
@@ -121,11 +123,16 @@ prebake required by PhantomSystem.
   and menu while retaining PhantomSystem controls.
 - **Use Rotation Constraint**: May improve following when the base and phantom
   skeleton proportions or orientations differ slightly.
+- **Override PhysBone Immobile Type**: Sets the phantom's PhysBones to All
+  Motion to reduce unintended base-avatar movement while frozen.
 - **Try Convert Animator Tracking Control**: Attempts to retain body-part
   Tracking controls from the source avatar.
+- **Phantom View Near Clip (Advanced)**: Sets the camera's near clipping
+  distance at 1x scale. It follows the phantom's size when Scale Control is
+  enabled.
 
 New Slots enable Phantom Grabbing, Scale Control, Phantom View, and Tracking
-Control conversion by default.
+Control conversion by default, and also override the PhysBone Immobile Type.
 
 ## Global Settings
 
