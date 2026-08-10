@@ -259,16 +259,64 @@ namespace MPCCT.PhantomSystem.Editor
 
             foreach (var slot in state.System.Slots)
             {
-                var sourceResult = PhantomSourcePlayableControllerProcessor.Process(
+                slot.ProcessedFxController = null;
+                slot.ProcessedGestureController = null;
+                slot.ProcessedActionController = null;
+                slot.HasTrackingControlConversion = false;
+                PhantomAnimatorControllerBuilder.Build(ctx, state.System, slot, state.Report);
+            }
+        }
+    }
+
+    public static class ConvertPhantomSourcePlayablesPass
+    {
+        public static void Execute(BuildContext ctx)
+        {
+            var state = ctx.GetState<PhantomBuildState>();
+            if (!state.HasWork)
+            {
+                return;
+            }
+
+            foreach (var slot in state.System.Slots)
+            {
+                PhantomSourcePlayableControllerProcessor.ProcessVirtual(
                     ctx,
                     slot,
                     state.System.ProjectSettings,
                     state.Report);
-                slot.ProcessedFxController = sourceResult.FxController;
-                slot.ProcessedGestureController = sourceResult.GestureController;
-                slot.ProcessedActionController = sourceResult.ActionController;
-                slot.HasTrackingControlConversion = sourceResult.HasTrackingConversion;
-                PhantomAnimatorControllerBuilder.Build(ctx, state.System, slot, state.Report);
+            }
+        }
+    }
+
+    public static class GenerateTrackingAnimatorAssetsPass
+    {
+        public static void Execute(BuildContext ctx)
+        {
+            var state = ctx.GetState<PhantomBuildState>();
+            if (!state.HasWork)
+            {
+                return;
+            }
+
+            foreach (var slot in state.System.Slots)
+            {
+                slot.ProcessedFxController = slot.SourceFxMergeAnimator != null
+                    ? slot.SourceFxMergeAnimator.animator
+                    : null;
+                slot.ProcessedGestureController = slot.SourceGestureMergeAnimator != null
+                    ? slot.SourceGestureMergeAnimator.animator
+                    : null;
+                slot.ProcessedActionController = slot.SourceActionMergeAnimator != null
+                    ? slot.SourceActionMergeAnimator.animator
+                    : null;
+
+                PhantomAnimatorControllerBuilder.BuildTracking(
+                    ctx,
+                    state.System,
+                    slot,
+                    state.Report);
+                PhantomCoreMenuBuilder.InstallTrackingAnimator(slot);
             }
         }
     }
@@ -302,7 +350,26 @@ namespace MPCCT.PhantomSystem.Editor
 
             foreach (var slot in state.System.Slots)
             {
-                PhantomAvatarCloner.CleanupNestedAvatarComponents(slot);
+                PhantomAvatarCloner.CleanupNestedAvatarComponents(
+                    slot,
+                    preserveSamplingAnimator: true);
+            }
+        }
+    }
+
+    public static class CleanupPhantomSamplingAnimatorsPass
+    {
+        public static void Execute(BuildContext ctx)
+        {
+            var state = ctx.GetState<PhantomBuildState>();
+            if (!state.HasWork)
+            {
+                return;
+            }
+
+            foreach (var slot in state.System.Slots)
+            {
+                PhantomAvatarCloner.CleanupSamplingAnimator(slot);
             }
         }
     }

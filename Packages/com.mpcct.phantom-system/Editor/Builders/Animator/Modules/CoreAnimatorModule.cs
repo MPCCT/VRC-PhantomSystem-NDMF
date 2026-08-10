@@ -33,7 +33,7 @@ namespace MPCCT.PhantomSystem.Editor
             var freezeClip = context.CreateClip("PhantomFreeze");
             ApplyActivateCurves(context, offClip, prepareClip, freezeOffClip, freezeClip);
 
-            var layer = AddLayer(context.Controller, "PhantomActivate");
+            var layer = AddLayer(context, "PhantomActivate");
             var machine = layer.stateMachine;
             var off = AddState(machine, offClip);
             var prepare = AddState(machine, prepareClip);
@@ -126,7 +126,7 @@ namespace MPCCT.PhantomSystem.Editor
                 ApplyPositionLockCurves(context, onClip, offClip, prepareClip);
             }
 
-            var layer = AddLayer(context.Controller, "PhantomPositionLock");
+            var layer = AddLayer(context, "PhantomPositionLock");
             var machine = layer.stateMachine;
             var on = AddState(machine, onClip);
             var off = AddState(machine, offClip);

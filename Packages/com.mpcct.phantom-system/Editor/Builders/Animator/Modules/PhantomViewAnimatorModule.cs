@@ -72,7 +72,7 @@ namespace MPCCT.PhantomSystem.Editor
                 CreateMaskSizeTree(context, maskSizeParameter),
                 directWeightParameter);
 
-            var layer = AddLayer(context.Controller, "PhantomViewControls");
+            var layer = AddLayer(context, "PhantomViewControls");
             var state = layer.stateMachine.AddState("PhantomViewControls");
             state.motion = directTree;
             state.writeDefaultValues = true;
@@ -108,7 +108,7 @@ namespace MPCCT.PhantomSystem.Editor
             ApplyVisibility(context, disabledClip, false);
             ApplyVisibility(context, enabledClip, true);
 
-            var layer = AddLayer(context.Controller, "PhantomViewVisibility");
+            var layer = AddLayer(context, "PhantomViewVisibility");
             var machine = layer.stateMachine;
             var disabled = AddState(machine, disabledClip);
             var enabled = AddState(machine, enabledClip);
@@ -251,7 +251,7 @@ namespace MPCCT.PhantomSystem.Editor
                 "material._RequireStereoCamera",
                 1f);
 
-            var layer = AddLayer(context.Controller, "PhantomViewCameraFilter");
+            var layer = AddLayer(context, "PhantomViewCameraFilter");
             var machine = layer.stateMachine;
             var desktop = AddState(machine, desktopClip);
             var vr = AddState(machine, vrClip);

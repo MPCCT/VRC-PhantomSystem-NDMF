@@ -43,7 +43,9 @@ namespace MPCCT.PhantomSystem.Editor
             }
         }
 
-        public static void CleanupNestedAvatarComponents(PhantomSlotBuildState slot)
+        public static void CleanupNestedAvatarComponents(
+            PhantomSlotBuildState slot,
+            bool preserveSamplingAnimator = false)
         {
             if (slot.CloneRoot == null)
             {
@@ -55,13 +57,36 @@ namespace MPCCT.PhantomSystem.Editor
                 Object.DestroyImmediate(descriptor);
             }
 
+            if (!preserveSamplingAnimator)
+            {
+                CleanupSamplingAnimator(slot);
+            }
+            else
+            {
+                var samplingAnimator = slot.CloneRoot.GetComponent<Animator>();
+                if (samplingAnimator != null)
+                {
+                    // Humanoid baking only needs the Avatar. Prevent Animator Services from
+                    // treating this temporary sampling Animator as another innate controller.
+                    samplingAnimator.runtimeAnimatorController = null;
+                }
+            }
+
+            RemoveBuildOnlyComponents(slot.CloneRoot);
+        }
+
+        public static void CleanupSamplingAnimator(PhantomSlotBuildState slot)
+        {
+            if (slot?.CloneRoot == null)
+            {
+                return;
+            }
+
             var rootAnimator = slot.CloneRoot.GetComponent<Animator>();
             if (rootAnimator != null)
             {
                 Object.DestroyImmediate(rootAnimator);
             }
-
-            RemoveBuildOnlyComponents(slot.CloneRoot);
         }
 
         private static void RemoveBuildOnlyComponents(GameObject cloneRoot)

@@ -20,7 +20,8 @@
     "VRCSDK3A.dll",
     "VRCSDKBase.dll",
     "VRC.SDK3.Dynamics.Contact.dll",
-    "VRC.Dynamics.dll"
+    "VRC.Dynamics.dll",
+    "System.Collections.Immutable.dll"
   ],
   "autoReferenced": false,
   "defineConstraints": [],

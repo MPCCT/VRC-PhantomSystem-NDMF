@@ -38,7 +38,7 @@ namespace MPCCT.PhantomSystem.Editor
                 "m_Enabled",
                 true);
 
-            var layer = AddLayer(context.Controller, "PhantomGrabbingBoneDisplay");
+            var layer = AddLayer(context, "PhantomGrabbingBoneDisplay");
             var machine = layer.stateMachine;
             var hidden = AddState(machine, hiddenClip);
             var visible = AddState(machine, visibleClip);

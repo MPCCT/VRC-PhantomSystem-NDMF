@@ -38,16 +38,6 @@ namespace MPCCT.PhantomSystem.Editor
             mergeAnimator.matchAvatarWriteDefaults = true;
             slot.CoreMergeAnimator = mergeAnimator;
 
-            if (slot.GeneratedTrackingController != null)
-            {
-                var trackingMergeAnimator = host.AddComponent<ModularAvatarMergeAnimator>();
-                trackingMergeAnimator.animator = slot.GeneratedTrackingController;
-                trackingMergeAnimator.layerType = VRCAvatarDescriptor.AnimLayerType.FX;
-                trackingMergeAnimator.pathMode = MergeAnimatorPathMode.Absolute;
-                trackingMergeAnimator.matchAvatarWriteDefaults = false;
-                slot.TrackingMergeAnimator = trackingMergeAnimator;
-            }
-
             if (slot.GeneratedPhantomViewController != null)
             {
                 var phantomViewMergeAnimator = host.AddComponent<ModularAvatarMergeAnimator>();
@@ -96,6 +86,24 @@ namespace MPCCT.PhantomSystem.Editor
                     PhantomParameterNames.PhantomViewMaskSize(slot.Slot),
                     PhantomViewAnimatorModule.DefaultMaskSizeParameter));
             }
+        }
+
+        internal static void InstallTrackingAnimator(PhantomSlotBuildState slot)
+        {
+            if (slot?.GeneratedTrackingController == null
+                || slot.CoreMergeAnimator == null
+                || slot.TrackingMergeAnimator != null)
+            {
+                return;
+            }
+
+            var trackingMergeAnimator =
+                slot.CoreMergeAnimator.gameObject.AddComponent<ModularAvatarMergeAnimator>();
+            trackingMergeAnimator.animator = slot.GeneratedTrackingController;
+            trackingMergeAnimator.layerType = VRCAvatarDescriptor.AnimLayerType.FX;
+            trackingMergeAnimator.pathMode = MergeAnimatorPathMode.Absolute;
+            trackingMergeAnimator.matchAvatarWriteDefaults = false;
+            slot.TrackingMergeAnimator = trackingMergeAnimator;
         }
 
         private static VRCExpressionsMenu InstallCoreMenu(

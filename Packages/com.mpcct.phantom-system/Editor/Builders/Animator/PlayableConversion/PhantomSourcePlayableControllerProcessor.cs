@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using nadena.dev.ndmf;
+using nadena.dev.ndmf.animator;
 using UnityEditor.Animations;
 using UnityEngine;
 using VRC.SDK3.Avatars.Components;
@@ -9,48 +11,54 @@ using VRC.SDKBase;
 
 namespace MPCCT.PhantomSystem.Editor
 {
-    /// <summary>Processes source playable controllers for safe phantom-scoped integration.</summary>
+    /// <summary>Processes source playable controllers through NDMF's virtual animator graph.</summary>
     internal static class PhantomSourcePlayableControllerProcessor
     {
-        public static PhantomSourcePlayableProcessingResult Process(
+        public static void ProcessVirtual(
             BuildContext context,
             PhantomSlotBuildState slot,
             PhantomSystemProjectSettingsSnapshot projectSettings,
             PhantomBuildReport report)
         {
-            if (slot?.Slot == null)
+            if (slot?.Slot == null || slot.Slot.removeSourceControls)
             {
-                return default;
+                return;
             }
 
             slot.ConvertedActionLayers.Clear();
             slot.MissingHumanoidBoneClips.Clear();
-            if (slot.Slot.removeSourceControls)
-            {
-                return default;
-            }
+            slot.ConvertedClipReferences.Clear();
+            slot.WarnedUnsupportedAnimatorClips.Clear();
+            slot.HasTrackingControlConversion = false;
 
-            var sources = CollectSources(slot.BakedAvatar);
+            var controllerContext = context.Extension<AnimatorServicesContext>().ControllerContext;
             var prepared = new Dictionary<VRCAvatarDescriptor.AnimLayerType, PreparedController>();
-            foreach (var pair in sources)
+            foreach (var pair in slot.SourcePlayableRegistrations)
             {
-                if (!TryGetBaseController(pair.Value.Controller, out var baseController))
+                var registration = pair.Value;
+                if (registration?.MergeAnimator == null)
                 {
-                    report.Error(
-                        $"Slot '{slot.SlotId}' uses unsupported {pair.Key} controller type "
-                        + $"'{pair.Value.Controller.GetType().FullName}'.",
-                        slot.BakedAvatar);
                     continue;
                 }
 
-                var controller = UnityEngine.Object.Instantiate(baseController);
-                controller.name = $"PhantomSystem_{slot.SlotId}_Processed{pair.Key}";
+                if (!controllerContext.Controllers.TryGetValue(
+                        registration.MergeAnimator,
+                        out var controller)
+                    || controller == null)
+                {
+                    report.InternalError(
+                        $"Slot '{slot.SlotId}' {pair.Key} Source Merge Animator was not registered "
+                        + "in NDMF Animator Services.",
+                        slot.CloneRoot);
+                    continue;
+                }
+
                 PrefixLayers(controller, slot.HierarchyName, pair.Key);
                 if (pair.Key == VRCAvatarDescriptor.AnimLayerType.Action)
                 {
                     RecordConvertedActionLayers(slot, controller);
                 }
-                prepared[pair.Key] = new PreparedController(pair.Value, controller);
+                prepared[pair.Key] = new PreparedController(registration, controller);
             }
 
             var targetLayers = BuildTargetLayerMap(prepared);
@@ -58,51 +66,53 @@ namespace MPCCT.PhantomSystem.Editor
             foreach (var pair in prepared)
             {
                 state.OwnerPlayable = pair.Key;
-                var controller = pair.Value.Controller;
+                state.OwnerVirtualLayerIndices = pair.Value.Controller.Layers
+                    .Select((layer, index) => new
+                    {
+                        layer.VirtualLayerIndex,
+                        PhysicalIndex = layer.OriginalPhysicalLayerIndex ?? index
+                    })
+                    .ToDictionary(value => value.VirtualLayerIndex, value => value.PhysicalIndex);
                 PhantomPlayableMotionConverter.Convert(
                     context,
                     slot,
                     projectSettings,
                     report,
                     pair.Key,
-                    pair.Value.Source.Controller,
-                    controller,
-                    pair.Value.Source.Mask);
-
-                ProcessControllerBehaviours(controller, state);
+                    pair.Value.Controller,
+                    pair.Value.Registration.Source.Mask,
+                    pair.Value.Registration.BaseController);
+                ProcessControllerBehaviours(pair.Value.Controller, state);
             }
 
             var missingBoneSummary = BuildMissingBoneSummary(slot);
             if (!string.IsNullOrEmpty(missingBoneSummary))
             {
-                report.Warning(missingBoneSummary, slot.BakedAvatar);
-            }
-
-            foreach (var driver in state.CreatedDrivers)
-            {
-                context.AssetSaver.SaveAsset(driver);
-            }
-            foreach (var marker in state.CreatedMarkers)
-            {
-                context.AssetSaver.SaveAsset(marker);
-            }
-            foreach (var pair in prepared)
-            {
-                context.AssetSaver.SaveAsset(pair.Value.Controller);
+                report.Warning(missingBoneSummary, slot.CloneRoot);
             }
 
             state.ReportSummary();
-            return new PhantomSourcePlayableProcessingResult(
-                BuildOutput(
-                    prepared,
-                    VRCAvatarDescriptor.AnimLayerType.FX),
-                BuildOutput(
-                    prepared,
-                    VRCAvatarDescriptor.AnimLayerType.Gesture),
-                BuildOutput(
-                    prepared,
-                    VRCAvatarDescriptor.AnimLayerType.Action),
-                state.DriverCount > 0);
+            slot.HasTrackingControlConversion = state.DriverCount > 0;
+        }
+
+        internal static bool TryGetBaseController(
+            RuntimeAnimatorController source,
+            out AnimatorController controller)
+        {
+            var current = source;
+            var visited = new HashSet<RuntimeAnimatorController>();
+            while (current is AnimatorOverrideController overrideController)
+            {
+                if (!visited.Add(current))
+                {
+                    controller = null;
+                    return false;
+                }
+                current = overrideController.runtimeAnimatorController;
+            }
+
+            controller = current as AnimatorController;
+            return controller != null;
         }
 
         internal static string BuildMissingBoneSummary(PhantomSlotBuildState slot)
@@ -143,201 +153,133 @@ namespace MPCCT.PhantomSystem.Editor
                    + "mapping only if those animations are required.";
         }
 
-        private static Dictionary<VRCAvatarDescriptor.AnimLayerType, PhantomSourcePlayableLayer>
-            CollectSources(VRCAvatarDescriptor descriptor)
-        {
-            var result = new Dictionary<VRCAvatarDescriptor.AnimLayerType, PhantomSourcePlayableLayer>();
-            foreach (var type in new[]
-                     {
-                         VRCAvatarDescriptor.AnimLayerType.FX,
-                         VRCAvatarDescriptor.AnimLayerType.Gesture,
-                         VRCAvatarDescriptor.AnimLayerType.Action
-                     })
-            {
-                if (PhantomSourcePlayableControllerUtility.TryGetLayer(
-                        descriptor,
-                        type,
-                        out var layer)
-                    && !layer.IsDefault
-                    && layer.Controller != null)
-                {
-                    result[type] = layer;
-                }
-            }
-
-            return result;
-        }
-
         private static Dictionary<VRCAvatarDescriptor.AnimLayerType, IReadOnlyList<string>>
             BuildTargetLayerMap(
                 IReadOnlyDictionary<VRCAvatarDescriptor.AnimLayerType, PreparedController> prepared)
         {
-            var result = new Dictionary<VRCAvatarDescriptor.AnimLayerType, IReadOnlyList<string>>();
-            foreach (var pair in prepared)
-            {
-                var names = new List<string>();
-                foreach (var layer in pair.Value.Controller.layers)
-                {
-                    names.Add(layer.name);
-                }
-                result[pair.Key] = names;
-            }
-            return result;
+            return prepared.ToDictionary(
+                pair => pair.Key,
+                pair => (IReadOnlyList<string>)pair.Value.Controller.Layers
+                    .Select(layer => layer.Name)
+                    .ToArray());
         }
 
         private static void PrefixLayers(
-            AnimatorController controller,
+            VirtualAnimatorController controller,
             string slotId,
             VRCAvatarDescriptor.AnimLayerType playable)
         {
-            var layers = controller.layers;
+            var layers = controller.Layers.ToArray();
             for (var index = 0; index < layers.Length; index++)
             {
-                var original = string.IsNullOrWhiteSpace(layers[index].name)
+                var original = string.IsNullOrWhiteSpace(layers[index].Name)
                     ? $"Layer{index}"
-                    : layers[index].name;
-                layers[index].name =
-                    $"PhantomSystem_{slotId}_{playable}_{index}_{TransformPathUtility.SafeName(original, $"Layer{index}")}";
+                    : layers[index].Name;
+                layers[index].Name = PhantomAnimatorGraphUtility.BuildSlotLayerName(
+                    slotId,
+                    $"{playable}_{index}_{TransformPathUtility.SafeName(original, $"Layer{index}")}");
                 if (index == 0)
                 {
-                    layers[index].defaultWeight = 1f;
+                    layers[index].DefaultWeight = 1f;
                 }
             }
-            controller.layers = layers;
         }
 
         private static void RecordConvertedActionLayers(
             PhantomSlotBuildState slot,
-            AnimatorController controller)
+            VirtualAnimatorController controller)
         {
-            var layers = controller.layers;
+            var layers = controller.Layers.ToArray();
             for (var index = 0; index < layers.Length; index++)
             {
                 slot.ConvertedActionLayers.Add(new PhantomConvertedActionLayer(
-                    layers[index].name,
-                    index == 0 ? 1f : layers[index].defaultWeight));
+                    layers[index].Name,
+                    index == 0 ? 1f : layers[index].DefaultWeight));
             }
-        }
-
-        private static RuntimeAnimatorController BuildOutput(
-            IReadOnlyDictionary<VRCAvatarDescriptor.AnimLayerType, PreparedController> prepared,
-            VRCAvatarDescriptor.AnimLayerType playable)
-        {
-            if (!prepared.TryGetValue(playable, out var value))
-            {
-                return null;
-            }
-
-            return value.Controller;
-        }
-
-        private static bool TryGetBaseController(
-            RuntimeAnimatorController source,
-            out AnimatorController controller)
-        {
-            var current = source;
-            var visited = new HashSet<RuntimeAnimatorController>();
-            while (current is AnimatorOverrideController overrideController)
-            {
-                if (!visited.Add(current))
-                {
-                    controller = null;
-                    return false;
-                }
-                current = overrideController.runtimeAnimatorController;
-            }
-
-            controller = current as AnimatorController;
-            return controller != null;
         }
 
         private static void ProcessControllerBehaviours(
-            AnimatorController controller,
+            VirtualAnimatorController controller,
             ProcessingState state)
         {
-            var processedStateMachines = new HashSet<AnimatorStateMachine>();
-            foreach (var layer in controller.layers)
+            var layers = controller.Layers.ToArray();
+            var processedStateMachines = new HashSet<VirtualStateMachine>();
+            foreach (var layer in layers)
             {
-                if (layer.stateMachine != null
-                    && processedStateMachines.Add(layer.stateMachine))
+                if (layer.StateMachine != null
+                    && processedStateMachines.Add(layer.StateMachine))
                 {
-                    ProcessStateMachine(layer.stateMachine, state);
+                    ProcessStateMachine(layer.StateMachine, state);
                 }
             }
 
-            var layers = controller.layers;
-            for (var layerIndex = 0; layerIndex < layers.Length; layerIndex++)
+            foreach (var layer in layers)
             {
-                var syncedLayerIndex = layers[layerIndex].syncedLayerIndex;
-                if (syncedLayerIndex < 0 || syncedLayerIndex >= layers.Length)
+                if (layer.SyncedLayerBehaviourOverrides.Count == 0)
                 {
                     continue;
                 }
 
-                foreach (var animatorState in EnumerateStates(
-                             layers[syncedLayerIndex].stateMachine))
+                var overrides = layer.SyncedLayerBehaviourOverrides.ToBuilder();
+                foreach (var pair in layer.SyncedLayerBehaviourOverrides)
                 {
                     var changes = ProcessBehaviours(
-                        controller.GetStateEffectiveBehaviours(animatorState, layerIndex),
+                        pair.Value,
                         state,
-                        $"{layers[layerIndex].name}/{animatorState.name}",
-                        () => ScriptableObject.CreateInstance<VRCAvatarParameterDriver>());
-                    controller.SetStateEffectiveBehaviours(
-                        animatorState,
-                        layerIndex,
-                        AppendBehaviour(changes.Behaviours, changes.Driver));
+                        $"{layer.Name}/{pair.Key.Name}");
+                    overrides[pair.Key] = AppendBehaviour(changes.Behaviours, changes.Driver);
                     AppendDriver(changes.Driver, state);
                 }
+                layer.SyncedLayerBehaviourOverrides = overrides.ToImmutable();
             }
         }
 
         private static void ProcessStateMachine(
-            AnimatorStateMachine machine,
+            VirtualStateMachine machine,
             ProcessingState state)
         {
-            var machineChanges = ProcessBehaviours(
-                machine.behaviours,
-                state,
-                machine.name,
-                () => machine.AddStateMachineBehaviour<VRCAvatarParameterDriver>());
-            machine.behaviours = AppendBehaviour(machineChanges.Behaviours, machineChanges.Driver);
+            var machineChanges = ProcessBehaviours(machine.Behaviours, state, machine.Name);
+            machine.Behaviours = AppendBehaviour(machineChanges.Behaviours, machineChanges.Driver);
             AppendDriver(machineChanges.Driver, state);
 
-            foreach (var childState in machine.states)
+            foreach (var childState in machine.States)
             {
-                if (childState.state == null)
+                if (childState.State == null)
                 {
                     continue;
                 }
 
                 var changes = ProcessBehaviours(
-                    childState.state.behaviours,
+                    childState.State.Behaviours,
                     state,
-                    childState.state.name,
-                    () => childState.state.AddStateMachineBehaviour<VRCAvatarParameterDriver>());
-                childState.state.behaviours = AppendBehaviour(changes.Behaviours, changes.Driver);
+                    childState.State.Name);
+                childState.State.Behaviours = AppendBehaviour(changes.Behaviours, changes.Driver);
                 AppendDriver(changes.Driver, state);
             }
 
-            foreach (var childMachine in machine.stateMachines)
+            foreach (var childMachine in machine.StateMachines)
             {
-                if (childMachine.stateMachine != null)
+                if (childMachine.StateMachine != null)
                 {
-                    ProcessStateMachine(childMachine.stateMachine, state);
+                    ProcessStateMachine(childMachine.StateMachine, state);
                 }
             }
         }
 
         private static BehaviourChanges ProcessBehaviours(
-            StateMachineBehaviour[] behaviours,
+            IEnumerable<StateMachineBehaviour> behaviours,
             ProcessingState state,
-            string ownerName,
-            Func<VRCAvatarParameterDriver> createDriver)
+            string ownerName)
         {
             var kept = new List<StateMachineBehaviour>();
             var converted = new Dictionary<PhantomTrackingControlGroup, bool>();
-            foreach (var behaviour in behaviours ?? Array.Empty<StateMachineBehaviour>())
+            foreach (var behaviour in behaviours ?? Enumerable.Empty<StateMachineBehaviour>())
             {
+                if (behaviour is VRCAnimatorPlayAudio playAudio)
+                {
+                    RemapPlayAudioParameter(playAudio, state.Slot);
+                }
+
                 if (behaviour is VRCAnimatorTrackingControl tracking)
                 {
                     state.TrackingRemoved++;
@@ -379,11 +321,10 @@ namespace MPCCT.PhantomSystem.Editor
 
             if (converted.Count == 0)
             {
-                return new BehaviourChanges(kept.ToArray(), null);
+                return new BehaviourChanges(kept.ToImmutableList(), null);
             }
 
-            var driver = createDriver();
-            state.CreatedDrivers.Add(driver);
+            var driver = ScriptableObject.CreateInstance<VRCAvatarParameterDriver>();
             driver.name = $"Phantom Tracking Conversion ({ownerName})";
             driver.localOnly = false;
             driver.parameters = new List<VRC_AvatarParameterDriver.Parameter>();
@@ -397,7 +338,27 @@ namespace MPCCT.PhantomSystem.Editor
                 });
             }
 
-            return new BehaviourChanges(kept.ToArray(), driver);
+            return new BehaviourChanges(kept.ToImmutableList(), driver);
+        }
+
+        private static void RemapPlayAudioParameter(
+            VRCAnimatorPlayAudio playAudio,
+            PhantomSlotBuildState slot)
+        {
+            if (playAudio == null
+                || string.IsNullOrWhiteSpace(playAudio.ParameterName)
+                || slot?.Slot == null)
+            {
+                return;
+            }
+
+            playAudio.ParameterName = slot.ParameterResolution?.FinalName(
+                                          playAudio.ParameterName,
+                                          slot.Slot)
+                                      ?? PhantomParameterPolicy.FinalOriginalParameterName(
+                                          slot.Slot,
+                                          playAudio.ParameterName,
+                                          slot.ValidSharedParameterNames);
         }
 
         private static void ProcessPlayableLayerControl(
@@ -442,7 +403,6 @@ namespace MPCCT.PhantomSystem.Editor
                 marker.goalWeight = enabled ? actionLayer.EnabledWeight : 0f;
                 marker.blendDuration = 0f;
                 marker.debugString = index == 0 ? control.debugString : string.Empty;
-                state.CreatedMarkers.Add(marker);
                 kept.Add(marker);
             }
 
@@ -465,28 +425,40 @@ namespace MPCCT.PhantomSystem.Editor
                 return null;
             }
 
+            if (sourceTarget == state.OwnerPlayable)
+            {
+                // NDMF has already virtualized the layer index for controls targeting
+                // the controller currently being processed. Preserve it for commit.
+                return control;
+            }
+
+            var targetLayerIndex = control.layer;
+            if (state.OwnerVirtualLayerIndices != null
+                && state.OwnerVirtualLayerIndices.TryGetValue(
+                    targetLayerIndex,
+                    out var originalLayerIndex))
+            {
+                // Action controllers are merged into FX, so NDMF can virtualize an FX
+                // control against the Action controller. Recover its serialized index
+                // before resolving the actual source FX layer name.
+                targetLayerIndex = originalLayerIndex;
+            }
+
             if (!state.TargetLayers.TryGetValue(sourceTarget, out var layers)
-                || control.layer < 0
-                || control.layer >= layers.Count)
+                || targetLayerIndex < 0
+                || targetLayerIndex >= layers.Count)
             {
                 state.LayerControlRemoved++;
                 return null;
             }
 
-            var sameController = sourceTarget == state.OwnerPlayable;
-            if (sameController)
-            {
-                return control;
-            }
-
             var marker = ScriptableObject.CreateInstance<PhantomAnimatorLayerControlMarker>();
             marker.name = "Phantom Animator Layer Control Retarget";
             marker.targetPlayable = sourceTarget;
-            marker.targetLayerName = layers[control.layer];
+            marker.targetLayerName = layers[targetLayerIndex];
             marker.goalWeight = control.goalWeight;
             marker.blendDuration = control.blendDuration;
             marker.debugString = control.debugString;
-            state.CreatedMarkers.Add(marker);
             state.LayerControlRetargeted++;
             return marker;
         }
@@ -509,28 +481,6 @@ namespace MPCCT.PhantomSystem.Editor
                 default:
                     result = default;
                     return false;
-            }
-        }
-
-        private static IEnumerable<AnimatorState> EnumerateStates(AnimatorStateMachine machine)
-        {
-            if (machine == null)
-            {
-                yield break;
-            }
-            foreach (var child in machine.states)
-            {
-                if (child.state != null)
-                {
-                    yield return child.state;
-                }
-            }
-            foreach (var childMachine in machine.stateMachines)
-            {
-                foreach (var state in EnumerateStates(childMachine.stateMachine))
-                {
-                    yield return state;
-                }
             }
         }
 
@@ -578,42 +528,35 @@ namespace MPCCT.PhantomSystem.Editor
                 parameter.name == PhantomParameterNames.TrackingMouth(state.Slot.Slot));
         }
 
-        private static StateMachineBehaviour[] AppendBehaviour(
-            StateMachineBehaviour[] behaviours,
+        private static ImmutableList<StateMachineBehaviour> AppendBehaviour(
+            ImmutableList<StateMachineBehaviour> behaviours,
             StateMachineBehaviour behaviour)
         {
-            if (behaviour == null)
-            {
-                return behaviours ?? Array.Empty<StateMachineBehaviour>();
-            }
-            var source = behaviours ?? Array.Empty<StateMachineBehaviour>();
-            var result = new StateMachineBehaviour[source.Length + 1];
-            Array.Copy(source, result, source.Length);
-            result[result.Length - 1] = behaviour;
-            return result;
+            var source = behaviours ?? ImmutableList<StateMachineBehaviour>.Empty;
+            return behaviour == null ? source : source.Add(behaviour);
         }
 
         private readonly struct PreparedController
         {
-            public readonly PhantomSourcePlayableLayer Source;
-            public readonly AnimatorController Controller;
+            public readonly PhantomSourcePlayableRegistration Registration;
+            public readonly VirtualAnimatorController Controller;
 
             public PreparedController(
-                PhantomSourcePlayableLayer source,
-                AnimatorController controller)
+                PhantomSourcePlayableRegistration registration,
+                VirtualAnimatorController controller)
             {
-                Source = source;
+                Registration = registration;
                 Controller = controller;
             }
         }
 
         private readonly struct BehaviourChanges
         {
-            public readonly StateMachineBehaviour[] Behaviours;
+            public readonly ImmutableList<StateMachineBehaviour> Behaviours;
             public readonly VRCAvatarParameterDriver Driver;
 
             public BehaviourChanges(
-                StateMachineBehaviour[] behaviours,
+                ImmutableList<StateMachineBehaviour> behaviours,
                 VRCAvatarParameterDriver driver)
             {
                 Behaviours = behaviours;
@@ -627,6 +570,7 @@ namespace MPCCT.PhantomSystem.Editor
             public readonly PhantomBuildReport Report;
             public readonly IReadOnlyDictionary<VRCAvatarDescriptor.AnimLayerType, IReadOnlyList<string>> TargetLayers;
             public VRCAvatarDescriptor.AnimLayerType OwnerPlayable;
+            public IReadOnlyDictionary<int, int> OwnerVirtualLayerIndices;
             public int TrackingRemoved;
             public int TrackingConverted;
             public int LocomotionRemoved;
@@ -641,8 +585,6 @@ namespace MPCCT.PhantomSystem.Editor
             public int DriverCount;
             public bool EyePartialConversion;
             public bool MouthPartialConversion;
-            public readonly List<VRCAvatarParameterDriver> CreatedDrivers = new List<VRCAvatarParameterDriver>();
-            public readonly List<PhantomAnimatorLayerControlMarker> CreatedMarkers = new List<PhantomAnimatorLayerControlMarker>();
 
             public ProcessingState(
                 PhantomSlotBuildState slot,
@@ -656,86 +598,67 @@ namespace MPCCT.PhantomSystem.Editor
 
             public void ReportSummary()
             {
+                var reportContext = Slot.CloneRoot;
                 if (TrackingRemoved > 0)
                 {
                     if (TrackingConverted > 0)
                     {
                         Report.Info(
                             $"Slot '{Slot.SlotId}' converted {TrackingConverted} Animator Tracking Control behavior(s) into {DriverCount} phantom parameter driver(s).",
-                            Slot.BakedAvatar);
+                            reportContext);
                     }
                     else
                     {
                         Report.Warning(
                             $"Slot '{Slot.SlotId}' removed {TrackingRemoved} Animator Tracking Control behavior(s) without conversion.",
-                            Slot.BakedAvatar);
+                            reportContext);
                     }
                 }
                 if (LocomotionRemoved > 0)
                 {
-                    Report.Warning($"Slot '{Slot.SlotId}' removed {LocomotionRemoved} avatar-global Animator Locomotion Control behavior(s).", Slot.BakedAvatar);
+                    Report.Warning($"Slot '{Slot.SlotId}' removed {LocomotionRemoved} avatar-global Animator Locomotion Control behavior(s).", reportContext);
                 }
                 if (TemporaryPoseRemoved > 0)
                 {
-                    Report.Warning($"Slot '{Slot.SlotId}' removed {TemporaryPoseRemoved} avatar-global Animator Temporary Pose Space behavior(s).", Slot.BakedAvatar);
+                    Report.Warning($"Slot '{Slot.SlotId}' removed {TemporaryPoseRemoved} avatar-global Animator Temporary Pose Space behavior(s).", reportContext);
                 }
                 if (PlayableLayerRemoved > 0)
                 {
-                    Report.Warning($"Slot '{Slot.SlotId}' removed {PlayableLayerRemoved} Playable Layer Control behavior(s) with unavailable or unsupported targets.", Slot.BakedAvatar);
+                    Report.Warning($"Slot '{Slot.SlotId}' removed {PlayableLayerRemoved} Playable Layer Control behavior(s) with unavailable or unsupported targets.", reportContext);
                 }
                 if (ActionPlayableLayerConverted > 0)
                 {
-                    Report.Info($"Slot '{Slot.SlotId}' converted {ActionPlayableLayerConverted} binary Action Playable Layer Control behavior(s) into instant controls for all Converted Action layers.", Slot.BakedAvatar);
+                    Report.Info($"Slot '{Slot.SlotId}' converted {ActionPlayableLayerConverted} binary Action Playable Layer Control behavior(s) into instant controls for all Converted Action layers.", reportContext);
                 }
                 if (NonBinaryActionPlayableLayerRemoved > 0)
                 {
-                    Report.Warning($"Slot '{Slot.SlotId}' removed {NonBinaryActionPlayableLayerRemoved} Action Playable Layer Control behavior(s) whose Goal Weight was neither 0 nor 1.", Slot.BakedAvatar);
+                    Report.Warning($"Slot '{Slot.SlotId}' removed {NonBinaryActionPlayableLayerRemoved} Action Playable Layer Control behavior(s) whose Goal Weight was neither 0 nor 1.", reportContext);
                 }
                 if (ActionPlayableBlendDurationIgnored > 0)
                 {
-                    Report.Warning($"Slot '{Slot.SlotId}' ignored Blend Duration on {ActionPlayableBlendDurationIgnored} converted Action Playable Layer Control behavior(s); Converted Action switching is instant.", Slot.BakedAvatar);
+                    Report.Warning($"Slot '{Slot.SlotId}' ignored Blend Duration on {ActionPlayableBlendDurationIgnored} converted Action Playable Layer Control behavior(s); Converted Action switching is instant.", reportContext);
                 }
                 if (ActionLayerControlRemoved > 0)
                 {
-                    Report.Warning($"Slot '{Slot.SlotId}' removed {ActionLayerControlRemoved} Animator Layer Control behavior(s) targeting Action because Converted Action weight is controlled as one playable group.", Slot.BakedAvatar);
+                    Report.Warning($"Slot '{Slot.SlotId}' removed {ActionLayerControlRemoved} Animator Layer Control behavior(s) targeting Action because Converted Action weight is controlled as one playable group.", reportContext);
                 }
                 if (LayerControlRetargeted > 0)
                 {
-                    Report.Info($"Slot '{Slot.SlotId}' scheduled {LayerControlRetargeted} Animator Layer Control behavior(s) for final layer retargeting.", Slot.BakedAvatar);
+                    Report.Info($"Slot '{Slot.SlotId}' scheduled {LayerControlRetargeted} Animator Layer Control behavior(s) for final layer retargeting.", reportContext);
                 }
                 if (LayerControlRemoved > 0)
                 {
-                    Report.Warning($"Slot '{Slot.SlotId}' removed {LayerControlRemoved} Animator Layer Control behavior(s) with unavailable or unsupported targets.", Slot.BakedAvatar);
+                    Report.Warning($"Slot '{Slot.SlotId}' removed {LayerControlRemoved} Animator Layer Control behavior(s) with unavailable or unsupported targets.", reportContext);
                 }
                 if (EyePartialConversion)
                 {
-                    Report.Warning($"Slot '{Slot.SlotId}' converts Eyes & Eyelids using available eye bones only.", Slot.BakedAvatar);
+                    Report.Warning($"Slot '{Slot.SlotId}' converts Eyes & Eyelids using available eye bones only.", reportContext);
                 }
                 if (MouthPartialConversion)
                 {
-                    Report.Warning($"Slot '{Slot.SlotId}' converts Mouth & Jaw using the available jaw bone only.", Slot.BakedAvatar);
+                    Report.Warning($"Slot '{Slot.SlotId}' converts Mouth & Jaw using the available jaw bone only.", reportContext);
                 }
             }
-        }
-    }
-
-    internal readonly struct PhantomSourcePlayableProcessingResult
-    {
-        public readonly RuntimeAnimatorController FxController;
-        public readonly RuntimeAnimatorController GestureController;
-        public readonly RuntimeAnimatorController ActionController;
-        public readonly bool HasTrackingConversion;
-
-        public PhantomSourcePlayableProcessingResult(
-            RuntimeAnimatorController fxController,
-            RuntimeAnimatorController gestureController,
-            RuntimeAnimatorController actionController,
-            bool hasTrackingConversion)
-        {
-            FxController = fxController;
-            GestureController = gestureController;
-            ActionController = actionController;
-            HasTrackingConversion = hasTrackingConversion;
         }
     }
 }

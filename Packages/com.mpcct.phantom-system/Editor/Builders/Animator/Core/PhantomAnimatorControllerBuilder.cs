@@ -50,8 +50,16 @@ namespace MPCCT.PhantomSystem.Editor
             PhantomAnimatorGraphUtility.ValidateStateMotions(context);
             SaveGeneratedAssets(context);
 
-            BuildTrackingController(ndmfContext, system, slot, report);
             BuildPhantomViewController(ndmfContext, system, slot, report);
+        }
+
+        internal static void BuildTracking(
+            BuildContext ndmfContext,
+            PhantomSystemBuildState system,
+            PhantomSlotBuildState slot,
+            PhantomBuildReport report)
+        {
+            BuildTrackingController(ndmfContext, system, slot, report);
         }
 
         private static void BuildPhantomViewController(

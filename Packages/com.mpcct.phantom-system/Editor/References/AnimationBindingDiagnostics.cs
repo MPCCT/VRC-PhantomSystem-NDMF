@@ -129,7 +129,7 @@ namespace MPCCT.PhantomSystem.Editor
             // Strict PhantomSystem diagnostics are meaningful only for clips whose
             // conversion provenance we recorded. Other NDMF passes can create final
             // clips with intentionally unresolved sentinel bindings.
-            if (!IsConvertedPlayableClip(state, clip))
+            if (!IsConvertedPlayableClip(context.ObjectRegistry, state, clip))
             {
                 return;
             }
@@ -194,10 +194,20 @@ namespace MPCCT.PhantomSystem.Editor
             }
         }
 
-        internal static bool IsConvertedPlayableClip(PhantomBuildState state, AnimationClip clip)
+        internal static bool IsConvertedPlayableClip(
+            IObjectRegistry objectRegistry,
+            PhantomBuildState state,
+            AnimationClip clip)
         {
-            return state?.System?.Slots != null
-                   && state.System.Slots.Any(slot => slot.ConvertedClips.ContainsKey(clip));
+            if (objectRegistry == null || clip == null || state?.System?.Slots == null)
+            {
+                return false;
+            }
+
+            var reference = objectRegistry.GetReference(clip, false);
+            return reference != null
+                   && state.System.Slots.Any(slot =>
+                       slot.ConvertedClipReferences.ContainsKey(reference));
         }
 
         private static bool IsPositionRotationOrScale(string propertyName)

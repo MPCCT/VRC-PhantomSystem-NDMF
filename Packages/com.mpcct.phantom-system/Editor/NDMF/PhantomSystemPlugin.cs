@@ -28,9 +28,28 @@ namespace MPCCT.PhantomSystem.Editor
                 .Then
                 .Run("Cleanup Prebaked Avatar Metadata", ctx => PhantomBuildPassRunner.Run(ctx, CleanupPrebakedAvatarMetadataPass.Execute));
 
-            InPhase(BuildPhase.Transforming)
-                .BeforePlugin("nadena.dev.modular-avatar")
-                .Run("Finalize Phantom Merge Animators", ctx => PhantomBuildPassRunner.Run(ctx, FinalizeMergeAnimatorsPass.Execute));
+            var preModularAvatar = InPhase(BuildPhase.Transforming)
+                .BeforePlugin("nadena.dev.modular-avatar");
+
+            preModularAvatar.WithRequiredExtension(typeof(AnimatorServicesContext), sequence =>
+            {
+                sequence.Run(
+                    "Convert Phantom Source Playables",
+                    ctx => PhantomBuildPassRunner.Run(ctx, ConvertPhantomSourcePlayablesPass.Execute));
+            });
+
+            preModularAvatar
+                .Run(
+                    "Cleanup Phantom Sampling Animators",
+                    ctx => PhantomBuildPassRunner.Run(ctx, CleanupPhantomSamplingAnimatorsPass.Execute))
+                .Then
+                .Run(
+                    "Generate Phantom Tracking Animator Assets",
+                    ctx => PhantomBuildPassRunner.Run(ctx, GenerateTrackingAnimatorAssetsPass.Execute))
+                .Then
+                .Run(
+                    "Finalize Phantom Merge Animators",
+                    ctx => PhantomBuildPassRunner.Run(ctx, FinalizeMergeAnimatorsPass.Execute));
 
             var postModularAvatar = InPhase(BuildPhase.Transforming)
                 .AfterPlugin("nadena.dev.modular-avatar")

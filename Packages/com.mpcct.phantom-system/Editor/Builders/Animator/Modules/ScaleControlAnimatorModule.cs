@@ -32,7 +32,7 @@ namespace MPCCT.PhantomSystem.Editor
 
             var normalTree = CreateScaleTree(context, scaleParameter, false);
             var mirroredTree = CreateScaleTree(context, scaleParameter, true);
-            var layer = AddLayer(context.Controller, "PhantomScaleControl");
+            var layer = AddLayer(context, "PhantomScaleControl");
             var machine = layer.stateMachine;
             var normal = machine.AddState("PhantomScaleNormal");
             normal.motion = normalTree;
@@ -51,7 +51,7 @@ namespace MPCCT.PhantomSystem.Editor
         {
             var idleClip = context.CreateClip("PhantomScaleResetIdle");
             var resetClip = context.CreateClip("PhantomScaleReset");
-            var layer = AddLayer(context.Controller, "PhantomScaleReset");
+            var layer = AddLayer(context, "PhantomScaleReset");
             var machine = layer.stateMachine;
             var idle = AddState(machine, idleClip);
             var reset = AddState(machine, resetClip);

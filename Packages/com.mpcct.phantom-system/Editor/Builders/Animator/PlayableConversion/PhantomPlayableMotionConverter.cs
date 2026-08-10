@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using nadena.dev.ndmf;
+using nadena.dev.ndmf.animator;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
@@ -10,7 +12,7 @@ using Object = UnityEngine.Object;
 
 namespace MPCCT.PhantomSystem.Editor
 {
-    /// <summary>Replaces humanoid motions with generic phantom transform motions.</summary>
+    /// <summary>Replaces humanoid motions in an NDMF virtual controller with generic phantom transform motions.</summary>
     internal sealed class PhantomPlayableMotionConverter
     {
         private readonly BuildContext context;
@@ -18,16 +20,16 @@ namespace MPCCT.PhantomSystem.Editor
         private readonly PhantomSystemProjectSettingsSnapshot projectSettings;
         private readonly PhantomBuildReport report;
         private readonly VRCAvatarDescriptor.AnimLayerType playable;
-        private readonly List<Dictionary<AnimationClip, AnimationClip>> overrideChain;
-        private readonly Dictionary<AnimationClip, AnimationClip>[] clipCaches =
+        private readonly PhantomVirtualPathMapper pathMapper;
+        private readonly Dictionary<VirtualClip, VirtualClip>[] clipCaches =
         {
-            new Dictionary<AnimationClip, AnimationClip>(),
-            new Dictionary<AnimationClip, AnimationClip>()
+            new Dictionary<VirtualClip, VirtualClip>(),
+            new Dictionary<VirtualClip, VirtualClip>()
         };
-        private readonly Dictionary<BlendTree, BlendTree>[] treeCaches =
+        private readonly Dictionary<VirtualBlendTree, VirtualBlendTree>[] treeCaches =
         {
-            new Dictionary<BlendTree, BlendTree>(),
-            new Dictionary<BlendTree, BlendTree>()
+            new Dictionary<VirtualBlendTree, VirtualBlendTree>(),
+            new Dictionary<VirtualBlendTree, VirtualBlendTree>()
         };
 
         private PhantomPlayableMotionConverter(
@@ -35,15 +37,16 @@ namespace MPCCT.PhantomSystem.Editor
             PhantomSlotBuildState slot,
             PhantomSystemProjectSettingsSnapshot projectSettings,
             PhantomBuildReport report,
-            VRCAvatarDescriptor.AnimLayerType playable,
-            RuntimeAnimatorController runtimeController)
+            VRCAvatarDescriptor.AnimLayerType playable)
         {
             this.context = context;
             this.slot = slot;
             this.projectSettings = projectSettings;
             this.report = report;
             this.playable = playable;
-            overrideChain = BuildOverrideChain(runtimeController);
+            pathMapper = new PhantomVirtualPathMapper(
+                context.AvatarRootTransform,
+                slot.CloneRoot);
         }
 
         public static void Convert(
@@ -52,103 +55,116 @@ namespace MPCCT.PhantomSystem.Editor
             PhantomSystemProjectSettingsSnapshot projectSettings,
             PhantomBuildReport report,
             VRCAvatarDescriptor.AnimLayerType playable,
-            RuntimeAnimatorController runtimeController,
-            AnimatorController controller,
-            AvatarMask descriptorMask)
+            VirtualAnimatorController controller,
+            AvatarMask descriptorMask,
+            AnimatorController baseController)
         {
             var converter = new PhantomPlayableMotionConverter(
                 context,
                 slot,
                 projectSettings,
                 report,
-                playable,
-                runtimeController);
-            converter.ConvertController(controller, descriptorMask);
+                playable);
+            converter.ConvertController(controller, descriptorMask, baseController);
         }
 
         private void ConvertController(
-            AnimatorController controller,
-            AvatarMask descriptorMask)
+            VirtualAnimatorController controller,
+            AvatarMask descriptorMask,
+            AnimatorController baseController)
         {
-            var layers = controller.layers;
+            var layers = controller.Layers.ToArray();
+            var physicalLayers = baseController != null
+                ? baseController.layers
+                : Array.Empty<AnimatorControllerLayer>();
+            var controllerContext = context.Extension<AnimatorServicesContext>().ControllerContext;
             for (var layerIndex = 0; layerIndex < layers.Length; layerIndex++)
             {
-                var layer = layers[layerIndex];
+                var sourceLayerMask = layerIndex < physicalLayers.Length
+                    ? physicalLayers[layerIndex].avatarMask
+                    : null;
                 var convertedMask = PhantomAvatarMaskConverter.Convert(
                     slot,
                     descriptorMask,
-                    layer.avatarMask,
-                    $"PhantomSystem_{slot.SlotId}_{playable}_{layer.name}_Mask");
-                if (convertedMask != null)
+                    sourceLayerMask,
+                    $"PhantomSystem_{slot.SlotId}_{playable}_{layers[layerIndex].Name}_Mask",
+                    context.AvatarRootTransform);
+                if (convertedMask == null)
                 {
-                    context.AssetSaver.SaveAsset(convertedMask);
-                    layer.avatarMask = convertedMask;
-                    layers[layerIndex] = layer;
-                }
-            }
-            controller.layers = layers;
-
-            var states = layers
-                .Where(layer => layer.stateMachine != null)
-                .SelectMany(layer => EnumerateStates(layer.stateMachine))
-                .Distinct()
-                .ToArray();
-            var stateMirrors = states.ToDictionary(state => state, state => state.mirror);
-            foreach (var state in states.Where(state => state.mirrorParameterActive))
-            {
-                report.Warning(
-                    $"Slot '{slot.SlotId}' {playable} state '{state.name}' uses parameter-driven Humanoid Mirror "
-                    + $"('{state.mirrorParameter}'). PhantomSystem baked the state's default Mirror value "
-                    + $"({state.mirror}) and will ignore runtime changes to that Mirror parameter.",
-                    state);
-            }
-
-            var processedStateMachines = new HashSet<AnimatorStateMachine>();
-            layers = controller.layers;
-            for (var layerIndex = 0; layerIndex < layers.Length; layerIndex++)
-            {
-                var layer = layers[layerIndex];
-                if (layer.syncedLayerIndex >= 0
-                    && layer.syncedLayerIndex < layers.Length)
-                {
-                    foreach (var state in EnumerateStates(
-                                 layers[layer.syncedLayerIndex].stateMachine))
-                    {
-                        var effective = controller.GetStateEffectiveMotion(state, layerIndex);
-                        controller.SetStateEffectiveMotion(
-                            state,
-                            ConvertMotion(effective, stateMirrors[state]),
-                            layerIndex);
-                    }
                     continue;
                 }
 
-                if (layer.stateMachine != null
-                    && processedStateMachines.Add(layer.stateMachine))
+                try
                 {
-                    foreach (var state in EnumerateStates(layer.stateMachine))
+                    layers[layerIndex].AvatarMask =
+                        controllerContext.CloneContext.Clone(convertedMask);
+                }
+                finally
+                {
+                    Object.DestroyImmediate(convertedMask);
+                }
+            }
+
+            var states = layers
+                .Where(layer => layer.StateMachine != null)
+                .SelectMany(layer => layer.StateMachine.AllStates())
+                .Distinct()
+                .ToArray();
+            var stateMirrors = states.ToDictionary(state => state, state => state.Mirror);
+            foreach (var state in states.Where(state => state.MirrorParameter != null))
+            {
+                report.Warning(
+                    $"Slot '{slot.SlotId}' {playable} state '{state.Name}' uses parameter-driven Humanoid Mirror "
+                    + $"('{state.MirrorParameter}'). PhantomSystem baked the state's default Mirror value "
+                    + $"({state.Mirror}) and will ignore runtime changes to that Mirror parameter.",
+                    slot.CloneRoot);
+            }
+
+            var processedStateMachines = new HashSet<VirtualStateMachine>();
+            foreach (var layer in layers)
+            {
+                if (layer.SyncedLayerIndex >= 0)
+                {
+                    var overrides = layer.SyncedLayerMotionOverrides.ToBuilder();
+                    foreach (var pair in layer.SyncedLayerMotionOverrides)
                     {
-                        state.motion = ConvertMotion(state.motion, stateMirrors[state]);
+                        overrides[pair.Key] = ConvertMotion(
+                            pair.Value,
+                            stateMirrors.TryGetValue(pair.Key, out var mirror) && mirror);
                     }
+                    layer.SyncedLayerMotionOverrides = overrides.ToImmutable();
+                    continue;
+                }
+
+                if (layer.StateMachine == null
+                    || !processedStateMachines.Add(layer.StateMachine))
+                {
+                    continue;
+                }
+
+                foreach (var state in layer.StateMachine.AllStates())
+                {
+                    state.Motion = ConvertMotion(
+                        state.Motion,
+                        stateMirrors.TryGetValue(state, out var mirror) && mirror);
                 }
             }
 
             foreach (var state in states)
             {
-                state.mirror = false;
-                state.mirrorParameterActive = false;
-                state.mirrorParameter = string.Empty;
+                state.Mirror = false;
+                state.MirrorParameter = null;
             }
         }
 
-        private Motion ConvertMotion(Motion motion, bool inheritedMirror)
+        private VirtualMotion ConvertMotion(VirtualMotion motion, bool inheritedMirror)
         {
-            if (motion is AnimationClip clip)
+            if (motion is VirtualClip clip)
             {
                 return ConvertClip(clip, inheritedMirror);
             }
 
-            if (!(motion is BlendTree sourceTree))
+            if (!(motion is VirtualBlendTree sourceTree))
             {
                 return motion;
             }
@@ -159,17 +175,15 @@ namespace MPCCT.PhantomSystem.Editor
                 return existingTree;
             }
 
-            var sourceChildren = sourceTree.children;
-            var convertedMotions = new Motion[sourceChildren.Length];
-            var changed = false;
-            for (var index = 0; index < sourceChildren.Length; index++)
-            {
-                convertedMotions[index] = ConvertMotion(
-                    sourceChildren[index].motion,
-                    CombineMirror(inheritedMirror, sourceChildren[index].mirror));
-                changed |= convertedMotions[index] != sourceChildren[index].motion;
-            }
-
+            var convertedMotions = sourceTree.Children
+                .Select(child => ConvertMotion(
+                    child.Motion,
+                    CombineMirror(inheritedMirror, child.Mirror)))
+                .ToArray();
+            var changed = sourceTree.Children
+                .Zip(convertedMotions, (source, converted) =>
+                    source.Motion != converted || source.Mirror)
+                .Any(value => value);
             if (!changed)
             {
                 treeCache[sourceTree] = sourceTree;
@@ -179,52 +193,49 @@ namespace MPCCT.PhantomSystem.Editor
             var tree = CreateConvertedBlendTree(
                 sourceTree,
                 convertedMotions,
-                $"PhantomSystem_{slot.SlotId}_{playable}_{sourceTree.name}"
+                $"PhantomSystem_{slot.SlotId}_{playable}_{sourceTree.Name}"
                 + (inheritedMirror ? "_Mirrored" : string.Empty));
             treeCache[sourceTree] = tree;
-            context.AssetSaver.SaveAsset(tree);
             return tree;
         }
 
-        internal static BlendTree CreateConvertedBlendTree(
-            BlendTree source,
-            IReadOnlyList<Motion> convertedMotions,
+        internal static VirtualBlendTree CreateConvertedBlendTree(
+            VirtualBlendTree source,
+            IReadOnlyList<VirtualMotion> convertedMotions,
             string name)
         {
             if (source == null)
             {
                 throw new ArgumentNullException(nameof(source));
             }
-
-            var sourceChildren = source.children;
-            if (convertedMotions == null || convertedMotions.Count != sourceChildren.Length)
+            if (convertedMotions == null || convertedMotions.Count != source.Children.Count)
             {
                 throw new ArgumentException(
                     "Converted BlendTree motion count must match the source child count.",
                     nameof(convertedMotions));
             }
 
-            // Do not Object.Instantiate Animator sub-assets here. Unity 2022 can emit a
-            // kStrongPPtrMask native assertion while cloning their strong object references.
-            // ChildMotion is a value type, so copying the array preserves every per-child
-            // option while allowing only the Motion references to be replaced.
-            var tree = new BlendTree();
-            tree.name = name;
-            tree.hideFlags = source.hideFlags;
-            tree.blendType = source.blendType;
-            tree.blendParameter = source.blendParameter;
-            tree.blendParameterY = source.blendParameterY;
-            tree.useAutomaticThresholds = false;
-            tree.minThreshold = source.minThreshold;
-            tree.maxThreshold = source.maxThreshold;
-
-            for (var index = 0; index < sourceChildren.Length; index++)
-            {
-                sourceChildren[index].motion = convertedMotions[index];
-                sourceChildren[index].mirror = false;
-            }
-            tree.children = sourceChildren;
-            tree.useAutomaticThresholds = source.useAutomaticThresholds;
+            var tree = VirtualBlendTree.Create(name);
+            tree.BlendType = source.BlendType;
+            tree.BlendParameter = source.BlendParameter;
+            tree.BlendParameterY = source.BlendParameterY;
+            tree.UseAutomaticThresholds = false;
+            tree.MinThreshold = source.MinThreshold;
+            tree.MaxThreshold = source.MaxThreshold;
+            tree.NormalizedBlendValues = source.NormalizedBlendValues;
+            tree.Children = source.Children
+                .Select((child, index) => new VirtualBlendTree.VirtualChildMotion
+                {
+                    Motion = convertedMotions[index],
+                    CycleOffset = child.CycleOffset,
+                    DirectBlendParameter = child.DirectBlendParameter,
+                    Mirror = false,
+                    Threshold = child.Threshold,
+                    Position = child.Position,
+                    TimeScale = child.TimeScale
+                })
+                .ToImmutableList();
+            tree.UseAutomaticThresholds = source.UseAutomaticThresholds;
             return tree;
         }
 
@@ -233,7 +244,7 @@ namespace MPCCT.PhantomSystem.Editor
             return inheritedMirror ^ localMirror;
         }
 
-        private AnimationClip ConvertClip(AnimationClip source, bool inheritedMirror)
+        private VirtualClip ConvertClip(VirtualClip source, bool inheritedMirror)
         {
             if (source == null)
             {
@@ -246,71 +257,102 @@ namespace MPCCT.PhantomSystem.Editor
                 return existing;
             }
 
-            var clip = ResolveOverride(source);
-            if (clip != source && clipCache.TryGetValue(clip, out existing))
-            {
-                clipCache[source] = existing;
-                return existing;
-            }
-
-            var bindings = AnimationUtility.GetCurveBindings(clip);
-            var objectBindings = AnimationUtility.GetObjectReferenceCurveBindings(clip);
-            var requiresBake = clip.humanMotion
-                               || bindings.Any(binding => binding.type == typeof(Animator))
+            var bindings = source.GetFloatCurveBindings().ToArray();
+            var objectBindings = source.GetObjectCurveBindings().ToArray();
+            var requiresBake = bindings.Any(binding => binding.type == typeof(Animator))
                                || bindings.Any(binding => binding.type == typeof(Transform)
-                                                          && string.IsNullOrEmpty(binding.path));
+                                                          && string.IsNullOrEmpty(
+                                                              pathMapper.ToCloneRelative(binding.path)));
             var requiresDriverRedirect = bindings.Any(RequiresDriverRedirect)
                                          || objectBindings.Any(RequiresDriverRedirect);
             if (!requiresBake && !requiresDriverRedirect)
             {
-                clipCache[source] = clip;
-                clipCache[clip] = clip;
-                return clip;
+                clipCache[source] = source;
+                return source;
             }
 
-            PhantomHumanoidClipBakeResult result = null;
-            AnimationClip converted;
-            if (requiresBake)
+            var sourceName = source.Name;
+            AnimationClip localSource = null;
+            AnimationClip converted = null;
+            try
             {
-                result = PhantomHumanoidClipBaker.Bake(
-                    clip,
-                    slot.CloneRoot,
-                    new PhantomHumanoidClipBakeOptions
-                    {
-                        SamplingMode = PhantomHumanoidSamplingMode.Adaptive,
-                        SampleRate = projectSettings.MaximumAdaptiveSampleRate,
-                        PositionErrorTolerance = projectSettings.PositionErrorTolerance,
-                        RotationErrorToleranceDegrees = projectSettings.RotationErrorToleranceDegrees,
-                        LocalizeRootMotionToHips = true,
-                        InheritedMirror = inheritedMirror,
-                        OutputBonePaths = slot.AnimationDriverBones.ToDictionary(
-                            pair => pair.Key,
-                            pair => TransformPathUtility.GetRelativePath(
-                                pair.Value,
-                                slot.CloneRoot.transform)),
-                        OutputBoneParentPaths = slot.AnimationDriverPoseParentClonePaths
-                    });
-                converted = result.Clip;
+                localSource = PhantomVirtualClipAdapter.Materialize(
+                    source,
+                    pathMapper.ToCloneRelative);
+
+                PhantomHumanoidClipBakeResult result = null;
+                if (requiresBake)
+                {
+                    result = PhantomHumanoidClipBaker.Bake(
+                        localSource,
+                        slot.CloneRoot,
+                        new PhantomHumanoidClipBakeOptions
+                        {
+                            SamplingMode = PhantomHumanoidSamplingMode.Adaptive,
+                            SampleRate = projectSettings.MaximumAdaptiveSampleRate,
+                            PositionErrorTolerance = projectSettings.PositionErrorTolerance,
+                            RotationErrorToleranceDegrees = projectSettings.RotationErrorToleranceDegrees,
+                            LocalizeRootMotionToHips = true,
+                            InheritedMirror = inheritedMirror,
+                            OutputBonePaths = slot.AnimationDriverBones.ToDictionary(
+                                pair => pair.Key,
+                                pair => TransformPathUtility.GetRelativePath(
+                                    pair.Value,
+                                    slot.CloneRoot.transform)),
+                            OutputBoneParentPaths = slot.AnimationDriverPoseParentClonePaths
+                        });
+                    converted = result.Clip;
+                }
+                else
+                {
+                    converted = localSource;
+                    localSource = null;
+                }
+
+                RedirectBoneBindings(converted);
+                converted.hideFlags = HideFlags.None;
+                converted.name = $"PhantomSystem_{slot.SlotId}_{playable}_{sourceName}"
+                                 + (inheritedMirror ? "_Mirrored" : string.Empty);
+                var imported = PhantomVirtualClipAdapter.ImportConverted(
+                    context,
+                    converted,
+                    source,
+                    pathMapper.ToAvatarRelative);
+                clipCache[source] = imported.Clip;
+                slot.ConvertedClipReferences[imported.Reference] = new PhantomConvertedClipMetadata
+                {
+                    SlotId = slot.SlotId,
+                    Playable = playable.ToString(),
+                    SourceClipName = sourceName
+                };
+
+                ReportBakeDiagnostics(source, sourceName, result);
+                return imported.Clip;
             }
-            else
+            finally
             {
-                converted = Object.Instantiate(clip);
+                if (converted != null)
+                {
+                    Object.DestroyImmediate(converted);
+                }
+                if (localSource != null)
+                {
+                    Object.DestroyImmediate(localSource);
+                }
+            }
+        }
+
+        private void ReportBakeDiagnostics(
+            VirtualClip source,
+            string sourceName,
+            PhantomHumanoidClipBakeResult result)
+        {
+            if (result == null)
+            {
+                return;
             }
 
-            RedirectBoneBindings(converted);
-            converted.name = $"PhantomSystem_{slot.SlotId}_{playable}_{clip.name}"
-                             + (inheritedMirror ? "_Mirrored" : string.Empty);
-            context.AssetSaver.SaveAsset(converted);
-            clipCache[source] = converted;
-            clipCache[clip] = converted;
-            slot.ConvertedClips[converted] = new PhantomConvertedClipMetadata
-            {
-                SlotId = slot.SlotId,
-                Playable = playable.ToString(),
-                SourceClip = clip
-            };
-
-            if (result != null && result.MissingBones.Count > 0)
+            if (result.MissingBones.Count > 0)
             {
                 foreach (var missingBone in result.MissingBones)
                 {
@@ -322,13 +364,12 @@ namespace MPCCT.PhantomSystem.Editor
                         slot.MissingHumanoidBoneClips.Add(missingBone, affectedClips);
                     }
 
-                    affectedClips.Add($"{playable}/{clip.name}");
+                    affectedClips.Add($"{playable}/{sourceName}");
                 }
             }
 
-            if (result != null
-                && result.SkippedAnimatorBindings.Count > 0
-                && slot.WarnedUnsupportedAnimatorClips.Add(clip))
+            if (result.SkippedAnimatorBindings.Count > 0
+                && slot.WarnedUnsupportedAnimatorClips.Add(source))
             {
                 var propertySummary = string.Join(", ", result.SkippedAnimatorBindings
                     .Select(binding => binding.propertyName)
@@ -336,50 +377,52 @@ namespace MPCCT.PhantomSystem.Editor
                     .Distinct(StringComparer.Ordinal)
                     .Take(5));
                 report.Warning(
-                    $"Slot '{slot.SlotId}' {playable} clip '{clip.name}' skipped "
+                    $"Slot '{slot.SlotId}' {playable} clip '{sourceName}' skipped "
                     + $"{result.SkippedAnimatorBindings.Count} unsupported Animator binding(s)"
                     + (string.IsNullOrEmpty(propertySummary) ? "." : $": {propertySummary}."),
-                    clip);
+                    slot.CloneRoot);
             }
 
-            if (result != null && result.RootMotionLocalized)
+            if (result.RootMotionLocalized)
             {
                 report.Info(
-                    $"Slot '{slot.SlotId}' {playable} clip '{clip.name}' localized Root Motion to its phantom Hips.",
-                    clip);
+                    $"Slot '{slot.SlotId}' {playable} clip '{sourceName}' localized Root Motion to its phantom Hips.",
+                    slot.CloneRoot);
             }
 
-            if (result != null && result.IgnoredRootScaleBindings.Count > 0)
+            if (result.IgnoredRootScaleBindings.Count > 0)
             {
                 report.Warning(
-                    $"Slot '{slot.SlotId}' {playable} clip '{clip.name}' ignored "
+                    $"Slot '{slot.SlotId}' {playable} clip '{sourceName}' ignored "
                     + $"{result.IgnoredRootScaleBindings.Count} root scale binding(s).",
-                    clip);
+                    slot.CloneRoot);
             }
 
-            if (result != null && result.HitSampleRateLimit)
+            if (result.HitSampleRateLimit)
             {
                 report.Warning(
-                    $"Slot '{slot.SlotId}' {playable} clip '{clip.name}' reached the "
+                    $"Slot '{slot.SlotId}' {playable} clip '{sourceName}' reached the "
                     + $"adaptive sampling limit ({result.SampleRate:0.###} FPS) before all bone errors "
                     + "fell within the configured tolerance.",
-                    clip);
+                    slot.CloneRoot);
             }
-
-            return converted;
         }
 
         private bool RequiresDriverRedirect(EditorCurveBinding binding)
         {
             return binding.type == typeof(Transform)
-                   && slot.CloneToAnimationDriverPaths.ContainsKey(binding.path ?? string.Empty);
+                   && slot.CloneToAnimationDriverPaths.ContainsKey(
+                       pathMapper.ToCloneRelative(binding.path));
         }
 
         private void RedirectBoneBindings(AnimationClip clip)
         {
             foreach (var binding in AnimationUtility.GetCurveBindings(clip))
             {
-                if (!RequiresDriverRedirect(binding))
+                if (binding.type != typeof(Transform)
+                    || !slot.CloneToAnimationDriverPaths.TryGetValue(
+                        binding.path ?? string.Empty,
+                        out var targetPath))
                 {
                     continue;
                 }
@@ -387,13 +430,16 @@ namespace MPCCT.PhantomSystem.Editor
                 var curve = AnimationUtility.GetEditorCurve(clip, binding);
                 AnimationUtility.SetEditorCurve(clip, binding, null);
                 var redirected = binding;
-                redirected.path = slot.CloneToAnimationDriverPaths[binding.path ?? string.Empty];
+                redirected.path = targetPath;
                 AnimationUtility.SetEditorCurve(clip, redirected, curve);
             }
 
             foreach (var binding in AnimationUtility.GetObjectReferenceCurveBindings(clip))
             {
-                if (!RequiresDriverRedirect(binding))
+                if (binding.type != typeof(Transform)
+                    || !slot.CloneToAnimationDriverPaths.TryGetValue(
+                        binding.path ?? string.Empty,
+                        out var targetPath))
                 {
                     continue;
                 }
@@ -401,84 +447,8 @@ namespace MPCCT.PhantomSystem.Editor
                 var curve = AnimationUtility.GetObjectReferenceCurve(clip, binding);
                 AnimationUtility.SetObjectReferenceCurve(clip, binding, null);
                 var redirected = binding;
-                redirected.path = slot.CloneToAnimationDriverPaths[binding.path ?? string.Empty];
+                redirected.path = targetPath;
                 AnimationUtility.SetObjectReferenceCurve(clip, redirected, curve);
-            }
-        }
-
-        private AnimationClip ResolveOverride(AnimationClip source)
-        {
-            var current = source;
-            foreach (var overrides in overrideChain)
-            {
-                if (current != null && overrides.TryGetValue(current, out var currentReplacement))
-                {
-                    current = currentReplacement ?? current;
-                }
-                else if (source != null && overrides.TryGetValue(source, out var sourceReplacement))
-                {
-                    current = sourceReplacement ?? current;
-                }
-            }
-            return current;
-        }
-
-        private static List<Dictionary<AnimationClip, AnimationClip>> BuildOverrideChain(
-            RuntimeAnimatorController runtimeController)
-        {
-            var controllers = new List<AnimatorOverrideController>();
-            var current = runtimeController;
-            var visited = new HashSet<RuntimeAnimatorController>();
-            while (current is AnimatorOverrideController overrideController
-                   && visited.Add(current))
-            {
-                controllers.Add(overrideController);
-                current = overrideController.runtimeAnimatorController;
-            }
-
-            controllers.Reverse();
-            var result = new List<Dictionary<AnimationClip, AnimationClip>>();
-            foreach (var overrideController in controllers)
-            {
-                var map = new Dictionary<AnimationClip, AnimationClip>();
-                var pairs = new List<KeyValuePair<AnimationClip, AnimationClip>>(
-                    overrideController.overridesCount);
-                overrideController.GetOverrides(pairs);
-                foreach (var pair in pairs)
-                {
-                    if (pair.Key != null)
-                    {
-                        map[pair.Key] = pair.Value ?? pair.Key;
-                    }
-                }
-                result.Add(map);
-            }
-
-            return result;
-        }
-
-        private static IEnumerable<AnimatorState> EnumerateStates(
-            AnimatorStateMachine stateMachine)
-        {
-            if (stateMachine == null)
-            {
-                yield break;
-            }
-
-            foreach (var child in stateMachine.states)
-            {
-                if (child.state != null)
-                {
-                    yield return child.state;
-                }
-            }
-
-            foreach (var childMachine in stateMachine.stateMachines)
-            {
-                foreach (var state in EnumerateStates(childMachine.stateMachine))
-                {
-                    yield return state;
-                }
             }
         }
     }

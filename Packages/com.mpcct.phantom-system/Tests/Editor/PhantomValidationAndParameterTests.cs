@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using nadena.dev.ndmf;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.Animations;
@@ -537,76 +538,6 @@ namespace MPCCT.PhantomSystem.Editor.Tests
                 PhantomAnimationBindingClassifier.Classify(binding));
         }
 
-        [Test]
-        public void BlendTreeConversion_RebuildsTreeAndConsumesChildMirror()
-        {
-            var source = new BlendTree();
-            var originalClip = new AnimationClip();
-            var convertedClip = new AnimationClip();
-            BlendTree converted = null;
-            try
-            {
-                source.name = "SourceTree";
-                source.hideFlags = HideFlags.HideInHierarchy;
-                source.blendType = BlendTreeType.Simple1D;
-                source.blendParameter = "Speed";
-                source.blendParameterY = "Direction";
-                source.useAutomaticThresholds = false;
-                source.minThreshold = -1f;
-                source.maxThreshold = 2f;
-                source.children = new[]
-                {
-                    new ChildMotion
-                    {
-                        motion = originalClip,
-                        threshold = 0.35f,
-                        position = new Vector2(1.25f, -0.5f),
-                        timeScale = 1.5f,
-                        cycleOffset = 0.25f,
-                        directBlendParameter = "DirectWeight",
-                        mirror = true
-                    }
-                };
-                var sourceChild = source.children.Single();
-
-                converted = PhantomPlayableMotionConverter.CreateConvertedBlendTree(
-                    source,
-                    new Motion[] { convertedClip },
-                    "ConvertedTree");
-
-                Assert.AreNotSame(source, converted);
-                Assert.AreEqual("ConvertedTree", converted.name);
-                Assert.AreEqual(source.hideFlags, converted.hideFlags);
-                Assert.AreEqual(source.blendType, converted.blendType);
-                Assert.AreEqual(source.blendParameter, converted.blendParameter);
-                Assert.AreEqual(source.blendParameterY, converted.blendParameterY);
-                Assert.AreEqual(source.useAutomaticThresholds, converted.useAutomaticThresholds);
-                Assert.AreEqual(source.minThreshold, converted.minThreshold);
-                Assert.AreEqual(source.maxThreshold, converted.maxThreshold);
-
-                var convertedChild = converted.children.Single();
-                Assert.AreSame(originalClip, source.children.Single().motion);
-                Assert.AreSame(convertedClip, convertedChild.motion);
-                Assert.AreEqual(sourceChild.threshold, convertedChild.threshold);
-                Assert.AreEqual(sourceChild.position, convertedChild.position);
-                Assert.AreEqual(sourceChild.timeScale, convertedChild.timeScale);
-                Assert.AreEqual(sourceChild.cycleOffset, convertedChild.cycleOffset);
-                Assert.AreEqual(sourceChild.directBlendParameter, convertedChild.directBlendParameter);
-                Assert.IsTrue(sourceChild.mirror);
-                Assert.IsFalse(convertedChild.mirror);
-            }
-            finally
-            {
-                if (converted != null)
-                {
-                    Object.DestroyImmediate(converted);
-                }
-                Object.DestroyImmediate(source);
-                Object.DestroyImmediate(originalClip);
-                Object.DestroyImmediate(convertedClip);
-            }
-        }
-
         [TestCase(false, false, false)]
         [TestCase(false, true, true)]
         [TestCase(true, false, true)]
@@ -752,20 +683,37 @@ namespace MPCCT.PhantomSystem.Editor.Tests
         [Test]
         public void ConvertedClipDetection_UsesProvenanceInsteadOfName()
         {
-            var clip = new AnimationClip { name = "PhantomSystem_Slot1_FX_UserClip" };
+            var root = new GameObject("Avatar");
+            var convertedSource = new AnimationClip { name = "ConvertedSource" };
+            var finalClip = new AnimationClip { name = "RenamedByAnotherPass" };
+            var userClip = new AnimationClip { name = "PhantomSystem_Slot1_FX_UserClip" };
             try
             {
+                var registry = new ObjectRegistry(root.transform);
+                var registryApi = (IObjectRegistry)registry;
                 var state = new PhantomBuildState { System = new PhantomSystemBuildState() };
                 var slot = new PhantomSlotBuildState();
                 state.System.Slots.Add(slot);
 
-                Assert.IsFalse(AnimationBindingDiagnostics.IsConvertedPlayableClip(state, clip));
-                slot.ConvertedClips[clip] = new PhantomConvertedClipMetadata();
-                Assert.IsTrue(AnimationBindingDiagnostics.IsConvertedPlayableClip(state, clip));
+                var reference = registryApi.GetReference(convertedSource);
+                slot.ConvertedClipReferences[reference] = new PhantomConvertedClipMetadata();
+                registryApi.RegisterReplacedObject(reference, finalClip);
+
+                Assert.IsTrue(AnimationBindingDiagnostics.IsConvertedPlayableClip(
+                    registry,
+                    state,
+                    finalClip));
+                Assert.IsFalse(AnimationBindingDiagnostics.IsConvertedPlayableClip(
+                    registry,
+                    state,
+                    userClip));
             }
             finally
             {
-                Object.DestroyImmediate(clip);
+                Object.DestroyImmediate(root);
+                Object.DestroyImmediate(convertedSource);
+                Object.DestroyImmediate(finalClip);
+                Object.DestroyImmediate(userClip);
             }
         }
 

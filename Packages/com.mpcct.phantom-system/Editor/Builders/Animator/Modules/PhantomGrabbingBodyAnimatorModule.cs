@@ -173,7 +173,7 @@ namespace MPCCT.PhantomSystem.Editor
             PhantomAnimatorBuildContext context,
             BodyGrabbingClips clips)
         {
-            var layer = AddLayer(context.Controller, "PhantomGrabbingBody");
+            var layer = AddLayer(context, "PhantomGrabbingBody");
             var machine = layer.stateMachine;
             var baseFollow = AddState(machine, clips.FollowBase);
             var frozen = AddState(machine, clips.EnterFrozen);

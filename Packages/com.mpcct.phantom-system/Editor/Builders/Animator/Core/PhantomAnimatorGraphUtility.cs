@@ -9,7 +9,23 @@ namespace MPCCT.PhantomSystem.Editor
     /// <summary>Provides shared AnimatorController graph construction helpers.</summary>
     internal static class PhantomAnimatorGraphUtility
     {
-        public static AnimatorControllerLayer AddLayer(AnimatorController controller, string name)
+        public static AnimatorControllerLayer AddLayer(
+            PhantomAnimatorBuildContext context,
+            string name)
+        {
+            return AddLayer(
+                context.Controller,
+                BuildSlotLayerName(context.Slot.HierarchyName, name));
+        }
+
+        internal static string BuildSlotLayerName(string slotHierarchyName, string name)
+        {
+            return $"PhantomSystem_{slotHierarchyName}_{name}";
+        }
+
+        private static AnimatorControllerLayer AddLayer(
+            AnimatorController controller,
+            string name)
         {
             controller.AddLayer(name);
             var layers = controller.layers;

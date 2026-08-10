@@ -17,17 +17,16 @@ namespace MPCCT.PhantomSystem.Editor
             PhantomSlotBuildState slot,
             PhantomBuildReport report)
         {
-            var sourceControllers = new[]
-            {
-                slot.ProcessedFxController,
-                slot.ProcessedActionController,
-                slot.ProcessedGestureController
-            };
-            InstallCloneParameterMappings(slot, sourceControllers);
-
+            slot.SourcePlayableRegistrations.Clear();
+            slot.SourceFxMergeAnimator = null;
+            slot.SourceActionMergeAnimator = null;
+            slot.SourceGestureMergeAnimator = null;
             var descriptor = slot.BakedAvatar;
             if (descriptor == null || slot.Slot == null || slot.Slot.removeSourceControls)
             {
+                InstallCloneParameterMappings(
+                    slot,
+                    System.Array.Empty<RuntimeAnimatorController>());
                 return;
             }
 
@@ -37,21 +36,63 @@ namespace MPCCT.PhantomSystem.Editor
                 return;
             }
 
-            slot.SourceFxMergeAnimator = AddMergeAnimator(
-                host,
-                slot,
-                slot.ProcessedFxController,
-                VRCAvatarDescriptor.AnimLayerType.FX);
-            slot.SourceActionMergeAnimator = AddMergeAnimator(
-                host,
-                slot,
-                slot.ProcessedActionController,
-                VRCAvatarDescriptor.AnimLayerType.FX);
-            slot.SourceGestureMergeAnimator = AddMergeAnimator(
-                host,
-                slot,
-                slot.ProcessedGestureController,
-                VRCAvatarDescriptor.AnimLayerType.Gesture);
+            foreach (var playable in new[]
+                     {
+                         VRCAvatarDescriptor.AnimLayerType.FX,
+                         VRCAvatarDescriptor.AnimLayerType.Action,
+                         VRCAvatarDescriptor.AnimLayerType.Gesture
+                     })
+            {
+                if (!PhantomSourcePlayableControllerUtility.TryGetLayer(
+                        descriptor,
+                        playable,
+                        out var source)
+                    || source.IsDefault
+                    || source.Controller == null)
+                {
+                    continue;
+                }
+
+                if (!PhantomSourcePlayableControllerProcessor.TryGetBaseController(
+                        source.Controller,
+                        out var baseController))
+                {
+                    report.Error(
+                        $"Slot '{slot.SlotId}' uses unsupported {playable} controller type "
+                        + $"'{source.Controller.GetType().FullName}'.",
+                        descriptor);
+                    continue;
+                }
+
+                var targetPlayable = playable == VRCAvatarDescriptor.AnimLayerType.Action
+                    ? VRCAvatarDescriptor.AnimLayerType.FX
+                    : playable;
+                var mergeAnimator = AddMergeAnimator(
+                    host,
+                    slot,
+                    source.Controller,
+                    targetPlayable);
+                if (mergeAnimator == null)
+                {
+                    continue;
+                }
+
+                slot.SourcePlayableRegistrations[playable] =
+                    new PhantomSourcePlayableRegistration
+                    {
+                        Playable = playable,
+                        Source = source,
+                        BaseController = baseController,
+                        MergeAnimator = mergeAnimator
+                    };
+                AssignMergeAnimator(slot, playable, mergeAnimator);
+            }
+
+            var sourceControllers = slot.SourcePlayableRegistrations.Values
+                .Select(registration => registration.Source.Controller)
+                .Where(controller => controller != null)
+                .ToArray();
+            InstallCloneParameterMappings(slot, sourceControllers);
 
             var parameterConfigs = PhantomParameterConfigBuilder.Build(
                 slot,
@@ -73,6 +114,25 @@ namespace MPCCT.PhantomSystem.Editor
                     descriptor.expressionsMenu,
                     slot.GeneratedCoreMenu,
                     report);
+            }
+        }
+
+        private static void AssignMergeAnimator(
+            PhantomSlotBuildState slot,
+            VRCAvatarDescriptor.AnimLayerType playable,
+            ModularAvatarMergeAnimator mergeAnimator)
+        {
+            switch (playable)
+            {
+                case VRCAvatarDescriptor.AnimLayerType.FX:
+                    slot.SourceFxMergeAnimator = mergeAnimator;
+                    break;
+                case VRCAvatarDescriptor.AnimLayerType.Action:
+                    slot.SourceActionMergeAnimator = mergeAnimator;
+                    break;
+                case VRCAvatarDescriptor.AnimLayerType.Gesture:
+                    slot.SourceGestureMergeAnimator = mergeAnimator;
+                    break;
             }
         }
 

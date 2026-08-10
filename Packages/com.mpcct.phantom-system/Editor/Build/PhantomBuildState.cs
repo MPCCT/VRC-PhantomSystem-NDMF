@@ -1,9 +1,11 @@
 using System.Collections.Generic;
 using nadena.dev.modular_avatar.core;
+using nadena.dev.ndmf.animator;
 using UnityEditor.Animations;
 using UnityEngine;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.ScriptableObjects;
+using NdmfObjectReference = nadena.dev.ndmf.ObjectReference;
 using PhantomAuthoring = MPCCT.PhantomSystem.PhantomSystem;
 
 namespace MPCCT.PhantomSystem.Editor
@@ -95,15 +97,18 @@ namespace MPCCT.PhantomSystem.Editor
         public ModularAvatarMergeAnimator SourceFxMergeAnimator;
         public ModularAvatarMergeAnimator SourceGestureMergeAnimator;
         public ModularAvatarMergeAnimator SourceActionMergeAnimator;
+        internal readonly Dictionary<VRCAvatarDescriptor.AnimLayerType, PhantomSourcePlayableRegistration>
+            SourcePlayableRegistrations =
+                new Dictionary<VRCAvatarDescriptor.AnimLayerType, PhantomSourcePlayableRegistration>();
         internal readonly List<PhantomConvertedActionLayer> ConvertedActionLayers =
             new List<PhantomConvertedActionLayer>();
         internal readonly HashSet<string> ValidSharedParameterNames =
             new HashSet<string>(System.StringComparer.Ordinal);
         internal PhantomSlotParameterResolution ParameterResolution;
-        internal readonly Dictionary<AnimationClip, PhantomConvertedClipMetadata> ConvertedClips =
-            new Dictionary<AnimationClip, PhantomConvertedClipMetadata>();
-        internal readonly HashSet<AnimationClip> WarnedUnsupportedAnimatorClips =
-            new HashSet<AnimationClip>();
+        internal readonly Dictionary<NdmfObjectReference, PhantomConvertedClipMetadata> ConvertedClipReferences =
+            new Dictionary<NdmfObjectReference, PhantomConvertedClipMetadata>();
+        internal readonly HashSet<VirtualClip> WarnedUnsupportedAnimatorClips =
+            new HashSet<VirtualClip>();
         internal readonly Dictionary<HumanBodyBones, HashSet<string>> MissingHumanoidBoneClips =
             new Dictionary<HumanBodyBones, HashSet<string>>();
     }
@@ -112,7 +117,15 @@ namespace MPCCT.PhantomSystem.Editor
     {
         public string SlotId;
         public string Playable;
-        public AnimationClip SourceClip;
+        public string SourceClipName;
+    }
+
+    internal sealed class PhantomSourcePlayableRegistration
+    {
+        public VRCAvatarDescriptor.AnimLayerType Playable;
+        public PhantomSourcePlayableLayer Source;
+        public AnimatorController BaseController;
+        public ModularAvatarMergeAnimator MergeAnimator;
     }
 
     internal readonly struct PhantomConvertedActionLayer

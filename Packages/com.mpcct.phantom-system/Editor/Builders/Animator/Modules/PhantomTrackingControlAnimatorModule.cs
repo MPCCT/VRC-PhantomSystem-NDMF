@@ -68,7 +68,7 @@ namespace MPCCT.PhantomSystem.Editor
                 disabledClip,
                 directWeightParameter);
             var enabledTree = CreateEnabledDirectTree(context, bindings, directWeightParameter);
-            var layer = AddLayer(context.Controller, "PhantomTrackingControl");
+            var layer = AddLayer(context, "PhantomTrackingControl");
             var machine = layer.stateMachine;
             var disabled = machine.AddState("PhantomTrackingDisabled");
             disabled.motion = disabledTree;

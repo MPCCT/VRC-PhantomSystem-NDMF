@@ -218,7 +218,7 @@ namespace MPCCT.PhantomSystem.Editor
             PhantomAnimatorBuildContext context,
             HipsGrabbingClips clips)
         {
-            var layer = AddLayer(context.Controller, "PhantomGrabbingHips");
+            var layer = AddLayer(context, "PhantomGrabbingHips");
             var machine = layer.stateMachine;
             var disabled = AddState(machine, clips.Disabled);
             var followBase = AddState(machine, clips.FollowBase);
