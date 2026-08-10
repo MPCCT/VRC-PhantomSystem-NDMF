@@ -218,6 +218,20 @@ namespace MPCCT.PhantomSystem.Editor.Tests
         }
 
         [Test]
+        public void ParameterResolver_KeepsNamesAlreadyInTheSlotNamespace()
+        {
+            var slot = new PhantomSlot { id = "Slot1", renamePhantomParameters = true };
+            const string name = "PhantomSystem/Slot1/AlreadyResolved";
+
+            var resolution = Resolve(
+                new Dictionary<string, PhantomParameterDefinition>(),
+                slot,
+                Definition(name, AnimatorControllerParameterType.Bool, false, 0f, false));
+
+            Assert.AreEqual(name, resolution.FinalNames[name]);
+        }
+
+        [Test]
         public void ParameterResolver_SharesCompatibleNamesAcrossSlotsInStableOrder()
         {
             var first = new PhantomSlot { id = "One", renamePhantomParameters = false };
@@ -416,13 +430,13 @@ namespace MPCCT.PhantomSystem.Editor.Tests
         }
 
         [Test]
-        public void CloneMappings_RemapContactEvenWhenSourceControlsAreRemoved()
+        public void SourceComponentMapping_OnlyChangesContactsCapturedBeforeRigGeneration()
         {
             var cloneRoot = new GameObject("CloneRoot");
             try
             {
-                var contact = cloneRoot.AddComponent<VRCContactReceiver>();
-                contact.parameter = "ContactValue";
+                var sourceContact = cloneRoot.AddComponent<VRCContactReceiver>();
+                sourceContact.parameter = "ContactValue";
                 var slot = new PhantomSlot
                 {
                     id = "Slot1",
@@ -433,26 +447,140 @@ namespace MPCCT.PhantomSystem.Editor.Tests
                 {
                     Slot = slot,
                     SlotId = "Slot1",
+                    Identity = PhantomSlotIdentity.Create(slot),
                     CloneRoot = cloneRoot,
-                    ParameterResolution = Resolve(
-                        new Dictionary<string, PhantomParameterDefinition>(),
-                        slot)
+                    ParameterResolution = new PhantomSlotParameterResolution()
                 };
+                state.ParameterResolution.FinalNames["ContactValue"] =
+                    "PhantomSystem/Slot1/Original/ContactValue";
 
-                var configs = PhantomParameterConfigBuilder.BuildCloneMappings(
-                    state,
-                    new RuntimeAnimatorController[0]);
-                var config = configs.Single(item =>
-                    !item.isPrefix && item.nameOrPrefix == "ContactValue");
+                PhantomSourceComponentParameterMapper.Capture(state);
+                var generatedContact = cloneRoot.AddComponent<VRCContactReceiver>();
+                generatedContact.parameter =
+                    PhantomParameterNames.PhantomGrabbingContactLeft(slot);
+                PhantomSourceComponentParameterMapper.Apply(state);
 
                 Assert.AreEqual(
                     "PhantomSystem/Slot1/Original/ContactValue",
-                    config.remapTo);
+                    sourceContact.parameter);
+                Assert.AreEqual(
+                    "PhantomSystem/Slot1/PhantomGrabbing/ContactLeft",
+                    generatedContact.parameter);
             }
             finally
             {
                 Object.DestroyImmediate(cloneRoot);
             }
+        }
+
+        [Test]
+        public void StrictSourceMapping_KeepsUnknownReservedAndNamespacedNames()
+        {
+            var slot = new PhantomSlot { id = "Slot1" };
+            var state = new PhantomSlotBuildState
+            {
+                Slot = slot,
+                SlotId = "Slot1",
+                Identity = PhantomSlotIdentity.Create(slot),
+                ParameterResolution = new PhantomSlotParameterResolution()
+            };
+            state.ParameterResolution.FinalNames["Known"] =
+                "PhantomSystem/Slot1/Original/Known";
+
+            Assert.IsTrue(PhantomSourceParameterMapping.TryResolve(
+                state,
+                "Known",
+                "test",
+                out var known));
+            Assert.AreEqual("PhantomSystem/Slot1/Original/Known", known);
+
+            Assert.IsTrue(PhantomSourceParameterMapping.TryResolve(
+                state,
+                "IsLocal",
+                "test",
+                out var reserved));
+            Assert.AreEqual("IsLocal", reserved);
+
+            var coreName = PhantomParameterNames.PhantomGrabbingContactLeft(slot);
+            Assert.IsTrue(PhantomSourceParameterMapping.TryResolve(
+                state,
+                coreName,
+                "test",
+                out var namespaced));
+            Assert.AreEqual(coreName, namespaced);
+
+            Assert.IsFalse(PhantomSourceParameterMapping.TryResolve(
+                state,
+                "Unknown",
+                "Contact Receiver",
+                out var unknown));
+            Assert.AreEqual("Unknown", unknown);
+            CollectionAssert.Contains(
+                state.UnresolvedSourceParameterReferences["Unknown"],
+                "Contact Receiver");
+        }
+
+        [Test]
+        public void UnknownSourceReferences_AreReportedOncePerSlot()
+        {
+            var slot = new PhantomSlot { id = "Slot1" };
+            var state = new PhantomSlotBuildState
+            {
+                Slot = slot,
+                SlotId = "Slot1",
+                Identity = PhantomSlotIdentity.Create(slot),
+                ParameterResolution = new PhantomSlotParameterResolution()
+            };
+            PhantomSourceParameterMapping.TryResolve(
+                state,
+                "UnknownContact",
+                "Contact Receiver",
+                out _);
+            PhantomSourceParameterMapping.TryResolve(
+                state,
+                "UnknownAudio",
+                "Animator Play Audio",
+                out _);
+            var report = new PhantomBuildReport();
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(
+                "2 unresolved source parameter name\\(s\\).*UnknownAudio.*UnknownContact"));
+
+            PhantomSourceParameterMapping.ReportUnresolved(state, report);
+            PhantomSourceParameterMapping.ReportUnresolved(state, report);
+
+            Assert.IsTrue(state.UnresolvedSourceParametersReported);
+        }
+
+        [Test]
+        public void ParameterResolver_WhenSourceControlsRemoved_KeepsRetainedComponentsOnly()
+        {
+            var slot = new PhantomSlot
+            {
+                id = "Slot1",
+                renamePhantomParameters = true,
+                removeSourceControls = true
+            };
+            var result = PhantomParameterResolver.Resolve(
+                new Dictionary<string, PhantomParameterDefinition>(),
+                new[]
+                {
+                    new PhantomParameterSlotInput
+                    {
+                        Slot = slot,
+                        Identity = PhantomSlotIdentity.Create(slot),
+                        SourceParameters = new[]
+                        {
+                            Definition("ControllerOnly", AnimatorControllerParameterType.Bool, false, 0f, false),
+                            Definition("ContactValue", AnimatorControllerParameterType.Bool, false, 0f, false)
+                        },
+                        RetainedSourceParameterNames = new HashSet<string> { "ContactValue" }
+                    }
+                }).Slots.Single();
+
+            Assert.IsFalse(result.FinalNames.ContainsKey("ControllerOnly"));
+            Assert.AreEqual(
+                "PhantomSystem/Slot1/Original/ContactValue",
+                result.FinalNames["ContactValue"]);
         }
 
         [Test]

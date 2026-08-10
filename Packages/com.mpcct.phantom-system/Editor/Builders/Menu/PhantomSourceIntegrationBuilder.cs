@@ -24,9 +24,6 @@ namespace MPCCT.PhantomSystem.Editor
             var descriptor = slot.BakedAvatar;
             if (descriptor == null || slot.Slot == null || slot.Slot.removeSourceControls)
             {
-                InstallCloneParameterMappings(
-                    slot,
-                    System.Array.Empty<RuntimeAnimatorController>());
                 return;
             }
 
@@ -92,7 +89,6 @@ namespace MPCCT.PhantomSystem.Editor
                 .Select(registration => registration.Source.Controller)
                 .Where(controller => controller != null)
                 .ToArray();
-            InstallCloneParameterMappings(slot, sourceControllers);
 
             var parameterConfigs = PhantomParameterConfigBuilder.Build(
                 slot,
@@ -157,55 +153,6 @@ namespace MPCCT.PhantomSystem.Editor
             root.Set(slot.CloneRoot);
             mergeAnimator.relativePathRoot = root;
             return mergeAnimator;
-        }
-
-        private static void InstallCloneParameterMappings(
-            PhantomSlotBuildState slot,
-            IEnumerable<RuntimeAnimatorController> controllers)
-        {
-            var parameterConfigs = PhantomParameterConfigBuilder.BuildCloneMappings(slot, controllers);
-            if (parameterConfigs.Count == 0 || slot.CloneRoot == null)
-            {
-                return;
-            }
-
-            var parameters = slot.CloneRoot.GetComponent<ModularAvatarParameters>();
-            if (parameters == null)
-            {
-                parameters = slot.CloneRoot.AddComponent<ModularAvatarParameters>();
-            }
-
-            if (parameters.parameters == null)
-            {
-                parameters.parameters = new List<ParameterConfig>();
-            }
-
-            foreach (var prefixConfig in parameterConfigs.Where(config => config.isPrefix))
-            {
-                parameters.parameters.RemoveAll(existing =>
-                    !existing.isPrefix
-                    && PhantomParameterConfigBuilder.IsDerivedDynamicParameter(
-                        prefixConfig.nameOrPrefix,
-                        existing.nameOrPrefix));
-            }
-
-            foreach (var config in parameterConfigs)
-            {
-                var existingIndex = parameters.parameters.FindIndex(existing =>
-                    existing.isPrefix == config.isPrefix
-                    && string.Equals(
-                        existing.nameOrPrefix,
-                        config.nameOrPrefix,
-                        System.StringComparison.Ordinal));
-                if (existingIndex >= 0)
-                {
-                    parameters.parameters[existingIndex] = config;
-                }
-                else
-                {
-                    parameters.parameters.Add(config);
-                }
-            }
         }
 
         private static void InstallOriginalMenu(

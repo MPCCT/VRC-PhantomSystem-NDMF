@@ -19,17 +19,6 @@ namespace MPCCT.PhantomSystem.Editor
                 return;
             }
 
-            // This controller is merged separately from the Core controller. Keep
-            // every referenced parameter declared locally as well, because other
-            // NDMF plugins may inspect it before Modular Avatar performs the merge.
-            AddBoolParameter(
-                context.Controller,
-                PhantomParameterNames.Activate(slot),
-                false);
-            AddBoolParameter(
-                context.Controller,
-                PhantomParameterNames.Freeze(slot),
-                false);
             foreach (var group in PhantomTrackingControlGroups.All)
             {
                 AddFloatParameter(
@@ -46,61 +35,13 @@ namespace MPCCT.PhantomSystem.Editor
                 return;
             }
 
-            var disabledClip = context.CreateClip("PhantomTrackingDisabled");
-            foreach (var binding in bindings)
-            {
-                SetFloat(
-                    disabledClip,
-                    binding.Path,
-                    binding.ConstraintType,
-                    SourceWeight(0),
-                    1f);
-                SetFloat(
-                    disabledClip,
-                    binding.Path,
-                    binding.ConstraintType,
-                    SourceWeight(1),
-                    0f);
-            }
-
-            var disabledTree = CreateDisabledDirectTree(
-                context,
-                disabledClip,
-                directWeightParameter);
             var enabledTree = CreateEnabledDirectTree(context, bindings, directWeightParameter);
             var layer = AddLayer(context, "PhantomTrackingControl");
             var machine = layer.stateMachine;
-            var disabled = machine.AddState("PhantomTrackingDisabled");
-            disabled.motion = disabledTree;
-            disabled.writeDefaultValues = true;
             var enabled = machine.AddState("PhantomTrackingEnabled");
             enabled.motion = enabledTree;
             enabled.writeDefaultValues = true;
-            machine.defaultState = disabled;
-
-            AddTransition(
-                disabled,
-                enabled,
-                BoolCondition(PhantomParameterNames.Activate(slot), true),
-                BoolCondition(PhantomParameterNames.Freeze(slot), false));
-            AddTransition(
-                enabled,
-                disabled,
-                BoolCondition(PhantomParameterNames.Activate(slot), false));
-            AddTransition(
-                enabled,
-                disabled,
-                BoolCondition(PhantomParameterNames.Freeze(slot), true));
-        }
-
-        private static BlendTree CreateDisabledDirectTree(
-            PhantomAnimatorBuildContext context,
-            AnimationClip disabledClip,
-            string directWeightParameter)
-        {
-            var direct = CreateDirectTree(context, "PhantomTrackingDisabledDirect");
-            AddDirectChild(direct, disabledClip, directWeightParameter);
-            return direct;
+            machine.defaultState = enabled;
         }
 
         private static BlendTree CreateEnabledDirectTree(

@@ -102,8 +102,6 @@ namespace MPCCT.PhantomSystem.Editor
                 new Dictionary<VRCAvatarDescriptor.AnimLayerType, PhantomSourcePlayableRegistration>();
         internal readonly List<PhantomConvertedActionLayer> ConvertedActionLayers =
             new List<PhantomConvertedActionLayer>();
-        internal readonly HashSet<string> ValidSharedParameterNames =
-            new HashSet<string>(System.StringComparer.Ordinal);
         internal PhantomSlotParameterResolution ParameterResolution;
         internal readonly Dictionary<NdmfObjectReference, PhantomConvertedClipMetadata> ConvertedClipReferences =
             new Dictionary<NdmfObjectReference, PhantomConvertedClipMetadata>();
@@ -111,6 +109,25 @@ namespace MPCCT.PhantomSystem.Editor
             new HashSet<VirtualClip>();
         internal readonly Dictionary<HumanBodyBones, HashSet<string>> MissingHumanoidBoneClips =
             new Dictionary<HumanBodyBones, HashSet<string>>();
+        internal readonly List<PhantomSourceComponentParameterReference> SourceComponentParameters =
+            new List<PhantomSourceComponentParameterReference>();
+        internal readonly Dictionary<string, HashSet<string>> UnresolvedSourceParameterReferences =
+            new Dictionary<string, HashSet<string>>(System.StringComparer.Ordinal);
+        internal bool UnresolvedSourceParametersReported;
+    }
+
+    internal enum PhantomSourceComponentParameterKind
+    {
+        Contact,
+        PhysBonePrefix,
+        RaycastPrefix
+    }
+
+    internal sealed class PhantomSourceComponentParameterReference
+    {
+        public Component Component;
+        public string OriginalName;
+        public PhantomSourceComponentParameterKind Kind;
     }
 
     internal sealed class PhantomConvertedClipMetadata

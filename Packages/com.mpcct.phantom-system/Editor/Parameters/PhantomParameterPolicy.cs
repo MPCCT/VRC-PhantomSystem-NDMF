@@ -63,21 +63,5 @@ namespace MPCCT.PhantomSystem.Editor
 
             return false;
         }
-
-        public static string FinalOriginalParameterName(
-            PhantomSlot slot,
-            string originalName,
-            ISet<string> validatedSharedNames = null)
-        {
-            if (slot == null
-                || !slot.renamePhantomParameters
-                || IsVrcReserved(originalName)
-                || validatedSharedNames != null && validatedSharedNames.Contains(originalName))
-            {
-                return originalName;
-            }
-
-            return PhantomParameterNames.OriginalParameterPrefix(slot) + originalName;
-        }
     }
 }

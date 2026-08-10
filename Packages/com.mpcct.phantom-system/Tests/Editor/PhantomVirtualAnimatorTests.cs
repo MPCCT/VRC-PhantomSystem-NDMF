@@ -76,6 +76,95 @@ namespace MPCCT.PhantomSystem.Editor.Tests
         }
 
         [Test]
+        public void SourceParameterCollection_IncludesControllerAndPlayAudioOnlyReferences()
+        {
+            var playAudio = ScriptableObject.CreateInstance<VRCAnimatorPlayAudio>();
+            playAudio.ParameterName = "AudioOnly";
+            var state = new AnimatorState
+            {
+                name = "State",
+                behaviours = new StateMachineBehaviour[] { playAudio }
+            };
+            var machine = new AnimatorStateMachine
+            {
+                name = "Machine",
+                states = new[] { new ChildAnimatorState { state = state } },
+                defaultState = state
+            };
+            var controller = new AnimatorController
+            {
+                name = "Source",
+                parameters = new[]
+                {
+                    new AnimatorControllerParameter
+                    {
+                        name = "ControllerOnly",
+                        type = AnimatorControllerParameterType.Float,
+                        defaultFloat = 0.25f
+                    }
+                },
+                layers = new[]
+                {
+                    new AnimatorControllerLayer
+                    {
+                        name = "Layer",
+                        stateMachine = machine,
+                        syncedLayerIndex = -1
+                    }
+                }
+            };
+            try
+            {
+                var definitions = new Dictionary<string, PhantomParameterDefinition>();
+                PhantomParameterAnalysis.CollectControllerParameters(controller, definitions);
+
+                var controllerDefinition = definitions["ControllerOnly"];
+                var audioDefinition = definitions["AudioOnly"];
+                Assert.AreEqual(AnimatorControllerParameterType.Float, controllerDefinition.ParameterType);
+                Assert.AreEqual(0.25f, controllerDefinition.DefaultValue);
+                Assert.AreEqual(AnimatorControllerParameterType.Int, audioDefinition.ParameterType);
+            }
+            finally
+            {
+                Object.DestroyImmediate(controller);
+                Object.DestroyImmediate(machine);
+                Object.DestroyImmediate(state);
+                Object.DestroyImmediate(playAudio);
+            }
+        }
+
+        [Test]
+        public void PlayAudioUnknownParameter_IsKeptAndRegistered()
+        {
+            var playAudio = ScriptableObject.CreateInstance<VRCAnimatorPlayAudio>();
+            try
+            {
+                playAudio.ParameterName = "UnknownAudio";
+                var slot = new PhantomSlot { id = "Slot1" };
+                var state = new PhantomSlotBuildState
+                {
+                    Slot = slot,
+                    SlotId = "Slot1",
+                    Identity = PhantomSlotIdentity.Create(slot),
+                    ParameterResolution = new PhantomSlotParameterResolution()
+                };
+
+                PhantomSourcePlayableControllerProcessor.RemapPlayAudioParameter(
+                    playAudio,
+                    state);
+
+                Assert.AreEqual("UnknownAudio", playAudio.ParameterName);
+                CollectionAssert.Contains(
+                    state.UnresolvedSourceParameterReferences["UnknownAudio"],
+                    "Animator Play Audio");
+            }
+            finally
+            {
+                Object.DestroyImmediate(playAudio);
+            }
+        }
+
+        [Test]
         public void SharedSourceController_IsConvertedIndependentlyPerSlot()
         {
             var avatar = new GameObject("Avatar");
@@ -86,6 +175,7 @@ namespace MPCCT.PhantomSystem.Editor.Tests
             CreateChild(clone1.transform, "Driver");
             CreateChild(clone2.transform, "Driver");
             avatar.AddComponent<Animator>();
+            avatar.AddComponent<VRCAvatarDescriptor>();
 
             var sourceClip = new AnimationClip { name = "SourceClip" };
             AnimationUtility.SetEditorCurve(
@@ -129,6 +219,9 @@ namespace MPCCT.PhantomSystem.Editor.Tests
             var context = new BuildContext(avatar, null);
             try
             {
+                Assert.AreSame(clone1, merge1.relativePathRoot.Get(avatar.transform));
+                Assert.AreSame(clone2, merge2.relativePathRoot.Get(avatar.transform));
+
                 var animatorServices =
                     context.ActivateExtensionContextRecursive<AnimatorServicesContext>();
                 var virtual1 = animatorServices.ControllerContext.Controllers[merge1];

@@ -40,6 +40,7 @@ namespace MPCCT.PhantomSystem.Editor
                 slot.CloneRoot = clone;
                 slot.BakedAvatar = clone.GetComponent<VRCAvatarDescriptor>();
                 slot.CloneAnimator = clone.GetComponent<Animator>();
+                PhantomSourceComponentParameterMapper.Capture(slot);
             }
         }
 

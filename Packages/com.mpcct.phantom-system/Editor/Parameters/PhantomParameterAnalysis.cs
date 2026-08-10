@@ -3,10 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using nadena.dev.ndmf;
 using nadena.dev.ndmf.preview;
+using UnityEditor.Animations;
 using UnityEngine;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.ScriptableObjects;
+using VRC.SDK3.Dynamics.Contact.Components;
 using VRC.SDK3.Dynamics.PhysBone.Components;
+using VRC.SDKBase;
 using PhantomAuthoring = MPCCT.PhantomSystem.PhantomSystem;
 
 namespace MPCCT.PhantomSystem.Editor
@@ -53,6 +56,8 @@ namespace MPCCT.PhantomSystem.Editor
     {
         public PhantomSlot Slot;
         public List<PhantomParameterDefinition> SourceParameters = new List<PhantomParameterDefinition>();
+        public HashSet<string> RetainedSourceParameterNames =
+            new HashSet<string>(StringComparer.Ordinal);
         public List<PhantomSharedParameterCandidate> Candidates = new List<PhantomSharedParameterCandidate>();
         public HashSet<string> NamesSharedWithBase = new HashSet<string>(StringComparer.Ordinal);
         public int SourceParameterCost;
@@ -71,6 +76,16 @@ namespace MPCCT.PhantomSystem.Editor
 
         public List<PhantomSlotParameterAnalysis> Slots = new List<PhantomSlotParameterAnalysis>();
         public List<string> ResolutionErrors = new List<string>();
+    }
+
+    internal sealed class PhantomSourceParameterCollection
+    {
+        public List<PhantomParameterDefinition> Definitions =
+            new List<PhantomParameterDefinition>();
+        public List<PhantomParameterDefinition> RetainedDefinitions =
+            new List<PhantomParameterDefinition>();
+        public HashSet<string> RetainedSourceParameterNames =
+            new HashSet<string>(StringComparer.Ordinal);
     }
 
     internal static class PhantomParameterAnalysis
@@ -106,7 +121,8 @@ namespace MPCCT.PhantomSystem.Editor
                 {
                     Slot = slotAnalysis.Slot,
                     Identity = PhantomSlotIdentity.Create(slotAnalysis.Slot),
-                    SourceParameters = slotAnalysis.SourceParameters
+                    SourceParameters = slotAnalysis.SourceParameters,
+                    RetainedSourceParameterNames = slotAnalysis.RetainedSourceParameterNames
                 }).ToList());
             analysis.ResolutionErrors.AddRange(parameterResolution.Errors);
             for (var index = 0; index < analysis.Slots.Count && index < parameterResolution.Slots.Count; index++)
@@ -182,6 +198,96 @@ namespace MPCCT.PhantomSystem.Editor
                 .ToList();
         }
 
+        public static PhantomSourceParameterCollection CollectSourceParameters(
+            GameObject root,
+            BuildContext context)
+        {
+            var collection = new PhantomSourceParameterCollection();
+            if (root == null)
+            {
+                return collection;
+            }
+
+            var definitions = ReadParameters(root, context, true);
+            var retainedDefinitions =
+                new Dictionary<string, PhantomParameterDefinition>(StringComparer.Ordinal);
+            foreach (var prefix in ReadDynamicParameterPrefixes(root))
+            {
+                MergeDefinition(definitions, prefix);
+            }
+
+            foreach (var contact in root.GetComponentsInChildren<VRCContactReceiver>(true))
+            {
+                AddRetainedReference(
+                    definitions,
+                    retainedDefinitions,
+                    collection.RetainedSourceParameterNames,
+                    contact.parameter,
+                    AnimatorControllerParameterType.Bool,
+                    contact);
+            }
+
+            foreach (var physBone in root.GetComponentsInChildren<VRCPhysBone>(true))
+            {
+                AddRetainedPrefix(
+                    definitions,
+                    retainedDefinitions,
+                    collection.RetainedSourceParameterNames,
+                    physBone.parameter,
+                    true,
+                    false,
+                    physBone);
+            }
+
+            foreach (var raycast in root.GetComponentsInChildren<VRCRaycast>(true))
+            {
+                AddRetainedPrefix(
+                    definitions,
+                    retainedDefinitions,
+                    collection.RetainedSourceParameterNames,
+                    raycast.Parameter,
+                    false,
+                    true,
+                    raycast);
+            }
+
+            var descriptor = root.GetComponent<VRCAvatarDescriptor>();
+            if (descriptor != null)
+            {
+                foreach (var playable in new[]
+                         {
+                             VRCAvatarDescriptor.AnimLayerType.FX,
+                             VRCAvatarDescriptor.AnimLayerType.Gesture,
+                             VRCAvatarDescriptor.AnimLayerType.Action
+                         })
+                {
+                    if (PhantomSourcePlayableControllerUtility.TryGetLayer(
+                            descriptor,
+                            playable,
+                            out var layer)
+                        && !layer.IsDefault
+                        && TryGetBaseController(layer.Controller, out var controller))
+                    {
+                        CollectControllerParameters(controller, definitions);
+                    }
+                }
+
+                CollectMenuParameters(descriptor.expressionsMenu, definitions);
+            }
+
+            collection.Definitions = definitions.Values
+                .Where(parameter => parameter != null
+                                    && !string.IsNullOrWhiteSpace(parameter.Name)
+                                    && !PhantomParameterPolicy.IsVrcReserved(parameter.Name))
+                .OrderBy(parameter => parameter.Name, StringComparer.Ordinal)
+                .ToList();
+            collection.RetainedDefinitions = retainedDefinitions.Values
+                .Where(parameter => !PhantomParameterPolicy.IsVrcReserved(parameter.Name))
+                .OrderBy(parameter => parameter.Name, StringComparer.Ordinal)
+                .ToList();
+            return collection;
+        }
+
         public static Dictionary<string, PhantomParameterDefinition> ReadDescriptorParameters(
             VRCAvatarDescriptor descriptor)
         {
@@ -227,24 +333,12 @@ namespace MPCCT.PhantomSystem.Editor
                 return analysis;
             }
 
-            if (slot.removeSourceControls)
-            {
-                analysis.FinalContributionCost = analysis.GeneratedParameterCost;
-                return analysis;
-            }
-
-            var sourceParameters = ReadParameters(slot.phantomAvatar.gameObject, null, true)
-                .Values
-                .Where(parameter => parameter != null
-                                    && !string.IsNullOrWhiteSpace(parameter.Name)
-                                    && !PhantomParameterPolicy.IsVrcReserved(parameter.Name))
-                .OrderBy(parameter => parameter.Name, StringComparer.Ordinal)
-                .ToList();
-            sourceParameters.AddRange(ReadDynamicParameterPrefixes(slot.phantomAvatar.gameObject));
-            sourceParameters = sourceParameters
-                .OrderBy(parameter => parameter.Name, StringComparer.Ordinal)
-                .ToList();
+            var sourceCollection = CollectSourceParameters(slot.phantomAvatar.gameObject, null);
+            var sourceParameters = slot.removeSourceControls
+                ? sourceCollection.RetainedDefinitions
+                : sourceCollection.Definitions;
             analysis.SourceParameters = sourceParameters;
+            analysis.RetainedSourceParameterNames = sourceCollection.RetainedSourceParameterNames;
             analysis.SourceParameterCost = sourceParameters.Sum(parameter => parameter.BitUsage);
 
             foreach (var source in sourceParameters.Where(parameter => !parameter.IsAnimatorOnly && !parameter.IsHidden))
@@ -349,6 +443,352 @@ namespace MPCCT.PhantomSystem.Editor
             }
 
             return result;
+        }
+
+        internal static void CollectControllerParameters(
+            AnimatorController controller,
+            IDictionary<string, PhantomParameterDefinition> definitions)
+        {
+            if (controller == null)
+            {
+                return;
+            }
+
+            foreach (var parameter in controller.parameters)
+            {
+                MergeDefinition(definitions, new PhantomParameterDefinition
+                {
+                    Name = parameter.name,
+                    ParameterType = parameter.type,
+                    IsAnimatorOnly = true,
+                    WantSynced = false,
+                    DefaultValue = DefaultValue(parameter)
+                });
+            }
+
+            // This also covers behaviours stored as synced-layer overrides, which are
+            // not necessarily reachable from the source state machine's behaviour array.
+            CollectBehaviourParameters(
+                controller.GetBehaviours<StateMachineBehaviour>(),
+                definitions);
+
+            var visitedStateMachines = new HashSet<AnimatorStateMachine>();
+            var visitedMotions = new HashSet<Motion>();
+            foreach (var layer in controller.layers)
+            {
+                CollectStateMachineParameterReferences(
+                    layer.stateMachine,
+                    definitions,
+                    visitedStateMachines,
+                    visitedMotions);
+            }
+        }
+
+        private static void CollectStateMachineParameterReferences(
+            AnimatorStateMachine machine,
+            IDictionary<string, PhantomParameterDefinition> definitions,
+            ISet<AnimatorStateMachine> visitedStateMachines,
+            ISet<Motion> visitedMotions)
+        {
+            if (machine == null || !visitedStateMachines.Add(machine))
+            {
+                return;
+            }
+
+            CollectTransitionParameters(machine.anyStateTransitions, definitions);
+            CollectTransitionParameters(machine.entryTransitions, definitions);
+            CollectBehaviourParameters(machine.behaviours, definitions);
+            foreach (var child in machine.states)
+            {
+                var state = child.state;
+                if (state == null)
+                {
+                    continue;
+                }
+
+                CollectTransitionParameters(state.transitions, definitions);
+                CollectMotionParameters(state.motion, definitions, visitedMotions);
+                CollectBehaviourParameters(state.behaviours, definitions);
+                AddControllerReference(definitions, state.mirrorParameter, AnimatorControllerParameterType.Bool);
+                AddControllerReference(definitions, state.speedParameter, AnimatorControllerParameterType.Float);
+                AddControllerReference(definitions, state.timeParameter, AnimatorControllerParameterType.Float);
+                AddControllerReference(definitions, state.cycleOffsetParameter, AnimatorControllerParameterType.Float);
+            }
+
+            foreach (var child in machine.stateMachines)
+            {
+                CollectStateMachineParameterReferences(
+                    child.stateMachine,
+                    definitions,
+                    visitedStateMachines,
+                    visitedMotions);
+            }
+        }
+
+        private static void CollectTransitionParameters<TTransition>(
+            IEnumerable<TTransition> transitions,
+            IDictionary<string, PhantomParameterDefinition> definitions)
+            where TTransition : AnimatorTransitionBase
+        {
+            foreach (var transition in transitions ?? Enumerable.Empty<TTransition>())
+            {
+                if (transition == null)
+                {
+                    continue;
+                }
+
+                foreach (var condition in transition.conditions)
+                {
+                    AddControllerReference(definitions, condition.parameter, null);
+                }
+            }
+        }
+
+        private static void CollectMotionParameters(
+            Motion motion,
+            IDictionary<string, PhantomParameterDefinition> definitions,
+            ISet<Motion> visitedMotions)
+        {
+            if (!(motion is BlendTree tree) || !visitedMotions.Add(motion))
+            {
+                return;
+            }
+
+            AddControllerReference(definitions, tree.blendParameter, AnimatorControllerParameterType.Float);
+            AddControllerReference(definitions, tree.blendParameterY, AnimatorControllerParameterType.Float);
+            foreach (var child in tree.children)
+            {
+                AddControllerReference(
+                    definitions,
+                    child.directBlendParameter,
+                    AnimatorControllerParameterType.Float);
+                CollectMotionParameters(child.motion, definitions, visitedMotions);
+            }
+        }
+
+        private static void CollectBehaviourParameters(
+            IEnumerable<StateMachineBehaviour> behaviours,
+            IDictionary<string, PhantomParameterDefinition> definitions)
+        {
+            foreach (var behaviour in behaviours ?? Enumerable.Empty<StateMachineBehaviour>())
+            {
+                if (behaviour is VRCAnimatorPlayAudio playAudio)
+                {
+                    AddControllerReference(
+                        definitions,
+                        playAudio.ParameterName,
+                        AnimatorControllerParameterType.Int);
+                }
+
+                if (!(behaviour is VRC_AvatarParameterDriver driver) || driver.parameters == null)
+                {
+                    continue;
+                }
+
+                foreach (var parameter in driver.parameters)
+                {
+                    AddControllerReference(definitions, parameter.name, null);
+                    AddControllerReference(definitions, parameter.source, null);
+                }
+            }
+        }
+
+        private static void CollectMenuParameters(
+            VRCExpressionsMenu menu,
+            IDictionary<string, PhantomParameterDefinition> definitions)
+        {
+            var visited = new HashSet<VRCExpressionsMenu>();
+            CollectMenuParameters(menu, definitions, visited);
+        }
+
+        private static void CollectMenuParameters(
+            VRCExpressionsMenu menu,
+            IDictionary<string, PhantomParameterDefinition> definitions,
+            ISet<VRCExpressionsMenu> visited)
+        {
+            if (menu == null || !visited.Add(menu) || menu.controls == null)
+            {
+                return;
+            }
+
+            foreach (var control in menu.controls)
+            {
+                if (control == null)
+                {
+                    continue;
+                }
+
+                AnimatorControllerParameterType? mainType =
+                    control.type == VRCExpressionsMenu.Control.ControlType.RadialPuppet
+                        ? AnimatorControllerParameterType.Float
+                        : (AnimatorControllerParameterType?)null;
+                AddControllerReference(definitions, control.parameter?.name, mainType);
+                if (control.subParameters != null)
+                {
+                    foreach (var parameter in control.subParameters)
+                    {
+                        AddControllerReference(
+                            definitions,
+                            parameter?.name,
+                            AnimatorControllerParameterType.Float);
+                    }
+                }
+
+                CollectMenuParameters(control.subMenu, definitions, visited);
+            }
+        }
+
+        private static void AddRetainedReference(
+            IDictionary<string, PhantomParameterDefinition> definitions,
+            IDictionary<string, PhantomParameterDefinition> retainedDefinitions,
+            ISet<string> retainedNames,
+            string name,
+            AnimatorControllerParameterType type,
+            Component source)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return;
+            }
+
+            retainedNames.Add(name);
+            var definition = new PhantomParameterDefinition
+            {
+                Name = name,
+                ParameterType = type,
+                IsAnimatorOnly = true,
+                WantSynced = false,
+                SourceComponent = source
+            };
+            MergeDefinition(definitions, definition);
+            MergeDefinition(retainedDefinitions, CloneDefinition(definition));
+        }
+
+        private static void AddRetainedPrefix(
+            IDictionary<string, PhantomParameterDefinition> definitions,
+            IDictionary<string, PhantomParameterDefinition> retainedDefinitions,
+            ISet<string> retainedNames,
+            string name,
+            bool isPhysBonePrefix,
+            bool isRaycastPrefix,
+            Component source)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return;
+            }
+
+            retainedNames.Add(name);
+            var definition = new PhantomParameterDefinition
+            {
+                Name = name,
+                IsAnimatorOnly = true,
+                WantSynced = false,
+                IsPhysBonePrefix = isPhysBonePrefix,
+                IsRaycastPrefix = isRaycastPrefix,
+                SourceComponent = source
+            };
+            MergeDefinition(definitions, definition);
+            MergeDefinition(retainedDefinitions, CloneDefinition(definition));
+        }
+
+        private static void AddControllerReference(
+            IDictionary<string, PhantomParameterDefinition> definitions,
+            string name,
+            AnimatorControllerParameterType? type)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return;
+            }
+
+            MergeDefinition(definitions, new PhantomParameterDefinition
+            {
+                Name = name,
+                ParameterType = type,
+                IsAnimatorOnly = true,
+                WantSynced = false
+            });
+        }
+
+        private static void MergeDefinition(
+            IDictionary<string, PhantomParameterDefinition> definitions,
+            PhantomParameterDefinition incoming)
+        {
+            if (incoming == null || string.IsNullOrWhiteSpace(incoming.Name))
+            {
+                return;
+            }
+
+            if (!definitions.TryGetValue(incoming.Name, out var existing))
+            {
+                definitions[incoming.Name] = incoming;
+                return;
+            }
+
+            if (!existing.ParameterType.HasValue && incoming.ParameterType.HasValue)
+            {
+                existing.ParameterType = incoming.ParameterType;
+            }
+            existing.IsPhysBonePrefix |= incoming.IsPhysBonePrefix;
+            existing.IsRaycastPrefix |= incoming.IsRaycastPrefix;
+            if (existing.SourceComponent == null)
+            {
+                existing.SourceComponent = incoming.SourceComponent;
+            }
+        }
+
+        private static PhantomParameterDefinition CloneDefinition(
+            PhantomParameterDefinition source)
+        {
+            return new PhantomParameterDefinition
+            {
+                Name = source.Name,
+                ParameterType = source.ParameterType,
+                IsAnimatorOnly = source.IsAnimatorOnly,
+                IsHidden = source.IsHidden,
+                IsPhysBonePrefix = source.IsPhysBonePrefix,
+                IsRaycastPrefix = source.IsRaycastPrefix,
+                WantSynced = source.WantSynced,
+                DefaultValue = source.DefaultValue,
+                Saved = source.Saved,
+                SourceComponent = source.SourceComponent,
+                SourcePlugin = source.SourcePlugin
+            };
+        }
+
+        private static bool TryGetBaseController(
+            RuntimeAnimatorController source,
+            out AnimatorController controller)
+        {
+            var current = source;
+            var visited = new HashSet<RuntimeAnimatorController>();
+            while (current is AnimatorOverrideController overrideController)
+            {
+                if (!visited.Add(current))
+                {
+                    controller = null;
+                    return false;
+                }
+                current = overrideController.runtimeAnimatorController;
+            }
+
+            controller = current as AnimatorController;
+            return controller != null;
+        }
+
+        private static float DefaultValue(AnimatorControllerParameter parameter)
+        {
+            switch (parameter.type)
+            {
+                case AnimatorControllerParameterType.Bool:
+                case AnimatorControllerParameterType.Trigger:
+                    return parameter.defaultBool ? 1f : 0f;
+                case AnimatorControllerParameterType.Int:
+                    return parameter.defaultInt;
+                default:
+                    return parameter.defaultFloat;
+            }
         }
 
         private static Transform FindAvatarRoot(Transform start)

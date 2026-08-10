@@ -138,11 +138,6 @@ namespace MPCCT.PhantomSystem.Editor
                     AddTrackingParameters(output, component, analysis.BaseParameters, slot);
                 }
 
-                if (slot.removeSourceControls)
-                {
-                    continue;
-                }
-
                 var slotAnalysis = slotIndex < analysis.Slots.Count ? analysis.Slots[slotIndex] : null;
                 if (slotAnalysis == null)
                 {
@@ -165,10 +160,7 @@ namespace MPCCT.PhantomSystem.Editor
                             sourceParameter.Name,
                             out var resolvedPrefix)
                             ? resolvedPrefix
-                            : PhantomParameterPolicy.FinalOriginalParameterName(
-                                slot,
-                                sourceParameter.Name,
-                                slotAnalysis.NamesSharedWithBase);
+                            : sourceParameter.Name;
                         output.Add(new ProvidedParameter(
                             prefixName,
                             ParameterNamespace.PhysBonesPrefix,
@@ -192,10 +184,7 @@ namespace MPCCT.PhantomSystem.Editor
                         sourceParameter.Name,
                         out var resolvedName)
                         ? resolvedName
-                        : PhantomParameterPolicy.FinalOriginalParameterName(
-                            slot,
-                            sourceParameter.Name,
-                            slotAnalysis.NamesSharedWithBase);
+                        : sourceParameter.Name;
                     output.Add(new ProvidedParameter(
                         finalName,
                         ParameterNamespace.Animator,

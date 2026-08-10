@@ -114,18 +114,17 @@ namespace MPCCT.PhantomSystem.Editor
             var inputs = new System.Collections.Generic.List<PhantomParameterSlotInput>();
             foreach (var slot in state.System.Slots)
             {
-                var definitions = PhantomParameterAnalysis.ReadParametersForObject(
-                        slot.PrebakedRoot,
-                        context)
-                    .Values
-                    .ToList();
-                definitions.AddRange(
-                    PhantomParameterAnalysis.ReadDynamicParameterPrefixes(slot.PrebakedRoot));
+                var collection = PhantomParameterAnalysis.CollectSourceParameters(
+                    slot.PrebakedRoot,
+                    context);
                 inputs.Add(new PhantomParameterSlotInput
                 {
                     Slot = slot.Slot,
                     Identity = slot.Identity,
-                    SourceParameters = definitions
+                    SourceParameters = slot.Slot != null && slot.Slot.removeSourceControls
+                        ? collection.RetainedDefinitions
+                        : collection.Definitions,
+                    RetainedSourceParameterNames = collection.RetainedSourceParameterNames
                 });
             }
 
@@ -139,8 +138,6 @@ namespace MPCCT.PhantomSystem.Editor
             {
                 var slot = state.System.Slots[index];
                 slot.ParameterResolution = resolution.Slots[index];
-                slot.ValidSharedParameterNames.Clear();
-                slot.ValidSharedParameterNames.UnionWith(resolution.Slots[index].SharedOriginalNames);
             }
         }
 
@@ -223,6 +220,7 @@ namespace MPCCT.PhantomSystem.Editor
 
             foreach (var slot in state.System.Slots)
             {
+                PhantomSourceComponentParameterMapper.Apply(slot);
                 PhantomHierarchyNormalizer.Normalize(state.System, slot, state.Report);
             }
         }
@@ -285,6 +283,11 @@ namespace MPCCT.PhantomSystem.Editor
                     slot,
                     state.System.ProjectSettings,
                     state.Report);
+            }
+
+            foreach (var slot in state.System.Slots)
+            {
+                PhantomSourceParameterMapping.ReportUnresolved(slot, state.Report);
             }
         }
     }

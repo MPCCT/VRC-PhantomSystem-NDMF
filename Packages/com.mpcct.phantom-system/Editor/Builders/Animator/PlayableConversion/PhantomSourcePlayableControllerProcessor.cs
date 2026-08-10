@@ -341,7 +341,7 @@ namespace MPCCT.PhantomSystem.Editor
             return new BehaviourChanges(kept.ToImmutableList(), driver);
         }
 
-        private static void RemapPlayAudioParameter(
+        internal static void RemapPlayAudioParameter(
             VRCAnimatorPlayAudio playAudio,
             PhantomSlotBuildState slot)
         {
@@ -352,13 +352,14 @@ namespace MPCCT.PhantomSystem.Editor
                 return;
             }
 
-            playAudio.ParameterName = slot.ParameterResolution?.FinalName(
-                                          playAudio.ParameterName,
-                                          slot.Slot)
-                                      ?? PhantomParameterPolicy.FinalOriginalParameterName(
-                                          slot.Slot,
-                                          playAudio.ParameterName,
-                                          slot.ValidSharedParameterNames);
+            if (PhantomSourceParameterMapping.TryResolve(
+                    slot,
+                    playAudio.ParameterName,
+                    "Animator Play Audio",
+                    out var finalName))
+            {
+                playAudio.ParameterName = finalName;
+            }
         }
 
         private static void ProcessPlayableLayerControl(

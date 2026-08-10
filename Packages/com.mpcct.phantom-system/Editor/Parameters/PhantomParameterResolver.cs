@@ -11,6 +11,8 @@ namespace MPCCT.PhantomSystem.Editor
         public PhantomSlotIdentity Identity;
         public IReadOnlyList<PhantomParameterDefinition> SourceParameters =
             Array.Empty<PhantomParameterDefinition>();
+        public ISet<string> RetainedSourceParameterNames =
+            new HashSet<string>(StringComparer.Ordinal);
     }
 
     internal sealed class PhantomParameterRename
@@ -33,14 +35,17 @@ namespace MPCCT.PhantomSystem.Editor
         public int SharedParameterSavings;
         public int FinalContributionCost;
 
-        public string FinalName(string originalName, PhantomSlot slot)
+        public bool TryGetFinalName(string originalName, out string finalName)
         {
-            if (originalName != null && FinalNames.TryGetValue(originalName, out var finalName))
+            if (originalName != null
+                && FinalNames.TryGetValue(originalName, out var resolvedName))
             {
-                return finalName;
+                finalName = resolvedName;
+                return true;
             }
 
-            return PhantomParameterPolicy.FinalOriginalParameterName(slot, originalName);
+            finalName = originalName;
+            return false;
         }
     }
 
@@ -93,7 +98,7 @@ namespace MPCCT.PhantomSystem.Editor
             {
                 var input = inputs[slotIndex];
                 var slotResult = result.Slots[slotIndex];
-                if (input?.Slot == null || input.Slot.removeSourceControls)
+                if (input?.Slot == null)
                 {
                     slotResult.FinalContributionCost = slotResult.GeneratedParameterCost;
                     continue;
@@ -101,7 +106,10 @@ namespace MPCCT.PhantomSystem.Editor
 
                 foreach (var source in (input.SourceParameters ?? Array.Empty<PhantomParameterDefinition>())
                              .Where(parameter => parameter != null
-                                                 && !string.IsNullOrWhiteSpace(parameter.Name))
+                                                 && !string.IsNullOrWhiteSpace(parameter.Name)
+                                                 && (!input.Slot.removeSourceControls
+                                                     || input.RetainedSourceParameterNames != null
+                                                     && input.RetainedSourceParameterNames.Contains(parameter.Name)))
                              .OrderByDescending(parameter => parameter.IsParameterPrefix)
                              .ThenBy(parameter => parameter.Name, StringComparer.Ordinal))
                 {
@@ -177,7 +185,9 @@ namespace MPCCT.PhantomSystem.Editor
             IDictionary<string, PhantomParameterDefinition> occupied)
         {
             var subParameters = PrefixSubParameters(source).ToArray();
-            var preferred = input.Slot.renamePhantomParameters
+            var preferred = IsInSlotNamespace(input, source.Name)
+                ? source.Name
+                : input.Slot.renamePhantomParameters
                 ? input.Identity.OriginalParameterName(source.Name)
                 : source.Name;
             var finalPrefix = preferred;
@@ -303,7 +313,7 @@ namespace MPCCT.PhantomSystem.Editor
             PhantomParameterDefinition source,
             IReadOnlyDictionary<string, PhantomParameterDefinition> occupied)
         {
-            if (!input.Slot.renamePhantomParameters)
+            if (!input.Slot.renamePhantomParameters || IsInSlotNamespace(input, source.Name))
             {
                 return source.Name;
             }
@@ -316,6 +326,19 @@ namespace MPCCT.PhantomSystem.Editor
             }
 
             return input.Identity.OriginalParameterName(source.Name);
+        }
+
+        private static bool IsInSlotNamespace(
+            PhantomParameterSlotInput input,
+            string name)
+        {
+            if (input?.Identity == null || string.IsNullOrWhiteSpace(name))
+            {
+                return false;
+            }
+
+            return string.Equals(name, input.Identity.ParameterPrefix, StringComparison.Ordinal)
+                   || name.StartsWith(input.Identity.ParameterPrefix + "/", StringComparison.Ordinal);
         }
 
         private static string AllocateUniqueName(
