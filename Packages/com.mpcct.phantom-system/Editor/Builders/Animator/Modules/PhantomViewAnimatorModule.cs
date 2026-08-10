@@ -69,6 +69,10 @@ namespace MPCCT.PhantomSystem.Editor
                 directWeightParameter);
             AddDirectChild(
                 directTree,
+                CreateNearClipMotion(context),
+                directWeightParameter);
+            AddDirectChild(
+                directTree,
                 CreateMaskSizeTree(context, maskSizeParameter),
                 directWeightParameter);
 
@@ -211,6 +215,35 @@ namespace MPCCT.PhantomSystem.Editor
             return motion;
         }
 
+        private static Motion CreateNearClipMotion(
+            PhantomAnimatorBuildContext context)
+        {
+            var baseNearClipPlane = PhantomViewBuilder.NormalizeNearClipPlane(
+                context.Slot.Slot.phantomViewNearClipPlane);
+            if (!context.Slot.Slot.enableScaleControl)
+            {
+                return CreateNearClipClip(
+                    context,
+                    "PhantomViewNearClip",
+                    baseNearClipPlane);
+            }
+
+            var minimumClip = CreateNearClipClip(
+                context,
+                "PhantomViewNearClipMinimumScale",
+                baseNearClipPlane * ScaleControlAnimatorModule.MinimumScale);
+            var maximumClip = CreateNearClipClip(
+                context,
+                "PhantomViewNearClipMaximumScale",
+                baseNearClipPlane * ScaleControlAnimatorModule.MaximumScale);
+            var scaleTree = context.CreateBlendTree(
+                "PhantomViewNearClipScaleTree",
+                PhantomParameterNames.Scale(context.Slot.Slot));
+            scaleTree.AddChild(minimumClip, 0f);
+            scaleTree.AddChild(maximumClip, 1f);
+            return scaleTree;
+        }
+
         private static BlendTree CreateMaskSizeTree(
             PhantomAnimatorBuildContext context,
             string maskSizeParameter)
@@ -306,6 +339,27 @@ namespace MPCCT.PhantomSystem.Editor
                 typeof(MeshRenderer),
                 "material._MaskSizeAngleDegrees",
                 maskSizeDegrees);
+            return clip;
+        }
+
+        private static AnimationClip CreateNearClipClip(
+            PhantomAnimatorBuildContext context,
+            string name,
+            float nearClipPlane)
+        {
+            var clip = context.CreateClip(name);
+            SetFloat(
+                clip,
+                context.PhantomViewLeftCameraPath,
+                typeof(Camera),
+                "near clip plane",
+                nearClipPlane);
+            SetFloat(
+                clip,
+                context.PhantomViewRightCameraPath,
+                typeof(Camera),
+                "near clip plane",
+                nearClipPlane);
             return clip;
         }
 

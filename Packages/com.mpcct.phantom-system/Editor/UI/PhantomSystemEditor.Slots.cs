@@ -89,6 +89,8 @@ namespace MPCCT.PhantomSystem.Editor
                 slotProperty.FindPropertyRelative("enableScaleControl");
             var enablePhantomView =
                 slotProperty.FindPropertyRelative("enablePhantomView");
+            var phantomViewNearClipPlane =
+                slotProperty.FindPropertyRelative("phantomViewNearClipPlane");
             var slotName = string.IsNullOrWhiteSpace(idProperty.stringValue)
                 ? $"Slot{slotIndex + 1}"
                 : idProperty.stringValue.Trim();
@@ -219,7 +221,9 @@ namespace MPCCT.PhantomSystem.Editor
                         useRotationConstraint,
                         rotationSolveInWorldSpace,
                         overridePhysBoneImmobileType,
-                        tryConvertAnimatorTrackingControl);
+                        tryConvertAnimatorTrackingControl,
+                        enablePhantomView,
+                        phantomViewNearClipPlane);
 
                     DrawValidation(slotIndex, source);
                 }
@@ -234,7 +238,9 @@ namespace MPCCT.PhantomSystem.Editor
             SerializedProperty useRotationConstraint,
             SerializedProperty rotationSolveInWorldSpace,
             SerializedProperty overridePhysBoneImmobileType,
-            SerializedProperty tryConvertAnimatorTrackingControl)
+            SerializedProperty tryConvertAnimatorTrackingControl,
+            SerializedProperty enablePhantomView,
+            SerializedProperty phantomViewNearClipPlane)
         {
             EditorGUILayout.Space();
             var expanded = GetSlotAdvancedFoldout(slotIndex);
@@ -284,6 +290,21 @@ namespace MPCCT.PhantomSystem.Editor
                         new GUIContent(
                             "Try Convert Animator Tracking Control",
                             "Convert supported Animator Tracking Control behaviors into PhantomSystem bone-group synchronization. Unsupported face simulation is reported as a partial conversion."));
+                }
+                using (new EditorGUI.DisabledScope(!enablePhantomView.boolValue))
+                {
+                    EditorGUI.BeginChangeCheck();
+                    var nearClipPlane = EditorGUILayout.FloatField(
+                        new GUIContent(
+                            "Phantom View Near Clip (m)",
+                            "Near clipping distance at 1x phantom scale. Increase it if the phantom's face obscures the view. The generated camera value follows Phantom Scale automatically."),
+                        PhantomViewBuilder.NormalizeNearClipPlane(
+                            phantomViewNearClipPlane.floatValue));
+                    if (EditorGUI.EndChangeCheck())
+                    {
+                        phantomViewNearClipPlane.floatValue =
+                            PhantomViewBuilder.NormalizeNearClipPlane(nearClipPlane);
+                    }
                 }
             }
         }
@@ -335,11 +356,13 @@ namespace MPCCT.PhantomSystem.Editor
             slotProperty.FindPropertyRelative("removeSourceControls").boolValue = false;
             slotProperty.FindPropertyRelative("useRotationConstraint").boolValue = false;
             slotProperty.FindPropertyRelative("rotationSolveInWorldSpace").boolValue = false;
-            slotProperty.FindPropertyRelative("overridePhysBoneImmobileType").boolValue = false;
+            slotProperty.FindPropertyRelative("overridePhysBoneImmobileType").boolValue = true;
             slotProperty.FindPropertyRelative("tryConvertAnimatorTrackingControl").boolValue = true;
             slotProperty.FindPropertyRelative("enablePhantomGrabbing").boolValue = true;
             slotProperty.FindPropertyRelative("enableScaleControl").boolValue = true;
             slotProperty.FindPropertyRelative("enablePhantomView").boolValue = true;
+            slotProperty.FindPropertyRelative("phantomViewNearClipPlane").floatValue =
+                PhantomSlot.DefaultPhantomViewNearClipPlane;
             SetSlotFoldout(newIndex, true);
             SetSharedParameterFoldout(newIndex, false);
             SetSlotAdvancedFoldout(newIndex, false);

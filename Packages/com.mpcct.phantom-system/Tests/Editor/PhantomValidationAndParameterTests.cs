@@ -96,6 +96,9 @@ namespace MPCCT.PhantomSystem.Editor.Tests
                 Assert.AreEqual(expected.enablePhantomGrabbing, actual.enablePhantomGrabbing);
                 Assert.AreEqual(expected.enableScaleControl, actual.enableScaleControl);
                 Assert.AreEqual(expected.enablePhantomView, actual.enablePhantomView);
+                Assert.AreEqual(
+                    expected.phantomViewNearClipPlane,
+                    actual.phantomViewNearClipPlane);
                 Assert.IsNotNull(actual.sharedParameterNames);
                 Assert.IsEmpty(actual.sharedParameterNames);
             }
@@ -106,6 +109,133 @@ namespace MPCCT.PhantomSystem.Editor.Tests
                     Object.DestroyImmediate(inspector);
                 }
                 Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void PhantomViewNearClip_NormalizesInvalidValues()
+        {
+            Assert.AreEqual(
+                PhantomSlot.DefaultPhantomViewNearClipPlane,
+                PhantomViewBuilder.NormalizeNearClipPlane(float.NaN));
+            Assert.AreEqual(
+                PhantomSlot.DefaultPhantomViewNearClipPlane,
+                PhantomViewBuilder.NormalizeNearClipPlane(0f));
+            Assert.AreEqual(
+                PhantomSlot.MinimumPhantomViewNearClipPlane,
+                PhantomViewBuilder.NormalizeNearClipPlane(0.0001f));
+            Assert.AreEqual(
+                PhantomSlot.MaximumPhantomViewNearClipPlane,
+                PhantomViewBuilder.NormalizeNearClipPlane(100f));
+        }
+
+        [Test]
+        public void PhantomViewNearClip_IsScaleAdaptedInsideExistingDirectTree()
+        {
+            var avatar = new GameObject("Avatar");
+            var slotRoot = new GameObject("Slot1");
+            var cloneRoot = new GameObject("Clone");
+            var leftCamera = new GameObject("LeftCamera");
+            var rightCamera = new GameObject("RightCamera");
+            var display = new GameObject("Display");
+            AnimatorController controller = null;
+            PhantomAnimatorBuildContext context = null;
+            try
+            {
+                slotRoot.transform.SetParent(avatar.transform, false);
+                cloneRoot.transform.SetParent(slotRoot.transform, false);
+                leftCamera.transform.SetParent(avatar.transform, false);
+                rightCamera.transform.SetParent(avatar.transform, false);
+                display.transform.SetParent(avatar.transform, false);
+
+                var slot = new PhantomSlot
+                {
+                    id = "Slot1",
+                    enableScaleControl = true,
+                    enablePhantomView = true,
+                    phantomViewNearClipPlane = 0.1f
+                };
+                var slotState = new PhantomSlotBuildState
+                {
+                    Slot = slot,
+                    SlotId = "Slot1",
+                    Identity = PhantomSlotIdentity.Create(slot),
+                    SlotRoot = slotRoot,
+                    CloneRoot = cloneRoot,
+                    PhantomViewLeftCamera = leftCamera.transform,
+                    PhantomViewRightCamera = rightCamera.transform,
+                    PhantomViewDisplayHost = display.transform
+                };
+                var system = new PhantomSystemBuildState
+                {
+                    AvatarRoot = avatar.transform
+                };
+                system.Slots.Add(slotState);
+                controller = new AnimatorController
+                {
+                    layers = new AnimatorControllerLayer[0]
+                };
+                context = new PhantomAnimatorBuildContext(
+                    null,
+                    system,
+                    slotState,
+                    new PhantomBuildReport(),
+                    controller);
+
+                PhantomViewAnimatorModule.BuildControls(context);
+
+                var controlsLayer = controller.layers.Single(layer =>
+                    layer.name.EndsWith("_PhantomViewControls", System.StringComparison.Ordinal));
+                var directTree = controlsLayer.stateMachine.defaultState.motion as BlendTree;
+                Assert.IsNotNull(directTree);
+                Assert.AreEqual(BlendTreeType.Direct, directTree.blendType);
+                Assert.AreEqual(3, directTree.children.Length);
+                Assert.IsTrue(directTree.children.All(child =>
+                    child.directBlendParameter
+                    == PhantomParameterNames.PhantomViewDirectWeight(slot)));
+
+                var nearClipTree = directTree.children
+                    .Select(child => child.motion)
+                    .OfType<BlendTree>()
+                    .Single(tree => tree.name == "PhantomViewNearClipScaleTree");
+                Assert.AreEqual(BlendTreeType.Simple1D, nearClipTree.blendType);
+                Assert.AreEqual(PhantomParameterNames.Scale(slot), nearClipTree.blendParameter);
+
+                var nearClipBinding = new EditorCurveBinding
+                {
+                    path = context.PhantomViewLeftCameraPath,
+                    type = typeof(Camera),
+                    propertyName = "near clip plane"
+                };
+                var minimumCurve = AnimationUtility.GetEditorCurve(
+                    (AnimationClip)nearClipTree.children[0].motion,
+                    nearClipBinding);
+                var maximumCurve = AnimationUtility.GetEditorCurve(
+                    (AnimationClip)nearClipTree.children[1].motion,
+                    nearClipBinding);
+                Assert.AreEqual(0.1f * ScaleControlAnimatorModule.MinimumScale,
+                    minimumCurve.Evaluate(0f), 0.000001f);
+                Assert.AreEqual(0.1f * ScaleControlAnimatorModule.MaximumScale,
+                    maximumCurve.Evaluate(0f), 0.000001f);
+            }
+            finally
+            {
+                if (context != null)
+                {
+                    foreach (var clip in context.GeneratedClips)
+                    {
+                        Object.DestroyImmediate(clip);
+                    }
+                    foreach (var tree in context.GeneratedBlendTrees)
+                    {
+                        Object.DestroyImmediate(tree);
+                    }
+                }
+                if (controller != null)
+                {
+                    Object.DestroyImmediate(controller);
+                }
+                Object.DestroyImmediate(avatar);
             }
         }
 

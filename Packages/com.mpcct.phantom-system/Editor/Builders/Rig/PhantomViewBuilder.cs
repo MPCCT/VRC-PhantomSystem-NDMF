@@ -92,16 +92,20 @@ namespace MPCCT.PhantomSystem.Editor
             var initialHalfDistance = PhantomViewAnimatorModule.MaximumStereoStrength
                                       * PhantomViewAnimatorModule.DefaultStereoStrengthParameter
                                       * 0.5f;
+            var nearClipPlane = NormalizeNearClipPlane(
+                slot.Slot.phantomViewNearClipPlane);
             slot.PhantomViewLeftCamera = CreateCamera(
                 captureRoot,
                 "LeftEyeCamera",
                 -initialHalfDistance,
-                leftTexture);
+                leftTexture,
+                nearClipPlane);
             slot.PhantomViewRightCamera = CreateCamera(
                 captureRoot,
                 "RightEyeCamera",
                 initialHalfDistance,
-                rightTexture);
+                rightTexture,
+                nearClipPlane);
 
             var displayHost = ConstraintRigBuilder.EnsureChild(viewRoot, "Display");
             displayHost.gameObject.layer = PlayerLocalLayer;
@@ -193,7 +197,8 @@ namespace MPCCT.PhantomSystem.Editor
             Transform parent,
             string name,
             float localX,
-            RenderTexture targetTexture)
+            RenderTexture targetTexture,
+            float nearClipPlane)
         {
             var cameraTransform = ConstraintRigBuilder.EnsureChild(parent, name);
             cameraTransform.gameObject.layer = PlayerLocalLayer;
@@ -207,7 +212,7 @@ namespace MPCCT.PhantomSystem.Editor
             camera.backgroundColor = Color.black;
             camera.fieldOfView = CaptureVerticalFieldOfView;
             camera.aspect = CaptureAspect;
-            camera.nearClipPlane = 0.03f;
+            camera.nearClipPlane = nearClipPlane;
             camera.farClipPlane = 250f;
             camera.allowHDR = false;
             camera.allowMSAA = false;
@@ -218,6 +223,19 @@ namespace MPCCT.PhantomSystem.Editor
             camera.cullingMask = ~(1 << PlayerLocalLayer);
             camera.enabled = false;
             return cameraTransform;
+        }
+
+        internal static float NormalizeNearClipPlane(float value)
+        {
+            if (float.IsNaN(value) || float.IsInfinity(value) || value <= 0f)
+            {
+                return PhantomSlot.DefaultPhantomViewNearClipPlane;
+            }
+
+            return Mathf.Clamp(
+                value,
+                PhantomSlot.MinimumPhantomViewNearClipPlane,
+                PhantomSlot.MaximumPhantomViewNearClipPlane);
         }
 
         private static Material CreateDisplayMaterial(
