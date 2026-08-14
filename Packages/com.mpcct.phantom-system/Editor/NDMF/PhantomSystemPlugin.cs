@@ -64,6 +64,8 @@ namespace MPCCT.PhantomSystem.Editor
 
             InPhase(BuildPhase.Optimizing)
                 .AfterPlugin("nadena.dev.modular-avatar")
+                .Run("Finalize Phantom FX Playable Mask", ctx => PhantomBuildPassRunner.Run(ctx, FinalizePhantomFxPlayableMaskPass.Execute))
+                .Then
                 .Run("Retarget Phantom Animator Layer Controls", ctx => PhantomBuildPassRunner.Run(ctx, RetargetPhantomAnimatorLayerControlsPass.Execute))
                 .Then
                 .Run("Validate Phantom Animation Bindings", ctx => PhantomBuildPassRunner.Run(ctx, ValidatePhantomAnimationBindingsPass.Execute));

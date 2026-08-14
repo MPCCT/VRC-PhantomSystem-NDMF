@@ -61,9 +61,7 @@ namespace MPCCT.PhantomSystem.Editor
                     continue;
                 }
 
-                var targetPlayable = playable == VRCAvatarDescriptor.AnimLayerType.Action
-                    ? VRCAvatarDescriptor.AnimLayerType.FX
-                    : playable;
+                var targetPlayable = ResolveMergeTarget(playable);
                 var mergeAnimator = AddMergeAnimator(
                     host,
                     slot,
@@ -111,6 +109,14 @@ namespace MPCCT.PhantomSystem.Editor
                     slot.GeneratedCoreMenu,
                     report);
             }
+        }
+
+        internal static VRCAvatarDescriptor.AnimLayerType ResolveMergeTarget(
+            VRCAvatarDescriptor.AnimLayerType sourcePlayable)
+        {
+            return sourcePlayable == VRCAvatarDescriptor.AnimLayerType.Action
+                ? VRCAvatarDescriptor.AnimLayerType.Gesture
+                : sourcePlayable;
         }
 
         private static void AssignMergeAnimator(

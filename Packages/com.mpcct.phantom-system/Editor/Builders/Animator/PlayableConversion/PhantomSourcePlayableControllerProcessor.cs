@@ -399,7 +399,7 @@ namespace MPCCT.PhantomSystem.Editor
                 var actionLayer = state.Slot.ConvertedActionLayers[index];
                 var marker = ScriptableObject.CreateInstance<PhantomAnimatorLayerControlMarker>();
                 marker.name = "Phantom Action Playable Layer Control Retarget";
-                marker.targetPlayable = VRCAvatarDescriptor.AnimLayerType.FX;
+                marker.targetPlayable = VRCAvatarDescriptor.AnimLayerType.Gesture;
                 marker.targetLayerName = actionLayer.LayerName;
                 marker.goalWeight = enabled ? actionLayer.EnabledWeight : 0f;
                 marker.blendDuration = 0f;
@@ -439,9 +439,9 @@ namespace MPCCT.PhantomSystem.Editor
                     targetLayerIndex,
                     out var originalLayerIndex))
             {
-                // Action controllers are merged into FX, so NDMF can virtualize an FX
-                // control against the Action controller. Recover its serialized index
-                // before resolving the actual source FX layer name.
+                // NDMF can virtualize a cross-controller control against the owner
+                // controller. Recover its serialized index before resolving the
+                // actual target controller layer name.
                 targetLayerIndex = originalLayerIndex;
             }
 

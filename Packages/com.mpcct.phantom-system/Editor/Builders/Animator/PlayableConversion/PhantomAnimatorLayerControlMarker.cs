@@ -5,7 +5,7 @@ namespace MPCCT.PhantomSystem.Editor
 {
     /// <summary>
     /// Build-only placeholder for a layer control whose target lives in another
-    /// controller, or whose Action target is being moved into FX.
+    /// controller, or whose Action target is being moved into Gesture.
     /// </summary>
     internal sealed class PhantomAnimatorLayerControlMarker : StateMachineBehaviour
     {

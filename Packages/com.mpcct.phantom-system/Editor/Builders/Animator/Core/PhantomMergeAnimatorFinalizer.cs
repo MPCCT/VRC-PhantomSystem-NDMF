@@ -41,15 +41,6 @@ namespace MPCCT.PhantomSystem.Editor
 
             foreach (var slot in state.System.Slots)
             {
-                if (slot.SourceActionMergeAnimator != null)
-                {
-                    slot.SourceActionMergeAnimator.layerPriority = CheckedIncrement(fxPriority, slot, state.Report);
-                    fxPriority = slot.SourceActionMergeAnimator.layerPriority;
-                }
-            }
-
-            foreach (var slot in state.System.Slots)
-            {
                 if (slot.CoreMergeAnimator != null)
                 {
                     slot.CoreMergeAnimator.layerPriority = CheckedIncrement(fxPriority, slot, state.Report);
@@ -84,6 +75,18 @@ namespace MPCCT.PhantomSystem.Editor
                         slot,
                         state.Report);
                     gesturePriority = slot.SourceGestureMergeAnimator.layerPriority;
+                }
+            }
+
+            foreach (var slot in state.System.Slots)
+            {
+                if (slot.SourceActionMergeAnimator != null)
+                {
+                    slot.SourceActionMergeAnimator.layerPriority = CheckedIncrement(
+                        gesturePriority,
+                        slot,
+                        state.Report);
+                    gesturePriority = slot.SourceActionMergeAnimator.layerPriority;
                 }
             }
         }

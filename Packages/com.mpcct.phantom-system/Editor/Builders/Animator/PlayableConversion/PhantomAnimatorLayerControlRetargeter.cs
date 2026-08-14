@@ -59,33 +59,33 @@ namespace MPCCT.PhantomSystem.Editor
                 return;
             }
 
-            if (!controllers.TryGetValue(VRCAvatarDescriptor.AnimLayerType.FX, out var fxController)
-                || !targets.TryGetValue(VRCAvatarDescriptor.AnimLayerType.FX, out var fxTargets))
+            if (!controllers.TryGetValue(VRCAvatarDescriptor.AnimLayerType.Gesture, out var gestureController)
+                || !targets.TryGetValue(VRCAvatarDescriptor.AnimLayerType.Gesture, out var gestureTargets))
             {
-                state.Report.Error("Cannot disable Converted Action layers because the final FX controller is missing.");
+                state.Report.Error("Cannot disable Converted Action layers because the final Gesture controller is missing.");
                 return;
             }
 
-            var layers = fxController.layers;
+            var layers = gestureController.layers;
             foreach (var slot in state.System.Slots)
             {
                 foreach (var actionLayer in slot.ConvertedActionLayers)
                 {
-                    if (!fxTargets.TryGetValue(actionLayer.LayerName, out var layerIndex)
+                    if (!gestureTargets.TryGetValue(actionLayer.LayerName, out var layerIndex)
                         || layerIndex < 0
                         || layerIndex >= layers.Length)
                     {
                         state.Report.Error(
-                            $"Could not resolve Converted Action layer '{actionLayer.LayerName}' in the final FX controller.",
-                            fxController);
+                            $"Could not resolve Converted Action layer '{actionLayer.LayerName}' in the final Gesture controller.",
+                            gestureController);
                         continue;
                     }
 
                     if (layerIndex == 0)
                     {
                         state.Report.Error(
-                            $"Converted Action layer '{actionLayer.LayerName}' became final FX layer 0 and cannot be weight-controlled.",
-                            fxController);
+                            $"Converted Action layer '{actionLayer.LayerName}' became final Gesture layer 0 and cannot be weight-controlled.",
+                            gestureController);
                         continue;
                     }
 
@@ -93,7 +93,7 @@ namespace MPCCT.PhantomSystem.Editor
                 }
             }
 
-            fxController.layers = layers;
+            gestureController.layers = layers;
         }
 
         private static Dictionary<VRCAvatarDescriptor.AnimLayerType, AnimatorController>

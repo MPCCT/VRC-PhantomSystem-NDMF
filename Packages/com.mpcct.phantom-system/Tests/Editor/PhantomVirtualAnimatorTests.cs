@@ -426,6 +426,109 @@ namespace MPCCT.PhantomSystem.Editor.Tests
             }
         }
 
+        [Test]
+        public void SourceAction_MergesIntoGesturePlayable()
+        {
+            Assert.AreEqual(
+                VRCAvatarDescriptor.AnimLayerType.Gesture,
+                PhantomSourceIntegrationBuilder.ResolveMergeTarget(
+                    VRCAvatarDescriptor.AnimLayerType.Action));
+            Assert.AreEqual(
+                VRCAvatarDescriptor.AnimLayerType.FX,
+                PhantomSourceIntegrationBuilder.ResolveMergeTarget(
+                    VRCAvatarDescriptor.AnimLayerType.FX));
+        }
+
+        [Test]
+        public void FxMaskFromNull_PreservesDefaultFxSemanticsAndExcludesDriver()
+        {
+            var avatar = new GameObject("Avatar");
+            var slot = CreateChild(avatar.transform, "Slot");
+            var driver = CreateChild(slot.transform, "Driver");
+            var driverBone = CreateChild(driver.transform, "Hips");
+            AvatarMask mask = null;
+            try
+            {
+                mask = PhantomFxPlayableMaskFinalizer.CreateMask(
+                    null,
+                    new[] { driver.transform, driverBone.transform },
+                    avatar.transform);
+
+                for (var part = AvatarMaskBodyPart.Root;
+                     part < AvatarMaskBodyPart.LastBodyPart;
+                     part++)
+                {
+                    Assert.IsFalse(mask.GetHumanoidBodyPartActive(part));
+                }
+                Assert.IsTrue(GetMaskPathState(mask, string.Empty));
+                Assert.IsFalse(GetMaskPathState(mask, "Slot/Driver"));
+                Assert.IsFalse(GetMaskPathState(mask, "Slot/Driver/Hips"));
+                Assert.IsTrue(
+                    PhantomFxPlayableMaskFinalizer.IsTransformExcluded(
+                        mask,
+                        "Slot/Driver/Hips"));
+            }
+            finally
+            {
+                if (mask != null)
+                {
+                    Object.DestroyImmediate(mask);
+                }
+                Object.DestroyImmediate(avatar);
+            }
+        }
+
+        [Test]
+        public void FxMaskCopy_PreservesSourceRulesAndOverridesDriverEntriesOnly()
+        {
+            var avatar = new GameObject("Avatar");
+            var slot = CreateChild(avatar.transform, "Slot");
+            var driver = CreateChild(slot.transform, "Driver");
+            var source = new AvatarMask { transformCount = 3 };
+            AvatarMask converted = null;
+            source.SetHumanoidBodyPartActive(AvatarMaskBodyPart.Head, true);
+            source.SetTransformPath(0, string.Empty);
+            source.SetTransformActive(0, true);
+            source.SetTransformPath(1, "Unrelated");
+            source.SetTransformActive(1, false);
+            source.SetTransformPath(2, "Slot/Driver");
+            source.SetTransformActive(2, true);
+            try
+            {
+                converted = PhantomFxPlayableMaskFinalizer.CreateMask(
+                    source,
+                    new[] { driver.transform },
+                    avatar.transform);
+
+                Assert.IsTrue(converted.GetHumanoidBodyPartActive(AvatarMaskBodyPart.Head));
+                Assert.IsTrue(GetMaskPathState(converted, string.Empty));
+                Assert.IsFalse(GetMaskPathState(converted, "Unrelated"));
+                Assert.IsFalse(GetMaskPathState(converted, "Slot/Driver"));
+            }
+            finally
+            {
+                if (converted != null)
+                {
+                    Object.DestroyImmediate(converted);
+                }
+                Object.DestroyImmediate(source);
+                Object.DestroyImmediate(avatar);
+            }
+        }
+
+        private static bool GetMaskPathState(AvatarMask mask, string path)
+        {
+            for (var index = 0; index < mask.transformCount; index++)
+            {
+                if (mask.GetTransformPath(index) == path)
+                {
+                    return mask.GetTransformActive(index);
+                }
+            }
+            Assert.Fail($"Mask path '{path}' was not found.");
+            return false;
+        }
+
         private static PhantomSlotBuildState CreateSlotState(
             string id,
             GameObject cloneRoot,

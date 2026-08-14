@@ -404,6 +404,15 @@ namespace MPCCT.PhantomSystem.Editor
         }
     }
 
+    public static class FinalizePhantomFxPlayableMaskPass
+    {
+        public static void Execute(BuildContext ctx)
+        {
+            var state = ctx.GetState<PhantomBuildState>();
+            PhantomFxPlayableMaskFinalizer.Apply(ctx, state);
+        }
+    }
+
     public static class CleanupAuthoringComponentsPass
     {
         public static void Execute(BuildContext ctx)

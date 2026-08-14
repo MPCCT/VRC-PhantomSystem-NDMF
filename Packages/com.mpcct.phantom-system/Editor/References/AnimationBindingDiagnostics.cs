@@ -20,6 +20,12 @@ namespace MPCCT.PhantomSystem.Editor
             }
 
             var controllers = CollectControllers(descriptor);
+            ValidateConvertedActionLayers(state, controllers);
+            ValidateFxPlayableMask(
+                context.AvatarRootTransform,
+                descriptor,
+                state,
+                controllers);
             var phantomRootPath = TransformPathUtility.GetRelativePath(
                 state.System.RuntimeRoot.transform,
                 context.AvatarRootTransform);
@@ -218,6 +224,137 @@ namespace MPCCT.PhantomSystem.Editor
             return reference != null
                    && state.System.Slots.Any(slot =>
                        slot.ConvertedClipReferences.ContainsKey(reference));
+        }
+
+        private static void ValidateConvertedActionLayers(
+            PhantomBuildState state,
+            IReadOnlyDictionary<VRCAvatarDescriptor.AnimLayerType, AnimatorController> controllers)
+        {
+            var expected = state.System.Slots
+                .SelectMany(slot => slot.ConvertedActionLayers)
+                .ToArray();
+            if (expected.Length == 0)
+            {
+                return;
+            }
+
+            if (!controllers.TryGetValue(
+                    VRCAvatarDescriptor.AnimLayerType.Gesture,
+                    out var gestureController))
+            {
+                state.Report.InternalError(
+                    "Final Gesture controller is missing while Converted Action layers are present.");
+                return;
+            }
+
+            var layers = gestureController.layers;
+            var indices = layers
+                .Select((layer, index) => new { layer.name, Index = index })
+                .GroupBy(value => value.name, StringComparer.Ordinal)
+                .ToDictionary(group => group.Key, group => group.ToArray(), StringComparer.Ordinal);
+            foreach (var actionLayer in expected)
+            {
+                if (!indices.TryGetValue(actionLayer.LayerName, out var matches)
+                    || matches.Length != 1)
+                {
+                    state.Report.InternalError(
+                        $"Final Gesture controller does not contain exactly one Converted Action layer "
+                        + $"named '{actionLayer.LayerName}'.",
+                        gestureController);
+                    continue;
+                }
+
+                var index = matches[0].Index;
+                if (index == 0)
+                {
+                    state.Report.InternalError(
+                        $"Converted Action layer '{actionLayer.LayerName}' became Gesture layer 0.",
+                        gestureController);
+                }
+                if (!Mathf.Approximately(layers[index].defaultWeight, 0f))
+                {
+                    state.Report.InternalError(
+                        $"Converted Action layer '{actionLayer.LayerName}' has final default weight "
+                        + $"{layers[index].defaultWeight:0.###} instead of 0.",
+                        gestureController);
+                }
+            }
+        }
+
+        private static void ValidateFxPlayableMask(
+            Transform avatarRoot,
+            VRCAvatarDescriptor descriptor,
+            PhantomBuildState state,
+            IReadOnlyDictionary<VRCAvatarDescriptor.AnimLayerType, AnimatorController> controllers)
+        {
+            var driverRoots = state.System.Slots
+                .Where(slot => slot.AnimationDriverRoot != null
+                               && PhantomFxPlayableMaskFinalizer.RequiresAnimationDriverIsolation(slot))
+                .Select(slot => slot.AnimationDriverRoot)
+                .ToArray();
+            if (driverRoots.Length == 0)
+            {
+                return;
+            }
+
+            if (!controllers.TryGetValue(
+                    VRCAvatarDescriptor.AnimLayerType.FX,
+                    out var fxController)
+                || fxController.layers.Length == 0)
+            {
+                state.Report.InternalError(
+                    "Final FX controller or its first layer is missing while Animation Driver isolation is required.");
+                return;
+            }
+
+            var mask = fxController.layers[0].avatarMask;
+            if (mask == null)
+            {
+                state.Report.InternalError(
+                    "Final FX layer 0 has no Avatar Mask while Animation Driver isolation is required.",
+                    fxController);
+                return;
+            }
+
+            foreach (var driverRoot in driverRoots)
+            {
+                var path = TransformPathUtility.GetRelativePath(driverRoot, avatarRoot);
+                if (path == null
+                    || !PhantomFxPlayableMaskFinalizer.IsTransformExcluded(mask, path))
+                {
+                    state.Report.InternalError(
+                        $"Final FX layer 0 Mask does not exclude Animation Driver "
+                        + $"'{path ?? driverRoot.name}'.",
+                        mask);
+                }
+            }
+
+            var descriptorMask = FindDescriptorMask(
+                descriptor,
+                VRCAvatarDescriptor.AnimLayerType.FX);
+            if (descriptorMask != mask)
+            {
+                state.Report.InternalError(
+                    "The final Avatar Descriptor FX Mask does not match the final FX layer 0 Mask.",
+                    descriptor);
+            }
+        }
+
+        private static AvatarMask FindDescriptorMask(
+            VRCAvatarDescriptor descriptor,
+            VRCAvatarDescriptor.AnimLayerType type)
+        {
+            foreach (var layer in (descriptor.baseAnimationLayers
+                         ?? Array.Empty<VRCAvatarDescriptor.CustomAnimLayer>())
+                     .Concat(descriptor.specialAnimationLayers
+                         ?? Array.Empty<VRCAvatarDescriptor.CustomAnimLayer>()))
+            {
+                if (layer.type == type)
+                {
+                    return layer.mask;
+                }
+            }
+            return null;
         }
 
         private static bool IsPositionRotationOrScale(string propertyName)
