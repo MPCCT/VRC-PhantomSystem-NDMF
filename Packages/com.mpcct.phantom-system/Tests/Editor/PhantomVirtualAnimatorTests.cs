@@ -28,6 +28,40 @@ namespace MPCCT.PhantomSystem.Editor.Tests
         }
 
         [Test]
+        public void AnimatorParameterBinding_IsNotClassifiedAsHumanoid()
+        {
+            const string parameterName = "FaceEmo_Hai_GestureLWProxy";
+            var binding = EditorCurveBinding.FloatCurve(
+                string.Empty,
+                typeof(Animator),
+                parameterName);
+            var parameters = new HashSet<string> { parameterName };
+
+            Assert.AreEqual(
+                PhantomAnimationBindingKind.AnimatorParameter,
+                PhantomAnimationBindingClassifier.Classify(binding, parameters));
+            Assert.AreEqual(
+                PhantomAnimationBindingKind.UnsupportedAnimator,
+                PhantomAnimationBindingClassifier.Classify(binding));
+        }
+
+        [Test]
+        public void HumanoidBinding_TakesPriorityOverMatchingParameterName()
+        {
+            var muscleName = HumanTrait.MuscleName.First();
+            var binding = EditorCurveBinding.FloatCurve(
+                string.Empty,
+                typeof(Animator),
+                muscleName);
+
+            Assert.AreEqual(
+                PhantomAnimationBindingKind.ResolvedHumanoid,
+                PhantomAnimationBindingClassifier.Classify(
+                    binding,
+                    new HashSet<string> { muscleName }));
+        }
+
+        [Test]
         public void VirtualBlendTreeConversion_PreservesChildSettingsAndConsumesMirror()
         {
             var sourceMotion = VirtualClip.Create("Source");

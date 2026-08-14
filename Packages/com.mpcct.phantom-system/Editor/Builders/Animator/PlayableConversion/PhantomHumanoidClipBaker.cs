@@ -11,13 +11,16 @@ namespace MPCCT.PhantomSystem.Editor
     {
         ResolvedHumanoid,
         RootTransform,
+        AnimatorParameter,
         UnsupportedAnimator,
         NonHumanoid
     }
 
     internal static class PhantomAnimationBindingClassifier
     {
-        public static PhantomAnimationBindingKind Classify(EditorCurveBinding binding)
+        public static PhantomAnimationBindingKind Classify(
+            EditorCurveBinding binding,
+            ISet<string> animatorParameterNames = null)
         {
             if (binding.type == typeof(Animator))
             {
@@ -26,8 +29,15 @@ namespace MPCCT.PhantomSystem.Editor
                     return PhantomAnimationBindingKind.RootTransform;
                 }
 
-                return PhantomHumanoidClipBaker.TryResolveHumanoidBinding(binding, out _, out _)
-                    ? PhantomAnimationBindingKind.ResolvedHumanoid
+                if (PhantomHumanoidClipBaker.TryResolveHumanoidBinding(binding, out _, out _))
+                {
+                    return PhantomAnimationBindingKind.ResolvedHumanoid;
+                }
+
+                return string.IsNullOrEmpty(binding.path)
+                       && animatorParameterNames != null
+                       && animatorParameterNames.Contains(binding.propertyName)
+                    ? PhantomAnimationBindingKind.AnimatorParameter
                     : PhantomAnimationBindingKind.UnsupportedAnimator;
             }
 
@@ -130,6 +140,9 @@ namespace MPCCT.PhantomSystem.Editor
                 ? rootTransformBindings.Where(IsRootScaleBinding).ToArray()
                 : Array.Empty<EditorCurveBinding>();
             var relevantBindings = animatorBindings
+                .Where(binding => PhantomAnimationBindingClassifier.Classify(
+                    binding,
+                    options.AnimatorParameterNames) != PhantomAnimationBindingKind.AnimatorParameter)
                 .Concat(rootTransformBindings.Where(binding =>
                     IsRootPositionOrRotationBinding(binding)
                     || IsRootScaleBinding(binding)))
@@ -140,7 +153,9 @@ namespace MPCCT.PhantomSystem.Editor
             var resolvedHumanoidBindingCount = 0;
             foreach (var binding in animatorBindings)
             {
-                var kind = PhantomAnimationBindingClassifier.Classify(binding);
+                var kind = PhantomAnimationBindingClassifier.Classify(
+                    binding,
+                    options.AnimatorParameterNames);
                 if (kind == PhantomAnimationBindingKind.UnsupportedAnimator)
                 {
                     skippedAnimatorBindings.Add(binding);
@@ -173,7 +188,8 @@ namespace MPCCT.PhantomSystem.Editor
             CopyNonHumanoidCurves(
                 source,
                 output,
-                options.LocalizeRootMotionToHips);
+                options.LocalizeRootMotionToHips,
+                options.AnimatorParameterNames);
 
             var bakedBones = new List<HumanBodyBones>();
             var missingBones = new List<HumanBodyBones>();
@@ -307,11 +323,15 @@ namespace MPCCT.PhantomSystem.Editor
         private static void CopyNonHumanoidCurves(
             AnimationClip source,
             AnimationClip output,
-            bool localizeRootMotion)
+            bool localizeRootMotion,
+            ISet<string> animatorParameterNames)
         {
             foreach (var binding in AnimationUtility.GetCurveBindings(source))
             {
-                if (binding.type == typeof(Animator))
+                if (binding.type == typeof(Animator)
+                    && PhantomAnimationBindingClassifier.Classify(
+                        binding,
+                        animatorParameterNames) != PhantomAnimationBindingKind.AnimatorParameter)
                 {
                     continue;
                 }
@@ -1613,6 +1633,7 @@ namespace MPCCT.PhantomSystem.Editor
         public float RotationErrorToleranceDegrees { get; set; } = 0.25f;
         public bool LocalizeRootMotionToHips { get; set; } = true;
         public bool InheritedMirror { get; set; }
+        public ISet<string> AnimatorParameterNames { get; set; }
         public IReadOnlyDictionary<HumanBodyBones, string> OutputBonePaths { get; set; }
         public IReadOnlyDictionary<HumanBodyBones, string> OutputBoneParentPaths { get; set; }
     }

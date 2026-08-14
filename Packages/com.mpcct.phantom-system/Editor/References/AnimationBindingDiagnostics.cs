@@ -65,6 +65,11 @@ namespace MPCCT.PhantomSystem.Editor
             var reported = new HashSet<string>();
             foreach (var pair in controllers)
             {
+                var animatorParameterNames = new HashSet<string>(
+                    pair.Value.parameters
+                        .Where(parameter => parameter.type == AnimatorControllerParameterType.Float)
+                        .Select(parameter => parameter.name),
+                    StringComparer.Ordinal);
                 foreach (var clip in pair.Value.animationClips.Where(clip => clip != null).Distinct())
                 {
                     InspectClip(
@@ -75,6 +80,7 @@ namespace MPCCT.PhantomSystem.Editor
                         phantomRootPath,
                         prohibitedRootPaths,
                         visibleHumanoidBonePaths,
+                        animatorParameterNames,
                         reported);
                 }
             }
@@ -124,6 +130,7 @@ namespace MPCCT.PhantomSystem.Editor
             string phantomRootPath,
             ISet<string> prohibitedRootPaths,
             ISet<string> visibleHumanoidBonePaths,
+            ISet<string> animatorParameterNames,
             ISet<string> reported)
         {
             // Strict PhantomSystem diagnostics are meaningful only for clips whose
@@ -166,13 +173,16 @@ namespace MPCCT.PhantomSystem.Editor
                     }
                 }
 
-                if (binding.type == typeof(Animator))
+                if (binding.type == typeof(Animator)
+                    && PhantomAnimationBindingClassifier.Classify(
+                        binding,
+                        animatorParameterNames) != PhantomAnimationBindingKind.AnimatorParameter)
                 {
                     var key = $"muscle|{clip.GetInstanceID()}|{binding.propertyName}";
                     if (reported.Add(key))
                     {
                         state.Report.InternalError(
-                            $"Converted {playable} clip '{clip.name}' still contains humanoid Animator binding "
+                            $"Converted {playable} clip '{clip.name}' still contains an unsupported or humanoid Animator binding "
                             + $"'{binding.propertyName}'.",
                             clip);
                     }

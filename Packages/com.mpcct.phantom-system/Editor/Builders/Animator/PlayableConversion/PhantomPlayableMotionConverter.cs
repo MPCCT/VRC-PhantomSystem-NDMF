@@ -21,6 +21,7 @@ namespace MPCCT.PhantomSystem.Editor
         private readonly PhantomBuildReport report;
         private readonly VRCAvatarDescriptor.AnimLayerType playable;
         private readonly PhantomVirtualPathMapper pathMapper;
+        private readonly HashSet<string> animatorParameterNames;
         private readonly Dictionary<VirtualClip, VirtualClip>[] clipCaches =
         {
             new Dictionary<VirtualClip, VirtualClip>(),
@@ -37,13 +38,17 @@ namespace MPCCT.PhantomSystem.Editor
             PhantomSlotBuildState slot,
             PhantomSystemProjectSettingsSnapshot projectSettings,
             PhantomBuildReport report,
-            VRCAvatarDescriptor.AnimLayerType playable)
+            VRCAvatarDescriptor.AnimLayerType playable,
+            IEnumerable<string> animatorParameterNames)
         {
             this.context = context;
             this.slot = slot;
             this.projectSettings = projectSettings;
             this.report = report;
             this.playable = playable;
+            this.animatorParameterNames = new HashSet<string>(
+                animatorParameterNames ?? Enumerable.Empty<string>(),
+                StringComparer.Ordinal);
             pathMapper = new PhantomVirtualPathMapper(
                 context.AvatarRootTransform,
                 slot.CloneRoot);
@@ -64,7 +69,10 @@ namespace MPCCT.PhantomSystem.Editor
                 slot,
                 projectSettings,
                 report,
-                playable);
+                playable,
+                controller.Parameters
+                    .Where(pair => pair.Value.type == AnimatorControllerParameterType.Float)
+                    .Select(pair => pair.Key));
             converter.ConvertController(controller, descriptorMask, baseController);
         }
 
@@ -259,10 +267,7 @@ namespace MPCCT.PhantomSystem.Editor
 
             var bindings = source.GetFloatCurveBindings().ToArray();
             var objectBindings = source.GetObjectCurveBindings().ToArray();
-            var requiresBake = bindings.Any(binding => binding.type == typeof(Animator))
-                               || bindings.Any(binding => binding.type == typeof(Transform)
-                                                          && string.IsNullOrEmpty(
-                                                              pathMapper.ToCloneRelative(binding.path)));
+            var requiresBake = bindings.Any(RequiresHumanoidBake);
             var requiresDriverRedirect = bindings.Any(RequiresDriverRedirect)
                                          || objectBindings.Any(RequiresDriverRedirect);
             if (!requiresBake && !requiresDriverRedirect)
@@ -294,6 +299,7 @@ namespace MPCCT.PhantomSystem.Editor
                             RotationErrorToleranceDegrees = projectSettings.RotationErrorToleranceDegrees,
                             LocalizeRootMotionToHips = true,
                             InheritedMirror = inheritedMirror,
+                            AnimatorParameterNames = animatorParameterNames,
                             OutputBonePaths = slot.AnimationDriverBones.ToDictionary(
                                 pair => pair.Key,
                                 pair => TransformPathUtility.GetRelativePath(
@@ -413,6 +419,19 @@ namespace MPCCT.PhantomSystem.Editor
             return binding.type == typeof(Transform)
                    && slot.CloneToAnimationDriverPaths.ContainsKey(
                        pathMapper.ToCloneRelative(binding.path));
+        }
+
+        private bool RequiresHumanoidBake(EditorCurveBinding binding)
+        {
+            if (binding.type == typeof(Animator))
+            {
+                return PhantomAnimationBindingClassifier.Classify(
+                    binding,
+                    animatorParameterNames) != PhantomAnimationBindingKind.AnimatorParameter;
+            }
+
+            return binding.type == typeof(Transform)
+                   && string.IsNullOrEmpty(pathMapper.ToCloneRelative(binding.path));
         }
 
         private void RedirectBoneBindings(AnimationClip clip)
