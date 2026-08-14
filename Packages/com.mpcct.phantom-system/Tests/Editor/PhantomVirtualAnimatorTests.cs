@@ -306,14 +306,12 @@ namespace MPCCT.PhantomSystem.Editor.Tests
                 Assert.IsInstanceOf<VRCAnimatorTrackingControl>(sourceState.behaviours[0]);
                 Assert.AreEqual("AudioIndex", sourcePlayAudio.ParameterName);
 
-                Assert.AreEqual(
-                    "Clone1/Driver",
-                    ((VirtualClip)virtual1.Layers.Single().StateMachine.AllStates().Single().Motion)
-                    .GetFloatCurveBindings().Single().path);
-                Assert.AreEqual(
-                    "Clone2/Driver",
-                    ((VirtualClip)virtual2.Layers.Single().StateMachine.AllStates().Single().Motion)
-                    .GetFloatCurveBindings().Single().path);
+                var slot1Binding = ((VirtualClip)virtual1.Layers.Single().StateMachine.AllStates().Single().Motion)
+                    .GetFloatCurveBindings().Single();
+                var slot2Binding = ((VirtualClip)virtual2.Layers.Single().StateMachine.AllStates().Single().Motion)
+                    .GetFloatCurveBindings().Single();
+                Assert.IsTrue(PhantomFxBoneAnimationFilter.IsDummyBinding(slot1Binding));
+                Assert.IsTrue(PhantomFxBoneAnimationFilter.IsDummyBinding(slot2Binding));
                 Assert.AreEqual(1, slot1.ConvertedClipReferences.Count);
                 Assert.AreEqual(1, slot2.ConvertedClipReferences.Count);
 
@@ -440,93 +438,192 @@ namespace MPCCT.PhantomSystem.Editor.Tests
         }
 
         [Test]
-        public void FxMaskFromNull_PreservesDefaultFxSemanticsAndExcludesDriver()
+        public void FxBoneFilter_RemovesPoseCurvesAndPreservesNonPoseCurves()
         {
-            var avatar = new GameObject("Avatar");
-            var slot = CreateChild(avatar.transform, "Slot");
-            var driver = CreateChild(slot.transform, "Driver");
-            var driverBone = CreateChild(driver.transform, "Hips");
-            AvatarMask mask = null;
+            var clone = new GameObject("Clone");
+            var armature = CreateChild(clone.transform, "Armature");
+            var hips = CreateChild(armature.transform, "Hips");
+            var face = CreateChild(clone.transform, "Face");
+            var clip = new AnimationClip { name = "MixedFx" };
             try
             {
-                mask = PhantomFxPlayableMaskFinalizer.CreateMask(
-                    null,
-                    new[] { driver.transform, driverBone.transform },
-                    avatar.transform);
-
-                for (var part = AvatarMaskBodyPart.Root;
-                     part < AvatarMaskBodyPart.LastBodyPart;
-                     part++)
+                var slot = new PhantomSlotBuildState
                 {
-                    Assert.IsFalse(mask.GetHumanoidBodyPartActive(part));
-                }
-                Assert.IsTrue(GetMaskPathState(mask, string.Empty));
-                Assert.IsFalse(GetMaskPathState(mask, "Slot/Driver"));
-                Assert.IsFalse(GetMaskPathState(mask, "Slot/Driver/Hips"));
-                Assert.IsTrue(
-                    PhantomFxPlayableMaskFinalizer.IsTransformExcluded(
-                        mask,
-                        "Slot/Driver/Hips"));
+                    CloneRoot = clone,
+                    CloneArmature = armature.transform
+                };
+                slot.CloneBones[HumanBodyBones.Hips] = hips.transform;
+                var bonePaths = PhantomFxBoneAnimationFilter.CollectBonePaths(slot);
+                var muscleBinding = EditorCurveBinding.FloatCurve(
+                    string.Empty,
+                    typeof(Animator),
+                    HumanTrait.MuscleName.First());
+                var parameterBinding = EditorCurveBinding.FloatCurve(
+                    string.Empty,
+                    typeof(Animator),
+                    "FaceParameter");
+                var boneBinding = EditorCurveBinding.FloatCurve(
+                    "Armature/Hips",
+                    typeof(Transform),
+                    "m_LocalRotation.x");
+                var nonBoneTransformBinding = EditorCurveBinding.FloatCurve(
+                    "Face",
+                    typeof(Transform),
+                    "m_LocalScale.x");
+                var blendShapeBinding = EditorCurveBinding.FloatCurve(
+                    "Face",
+                    typeof(SkinnedMeshRenderer),
+                    "blendShape.Smile");
+                AnimationUtility.SetEditorCurve(
+                    clip,
+                    muscleBinding,
+                    AnimationCurve.Constant(0f, 2f, 0.5f));
+                AnimationUtility.SetEditorCurve(
+                    clip,
+                    parameterBinding,
+                    AnimationCurve.Constant(0f, 1f, 1f));
+                AnimationUtility.SetEditorCurve(
+                    clip,
+                    boneBinding,
+                    AnimationCurve.Constant(0f, 2f, 0.25f));
+                AnimationUtility.SetEditorCurve(
+                    clip,
+                    nonBoneTransformBinding,
+                    AnimationCurve.Constant(0f, 1f, 1.1f));
+                AnimationUtility.SetEditorCurve(
+                    clip,
+                    blendShapeBinding,
+                    AnimationCurve.Constant(0f, 1f, 100f));
+
+                var result = PhantomFxBoneAnimationFilter.Filter(
+                    clip,
+                    bonePaths,
+                    new HashSet<string> { "FaceParameter" });
+
+                Assert.IsTrue(result.Changed);
+                Assert.AreEqual(1, result.RemovedAnimatorCurves);
+                Assert.AreEqual(1, result.RemovedTransformCurves);
+                Assert.AreEqual(2f, result.OriginalLength);
+                Assert.IsNull(AnimationUtility.GetEditorCurve(clip, muscleBinding));
+                Assert.IsNull(AnimationUtility.GetEditorCurve(clip, boneBinding));
+                Assert.IsNotNull(AnimationUtility.GetEditorCurve(clip, parameterBinding));
+                Assert.IsNotNull(AnimationUtility.GetEditorCurve(clip, nonBoneTransformBinding));
+                Assert.IsNotNull(AnimationUtility.GetEditorCurve(clip, blendShapeBinding));
+
+                var dummyBinding = AnimationUtility.GetCurveBindings(clip)
+                    .Single(PhantomFxBoneAnimationFilter.IsDummyBinding);
+                var dummyCurve = AnimationUtility.GetEditorCurve(clip, dummyBinding);
+                Assert.AreEqual(2f, dummyCurve.keys.Single().time);
+                Assert.AreEqual(2f, clip.length);
             }
             finally
             {
-                if (mask != null)
-                {
-                    Object.DestroyImmediate(mask);
-                }
-                Object.DestroyImmediate(avatar);
+                Object.DestroyImmediate(clip);
+                Object.DestroyImmediate(clone);
             }
         }
 
         [Test]
-        public void FxMaskCopy_PreservesSourceRulesAndOverridesDriverEntriesOnly()
+        public void FxBoneFilter_AllPoseCurvesBecomeDurationDummy()
         {
-            var avatar = new GameObject("Avatar");
-            var slot = CreateChild(avatar.transform, "Slot");
-            var driver = CreateChild(slot.transform, "Driver");
-            var source = new AvatarMask { transformCount = 3 };
-            AvatarMask converted = null;
-            source.SetHumanoidBodyPartActive(AvatarMaskBodyPart.Head, true);
-            source.SetTransformPath(0, string.Empty);
-            source.SetTransformActive(0, true);
-            source.SetTransformPath(1, "Unrelated");
-            source.SetTransformActive(1, false);
-            source.SetTransformPath(2, "Slot/Driver");
-            source.SetTransformActive(2, true);
+            var clip = new AnimationClip { name = "PoseOnly" };
             try
             {
-                converted = PhantomFxPlayableMaskFinalizer.CreateMask(
-                    source,
-                    new[] { driver.transform },
-                    avatar.transform);
+                var rootBinding = EditorCurveBinding.FloatCurve(
+                    string.Empty,
+                    typeof(Transform),
+                    "m_LocalPosition.x");
+                AnimationUtility.SetEditorCurve(
+                    clip,
+                    rootBinding,
+                    AnimationCurve.Constant(0f, 3f, 1f));
 
-                Assert.IsTrue(converted.GetHumanoidBodyPartActive(AvatarMaskBodyPart.Head));
-                Assert.IsTrue(GetMaskPathState(converted, string.Empty));
-                Assert.IsFalse(GetMaskPathState(converted, "Unrelated"));
-                Assert.IsFalse(GetMaskPathState(converted, "Slot/Driver"));
+                var result = PhantomFxBoneAnimationFilter.Filter(
+                    clip,
+                    new HashSet<string>(),
+                    new HashSet<string>());
+
+                Assert.IsTrue(result.Changed);
+                Assert.AreEqual(0, result.RemovedAnimatorCurves);
+                Assert.AreEqual(1, result.RemovedTransformCurves);
+                var remaining = AnimationUtility.GetCurveBindings(clip);
+                Assert.AreEqual(1, remaining.Length);
+                Assert.IsTrue(PhantomFxBoneAnimationFilter.IsDummyBinding(remaining[0]));
+                Assert.AreEqual(
+                    3f,
+                    AnimationUtility.GetEditorCurve(clip, remaining[0]).keys.Single().time);
+                Assert.AreEqual(3f, clip.length);
             }
             finally
             {
-                if (converted != null)
-                {
-                    Object.DestroyImmediate(converted);
-                }
-                Object.DestroyImmediate(source);
-                Object.DestroyImmediate(avatar);
+                Object.DestroyImmediate(clip);
             }
         }
 
-        private static bool GetMaskPathState(AvatarMask mask, string path)
+        [Test]
+        public void FxBoneFilter_NoPoseCurvesLeavesClipUnchanged()
         {
-            for (var index = 0; index < mask.transformCount; index++)
+            var clip = new AnimationClip { name = "BlendShapeOnly" };
+            try
             {
-                if (mask.GetTransformPath(index) == path)
-                {
-                    return mask.GetTransformActive(index);
-                }
+                var binding = EditorCurveBinding.FloatCurve(
+                    "Face",
+                    typeof(SkinnedMeshRenderer),
+                    "blendShape.Smile");
+                AnimationUtility.SetEditorCurve(
+                    clip,
+                    binding,
+                    AnimationCurve.Constant(0f, 1f, 100f));
+
+                var result = PhantomFxBoneAnimationFilter.Filter(
+                    clip,
+                    new HashSet<string>(),
+                    new HashSet<string>());
+
+                Assert.IsFalse(result.Changed);
+                CollectionAssert.AreEqual(
+                    new[] { binding },
+                    AnimationUtility.GetCurveBindings(clip));
+                Assert.IsFalse(AnimationUtility.GetCurveBindings(clip)
+                    .Any(PhantomFxBoneAnimationFilter.IsDummyBinding));
             }
-            Assert.Fail($"Mask path '{path}' was not found.");
-            return false;
+            finally
+            {
+                Object.DestroyImmediate(clip);
+            }
+        }
+
+        [Test]
+        public void FxBoneFilter_ZeroLengthPoseStillGetsDummyKey()
+        {
+            var clip = new AnimationClip { name = "ZeroLengthPose" };
+            try
+            {
+                var binding = EditorCurveBinding.FloatCurve(
+                    string.Empty,
+                    typeof(Transform),
+                    "m_LocalRotation.x");
+                AnimationUtility.SetEditorCurve(
+                    clip,
+                    binding,
+                    AnimationCurve.Constant(0f, 0f, 0f));
+
+                var result = PhantomFxBoneAnimationFilter.Filter(
+                    clip,
+                    new HashSet<string>(),
+                    new HashSet<string>());
+
+                Assert.IsTrue(result.Changed);
+                var remaining = AnimationUtility.GetCurveBindings(clip).Single();
+                Assert.IsTrue(PhantomFxBoneAnimationFilter.IsDummyBinding(remaining));
+                Assert.AreEqual(
+                    0f,
+                    AnimationUtility.GetEditorCurve(clip, remaining).keys.Single().time);
+            }
+            finally
+            {
+                Object.DestroyImmediate(clip);
+            }
         }
 
         private static PhantomSlotBuildState CreateSlotState(

@@ -161,6 +161,14 @@ size, or Phantom View performance needs tuning.
 
 - The base avatar and all phantom sources must be valid Humanoid avatars with
   the required Humanoid bones.
+- Avatars whose final FX Controller uses **Write Defaults Off** are not currently
+  supported. VRChat evaluates FX after Gesture, and Unity may let an unmasked
+  WD Off FX Controller claim ordinary Transform properties even when no FX Clip
+  animates them. This can prevent the Phantom Animation Driver from receiving
+  source Gesture/Action bone animation and may leave the phantom in its static
+  pose or a T-pose while an action plays. Affected avatars can use an FX setup
+  compatible with WD On, or enable **Remove Source Controls** to omit source
+  animation controls.
 - A base avatar can contain only one PhantomSystem component.
 - A phantom source must remain outside the base avatar hierarchy and cannot
   contain another PhantomSystem.

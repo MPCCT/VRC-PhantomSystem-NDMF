@@ -142,6 +142,13 @@ View のパフォーマンスを調整したい場合だけ変更してくださ
 
 - 本体とすべての分身元は、必要な Humanoid ボーンを持つ有効な Humanoid Avatar である
   必要があります。
+- 最終的な FX Controller が **Write Defaults Off** を使用する Avatar には、現在対応して
+  いません。VRChat では FX が Gesture の後に評価されるため、FX Clip が Transform を
+  アニメーションしていない場合でも、マスクされていない WD Off FX が通常の Transform の
+  所有権を取得することがあります。その結果、Phantom Animation Driver が分身元の
+  Gesture/Action ボーンアニメーションを受け取れず、アクション再生中の分身が静止ポーズや
+  T-Pose になる場合があります。該当する Avatar では WD On と互換性のある FX 構成を使用するか、
+  **Remove Source Controls** を有効にして分身元のアニメーション制御を除外してください。
 - 1 つの本体アバターに配置できる PhantomSystem コンポーネントは 1 つだけです。
 - 分身元は本体階層の外に配置し、別の PhantomSystem を含めないでください。
 - プレイヤー本体専用の Animator State Behaviour の一部は、分身上で直接実行できません。

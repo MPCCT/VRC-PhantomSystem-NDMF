@@ -127,6 +127,11 @@ PhysBone Immobile Type 覆盖。
 ## 使用限制
 
 - 本体和所有分身源都必须是有效的 Humanoid Avatar，并能解析必要的 Humanoid 骨骼。
+- 当前不支持最终 FX Controller 使用 **Write Defaults Off** 的 Avatar。VRChat 会在 Gesture
+  之后计算 FX，而 Unity 可能让未遮罩的 WD Off FX 获得普通 Transform 的所有权，即使 FX
+  Clip 没有动画这些 Transform。这会阻止 Phantom Animation Driver 接收分身源的
+  Gesture/Action 骨骼动画，并可能使播放动作的分身变为静态姿态或 T-Pose。受影响的 Avatar
+  可以改用兼容 WD On 的 FX，或启用 **Remove Source Controls**，不保留分身源动画控制。
 - 一个本体只能包含一个 PhantomSystem 组件。
 - 分身源必须位于本体层级外，并且不能包含另一个 PhantomSystem。
 - 部分只适用于玩家本体的 Animator State Behaviour 无法直接用于分身；PhantomSystem 会转换

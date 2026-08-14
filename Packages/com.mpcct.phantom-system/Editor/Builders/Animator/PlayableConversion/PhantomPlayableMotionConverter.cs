@@ -22,6 +22,10 @@ namespace MPCCT.PhantomSystem.Editor
         private readonly VRCAvatarDescriptor.AnimLayerType playable;
         private readonly PhantomVirtualPathMapper pathMapper;
         private readonly HashSet<string> animatorParameterNames;
+        private readonly HashSet<string> fxBonePaths;
+        private int filteredFxClipCount;
+        private int removedFxAnimatorCurveCount;
+        private int removedFxTransformCurveCount;
         private readonly Dictionary<VirtualClip, VirtualClip>[] clipCaches =
         {
             new Dictionary<VirtualClip, VirtualClip>(),
@@ -52,6 +56,9 @@ namespace MPCCT.PhantomSystem.Editor
             pathMapper = new PhantomVirtualPathMapper(
                 context.AvatarRootTransform,
                 slot.CloneRoot);
+            fxBonePaths = playable == VRCAvatarDescriptor.AnimLayerType.FX
+                ? PhantomFxBoneAnimationFilter.CollectBonePaths(slot)
+                : new HashSet<string>(StringComparer.Ordinal);
         }
 
         public static void Convert(
@@ -74,6 +81,7 @@ namespace MPCCT.PhantomSystem.Editor
                     .Where(pair => pair.Value.type == AnimatorControllerParameterType.Float)
                     .Select(pair => pair.Key));
             converter.ConvertController(controller, descriptorMask, baseController);
+            converter.ReportFxBoneAnimationFiltering();
         }
 
         private void ConvertController(
@@ -121,11 +129,22 @@ namespace MPCCT.PhantomSystem.Editor
             var stateMirrors = states.ToDictionary(state => state, state => state.Mirror);
             foreach (var state in states.Where(state => state.MirrorParameter != null))
             {
-                report.Warning(
-                    $"Slot '{slot.SlotId}' {playable} state '{state.Name}' uses parameter-driven Humanoid Mirror "
-                    + $"('{state.MirrorParameter}'). PhantomSystem baked the state's default Mirror value "
-                    + $"({state.Mirror}) and will ignore runtime changes to that Mirror parameter.",
-                    slot.CloneRoot);
+                if (playable == VRCAvatarDescriptor.AnimLayerType.FX)
+                {
+                    report.Warning(
+                        $"Slot '{slot.SlotId}' FX state '{state.Name}' uses parameter-driven Humanoid Mirror "
+                        + $"('{state.MirrorParameter}'). Source FX bone animation is removed, so PhantomSystem "
+                        + "will ignore this Mirror parameter.",
+                        slot.CloneRoot);
+                }
+                else
+                {
+                    report.Warning(
+                        $"Slot '{slot.SlotId}' {playable} state '{state.Name}' uses parameter-driven Humanoid Mirror "
+                        + $"('{state.MirrorParameter}'). PhantomSystem baked the state's default Mirror value "
+                        + $"({state.Mirror}) and will ignore runtime changes to that Mirror parameter.",
+                        slot.CloneRoot);
+                }
             }
 
             var processedStateMachines = new HashSet<VirtualStateMachine>();
@@ -265,6 +284,11 @@ namespace MPCCT.PhantomSystem.Editor
                 return existing;
             }
 
+            if (playable == VRCAvatarDescriptor.AnimLayerType.FX)
+            {
+                return ConvertFxClip(source, inheritedMirror, clipCache);
+            }
+
             var bindings = source.GetFloatCurveBindings().ToArray();
             var objectBindings = source.GetObjectCurveBindings().ToArray();
             var requiresBake = bindings.Any(RequiresHumanoidBake);
@@ -325,12 +349,7 @@ namespace MPCCT.PhantomSystem.Editor
                     source,
                     pathMapper.ToAvatarRelative);
                 clipCache[source] = imported.Clip;
-                slot.ConvertedClipReferences[imported.Reference] = new PhantomConvertedClipMetadata
-                {
-                    SlotId = slot.SlotId,
-                    Playable = playable.ToString(),
-                    SourceClipName = sourceName
-                };
+                RegisterConvertedClip(imported, sourceName);
 
                 ReportBakeDiagnostics(source, sourceName, result);
                 return imported.Clip;
@@ -346,6 +365,97 @@ namespace MPCCT.PhantomSystem.Editor
                     Object.DestroyImmediate(localSource);
                 }
             }
+        }
+
+        private VirtualClip ConvertFxClip(
+            VirtualClip source,
+            bool inheritedMirror,
+            IDictionary<VirtualClip, VirtualClip> clipCache)
+        {
+            var requiresFiltering = source.GetFloatCurveBindings().Any(binding =>
+            {
+                var mapped = binding;
+                mapped.path = pathMapper.ToCloneRelative(binding.path);
+                return PhantomFxBoneAnimationFilter.ShouldRemove(
+                    mapped,
+                    fxBonePaths,
+                    animatorParameterNames);
+            });
+            if (!requiresFiltering)
+            {
+                clipCache[source] = source;
+                return source;
+            }
+
+            var sourceName = source.Name;
+            AnimationClip converted = null;
+            try
+            {
+                converted = PhantomVirtualClipAdapter.Materialize(
+                    source,
+                    pathMapper.ToCloneRelative);
+                var result = PhantomFxBoneAnimationFilter.Filter(
+                    converted,
+                    fxBonePaths,
+                    animatorParameterNames);
+                if (!result.Changed)
+                {
+                    clipCache[source] = source;
+                    return source;
+                }
+
+                converted.hideFlags = HideFlags.None;
+                converted.name = $"PhantomSystem_{slot.SlotId}_{playable}_{sourceName}"
+                                 + (inheritedMirror ? "_Mirrored" : string.Empty);
+                var imported = PhantomVirtualClipAdapter.ImportConverted(
+                    context,
+                    converted,
+                    source,
+                    path => PhantomFxBoneAnimationFilter.IsDummyPath(path)
+                        ? path
+                        : pathMapper.ToAvatarRelative(path));
+                clipCache[source] = imported.Clip;
+                RegisterConvertedClip(imported, sourceName);
+
+                filteredFxClipCount++;
+                removedFxAnimatorCurveCount += result.RemovedAnimatorCurves;
+                removedFxTransformCurveCount += result.RemovedTransformCurves;
+                return imported.Clip;
+            }
+            finally
+            {
+                if (converted != null)
+                {
+                    Object.DestroyImmediate(converted);
+                }
+            }
+        }
+
+        private void RegisterConvertedClip(
+            PhantomVirtualClipImport imported,
+            string sourceName)
+        {
+            slot.ConvertedClipReferences[imported.Reference] = new PhantomConvertedClipMetadata
+            {
+                SlotId = slot.SlotId,
+                Playable = playable.ToString(),
+                SourceClipName = sourceName
+            };
+        }
+
+        private void ReportFxBoneAnimationFiltering()
+        {
+            if (filteredFxClipCount == 0)
+            {
+                return;
+            }
+
+            report.Info(
+                $"Slot '{slot.SlotId}' removed {removedFxTransformCurveCount} skeletal Transform "
+                + $"curve(s) and {removedFxAnimatorCurveCount} non-parameter Animator curve(s) from "
+                + $"{filteredFxClipCount} Source FX clip variant(s). A dummy binding preserves each "
+                + "affected clip's duration and prevents empty-clip Write Defaults behavior.",
+                slot.CloneRoot);
         }
 
         private void ReportBakeDiagnostics(

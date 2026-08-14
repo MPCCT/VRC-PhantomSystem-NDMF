@@ -21,11 +21,6 @@ namespace MPCCT.PhantomSystem.Editor
 
             var controllers = CollectControllers(descriptor);
             ValidateConvertedActionLayers(state, controllers);
-            ValidateFxPlayableMask(
-                context.AvatarRootTransform,
-                descriptor,
-                state,
-                controllers);
             var phantomRootPath = TransformPathUtility.GetRelativePath(
                 state.System.RuntimeRoot.transform,
                 context.AvatarRootTransform);
@@ -40,6 +35,7 @@ namespace MPCCT.PhantomSystem.Editor
                 phantomRootPath
             };
             var visibleHumanoidBonePaths = new HashSet<string>(StringComparer.Ordinal);
+            var sourceFxBonePaths = new HashSet<string>(StringComparer.Ordinal);
             foreach (var slot in state.System.Slots)
             {
                 AddPath(prohibitedRootPaths, slot.SlotRoot, context.AvatarRootTransform);
@@ -66,6 +62,19 @@ namespace MPCCT.PhantomSystem.Editor
                         visibleHumanoidBonePaths.Add(path);
                     }
                 }
+
+                var cloneRootPath = TransformPathUtility.GetRelativePath(
+                    slot.CloneRoot?.transform,
+                    context.AvatarRootTransform);
+                if (cloneRootPath != null)
+                {
+                    foreach (var relativePath in PhantomFxBoneAnimationFilter.CollectBonePaths(slot))
+                    {
+                        sourceFxBonePaths.Add(string.IsNullOrEmpty(relativePath)
+                            ? cloneRootPath
+                            : $"{cloneRootPath}/{relativePath}");
+                    }
+                }
             }
 
             var reported = new HashSet<string>();
@@ -86,6 +95,7 @@ namespace MPCCT.PhantomSystem.Editor
                         phantomRootPath,
                         prohibitedRootPaths,
                         visibleHumanoidBonePaths,
+                        sourceFxBonePaths,
                         animatorParameterNames,
                         reported);
                 }
@@ -136,13 +146,18 @@ namespace MPCCT.PhantomSystem.Editor
             string phantomRootPath,
             ISet<string> prohibitedRootPaths,
             ISet<string> visibleHumanoidBonePaths,
+            ISet<string> sourceFxBonePaths,
             ISet<string> animatorParameterNames,
             ISet<string> reported)
         {
             // Strict PhantomSystem diagnostics are meaningful only for clips whose
             // conversion provenance we recorded. Other NDMF passes can create final
             // clips with intentionally unresolved sentinel bindings.
-            if (!IsConvertedPlayableClip(context.ObjectRegistry, state, clip))
+            if (!TryGetConvertedPlayableClipMetadata(
+                    context.ObjectRegistry,
+                    state,
+                    clip,
+                    out var metadata))
             {
                 return;
             }
@@ -175,6 +190,26 @@ namespace MPCCT.PhantomSystem.Editor
                             $"Converted {playable} clip '{clip.name}' still animates visible phantom humanoid bone "
                             + $"'{binding.path}' through '{binding.propertyName}'. Bone animation must target the "
                             + "Phantom Animation Driver skeleton.",
+                            clip);
+                    }
+                }
+
+
+                if (string.Equals(
+                        metadata.Playable,
+                        VRCAvatarDescriptor.AnimLayerType.FX.ToString(),
+                        StringComparison.Ordinal)
+                    && binding.type == typeof(Transform)
+                    && sourceFxBonePaths.Contains(binding.path ?? string.Empty)
+                    && IsPositionRotationOrScale(binding.propertyName))
+                {
+                    var key = $"source-fx-bone|{clip.GetInstanceID()}|{binding.path}|{binding.propertyName}";
+                    if (reported.Add(key))
+                    {
+                        state.Report.InternalError(
+                            $"Converted Source FX clip '{clip.name}' still animates phantom skeleton transform "
+                            + $"'{binding.path}' through '{binding.propertyName}'. Source FX bone animation "
+                            + "must be removed before controller merging.",
                             clip);
                     }
                 }
@@ -215,15 +250,41 @@ namespace MPCCT.PhantomSystem.Editor
             PhantomBuildState state,
             AnimationClip clip)
         {
+            return TryGetConvertedPlayableClipMetadata(
+                objectRegistry,
+                state,
+                clip,
+                out _);
+        }
+
+        private static bool TryGetConvertedPlayableClipMetadata(
+            IObjectRegistry objectRegistry,
+            PhantomBuildState state,
+            AnimationClip clip,
+            out PhantomConvertedClipMetadata metadata)
+        {
+            metadata = null;
             if (objectRegistry == null || clip == null || state?.System?.Slots == null)
             {
                 return false;
             }
 
             var reference = objectRegistry.GetReference(clip, false);
-            return reference != null
-                   && state.System.Slots.Any(slot =>
-                       slot.ConvertedClipReferences.ContainsKey(reference));
+            if (reference == null)
+            {
+                return false;
+            }
+
+            foreach (var slot in state.System.Slots)
+            {
+                if (slot.ConvertedClipReferences.TryGetValue(reference, out metadata))
+                {
+                    return true;
+                }
+            }
+
+            metadata = null;
+            return false;
         }
 
         private static void ValidateConvertedActionLayers(
@@ -281,89 +342,9 @@ namespace MPCCT.PhantomSystem.Editor
             }
         }
 
-        private static void ValidateFxPlayableMask(
-            Transform avatarRoot,
-            VRCAvatarDescriptor descriptor,
-            PhantomBuildState state,
-            IReadOnlyDictionary<VRCAvatarDescriptor.AnimLayerType, AnimatorController> controllers)
-        {
-            var driverRoots = state.System.Slots
-                .Where(slot => slot.AnimationDriverRoot != null
-                               && PhantomFxPlayableMaskFinalizer.RequiresAnimationDriverIsolation(slot))
-                .Select(slot => slot.AnimationDriverRoot)
-                .ToArray();
-            if (driverRoots.Length == 0)
-            {
-                return;
-            }
-
-            if (!controllers.TryGetValue(
-                    VRCAvatarDescriptor.AnimLayerType.FX,
-                    out var fxController)
-                || fxController.layers.Length == 0)
-            {
-                state.Report.InternalError(
-                    "Final FX controller or its first layer is missing while Animation Driver isolation is required.");
-                return;
-            }
-
-            var mask = fxController.layers[0].avatarMask;
-            if (mask == null)
-            {
-                state.Report.InternalError(
-                    "Final FX layer 0 has no Avatar Mask while Animation Driver isolation is required.",
-                    fxController);
-                return;
-            }
-
-            foreach (var driverRoot in driverRoots)
-            {
-                var path = TransformPathUtility.GetRelativePath(driverRoot, avatarRoot);
-                if (path == null
-                    || !PhantomFxPlayableMaskFinalizer.IsTransformExcluded(mask, path))
-                {
-                    state.Report.InternalError(
-                        $"Final FX layer 0 Mask does not exclude Animation Driver "
-                        + $"'{path ?? driverRoot.name}'.",
-                        mask);
-                }
-            }
-
-            var descriptorMask = FindDescriptorMask(
-                descriptor,
-                VRCAvatarDescriptor.AnimLayerType.FX);
-            if (descriptorMask != mask)
-            {
-                state.Report.InternalError(
-                    "The final Avatar Descriptor FX Mask does not match the final FX layer 0 Mask.",
-                    descriptor);
-            }
-        }
-
-        private static AvatarMask FindDescriptorMask(
-            VRCAvatarDescriptor descriptor,
-            VRCAvatarDescriptor.AnimLayerType type)
-        {
-            foreach (var layer in (descriptor.baseAnimationLayers
-                         ?? Array.Empty<VRCAvatarDescriptor.CustomAnimLayer>())
-                     .Concat(descriptor.specialAnimationLayers
-                         ?? Array.Empty<VRCAvatarDescriptor.CustomAnimLayer>()))
-            {
-                if (layer.type == type)
-                {
-                    return layer.mask;
-                }
-            }
-            return null;
-        }
-
         private static bool IsPositionRotationOrScale(string propertyName)
         {
-            return propertyName != null
-                   && (propertyName.StartsWith("m_LocalPosition.", StringComparison.Ordinal)
-                       || propertyName.StartsWith("m_LocalRotation.", StringComparison.Ordinal)
-                       || propertyName.StartsWith("localEulerAnglesRaw.", StringComparison.Ordinal)
-                       || propertyName.StartsWith("m_LocalScale.", StringComparison.Ordinal));
+            return PhantomFxBoneAnimationFilter.IsPositionRotationOrScale(propertyName);
         }
 
         private static void AddPath(ISet<string> paths, GameObject value, Transform avatarRoot)
