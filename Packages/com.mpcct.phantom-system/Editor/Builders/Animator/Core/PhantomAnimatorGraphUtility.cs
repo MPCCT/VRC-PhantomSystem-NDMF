@@ -23,7 +23,7 @@ namespace MPCCT.PhantomSystem.Editor
             return $"PhantomSystem_{slotHierarchyName}_{name}";
         }
 
-        private static AnimatorControllerLayer AddLayer(
+        internal static AnimatorControllerLayer AddLayer(
             AnimatorController controller,
             string name)
         {

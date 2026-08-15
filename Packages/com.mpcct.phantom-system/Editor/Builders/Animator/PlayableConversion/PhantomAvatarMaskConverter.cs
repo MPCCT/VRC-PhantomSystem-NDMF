@@ -55,6 +55,42 @@ namespace MPCCT.PhantomSystem.Editor
             return result;
         }
 
+        internal static HashSet<HumanBodyBones> CollectActiveHumanoidBones(
+            PhantomSlotBuildState slot,
+            AvatarMask descriptorMask,
+            AvatarMask layerMask)
+        {
+            var result = new HashSet<HumanBodyBones>();
+            if (slot?.CloneRoot == null)
+            {
+                return result;
+            }
+
+            foreach (var pair in slot.AnimationDriverBones)
+            {
+                if (pair.Value == null
+                    || !slot.CloneBones.TryGetValue(pair.Key, out var cloneBone)
+                    || cloneBone == null)
+                {
+                    continue;
+                }
+
+                var sourcePath = TransformPathUtility.GetRelativePath(
+                    cloneBone,
+                    slot.CloneRoot.transform) ?? string.Empty;
+                var bodyPart = TryGetBodyPart(pair.Key, out var part)
+                    ? part
+                    : (AvatarMaskBodyPart?)null;
+                if (IsActive(descriptorMask, sourcePath, bodyPart)
+                    && IsActive(layerMask, sourcePath, bodyPart))
+                {
+                    result.Add(pair.Key);
+                }
+            }
+
+            return result;
+        }
+
         private static Dictionary<Transform, AvatarMaskBodyPart> BuildBonePartMap(
             PhantomSlotBuildState slot)
         {

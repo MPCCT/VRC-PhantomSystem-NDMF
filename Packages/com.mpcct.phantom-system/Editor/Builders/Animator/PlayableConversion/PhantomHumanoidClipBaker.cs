@@ -184,6 +184,8 @@ namespace MPCCT.PhantomSystem.Editor
                 forcePositionBones.Add(HumanBodyBones.Hips);
             }
 
+            var explicitlyAnimatedBones = new HashSet<HumanBodyBones>(affectedBones);
+
             var output = CreateOutputClip(source, sampleRate);
             CopyNonHumanoidCurves(
                 source,
@@ -231,6 +233,13 @@ namespace MPCCT.PhantomSystem.Editor
                         effectiveMirror,
                         bakedBones,
                         missingBones);
+
+                    WriteMissingNeutralRotationCurves(
+                        output,
+                        explicitlyAnimatedBones,
+                        options.NeutralRotationCompletionBones,
+                        options.OutputBonePaths,
+                        options.NeutralBoneRotations);
                 }
             }
             finally
@@ -257,6 +266,270 @@ namespace MPCCT.PhantomSystem.Editor
                 samplingDiagnostics.UnsimplifiedPoseKeyCount,
                 samplingDiagnostics.OutputPoseKeyCount,
                 samplingDiagnostics.HitSampleRateLimit);
+        }
+
+        internal static void WriteNeutralPoseRotations(
+            AnimationClip output,
+            GameObject humanoidRoot,
+            IReadOnlyDictionary<HumanBodyBones, string> outputBonePaths,
+            IReadOnlyDictionary<HumanBodyBones, string> outputBoneParentPaths)
+        {
+            if (output == null)
+            {
+                throw new ArgumentNullException(nameof(output));
+            }
+
+            if (outputBonePaths == null || outputBonePaths.Count == 0)
+            {
+                throw new ArgumentException(
+                    "At least one Humanoid Driver output path is required.",
+                    nameof(outputBonePaths));
+            }
+
+            var boneRotations = SampleNeutralBoneRotations(
+                humanoidRoot,
+                outputBoneParentPaths,
+                outputBonePaths.Keys);
+            var rotations = new Dictionary<string, Quaternion>(StringComparer.Ordinal);
+            foreach (var pair in outputBonePaths.OrderBy(pair => (int)pair.Key))
+            {
+                if (string.IsNullOrEmpty(pair.Value))
+                {
+                    throw new InvalidOperationException(
+                        $"Humanoid bone '{pair.Key}' has no Driver output path.");
+                }
+                if (rotations.ContainsKey(pair.Value))
+                {
+                    throw new InvalidOperationException(
+                        $"Multiple Humanoid bones resolve to Driver output path '{pair.Value}'.");
+                }
+                rotations[pair.Value] = boneRotations[pair.Key];
+            }
+
+            WriteNeutralRotationCurves(output, rotations);
+        }
+
+        internal static IReadOnlyDictionary<HumanBodyBones, Quaternion> SampleNeutralBoneRotations(
+            GameObject humanoidRoot,
+            IReadOnlyDictionary<HumanBodyBones, string> outputBoneParentPaths,
+            IEnumerable<HumanBodyBones> bones)
+        {
+            if (humanoidRoot == null)
+            {
+                throw new ArgumentNullException(nameof(humanoidRoot));
+            }
+            if (outputBoneParentPaths == null)
+            {
+                throw new ArgumentNullException(nameof(outputBoneParentPaths));
+            }
+            if (bones == null)
+            {
+                throw new ArgumentNullException(nameof(bones));
+            }
+
+            var sourceAnimator = humanoidRoot.GetComponent<Animator>();
+            if (sourceAnimator == null || sourceAnimator.avatar == null || !sourceAnimator.isHuman)
+            {
+                throw new ArgumentException(
+                    $"'{humanoidRoot.name}' must have a valid Humanoid Animator on its root.",
+                    nameof(humanoidRoot));
+            }
+
+            GameObject sampleRoot = null;
+            HumanPoseHandler poseHandler = null;
+            try
+            {
+                sampleRoot = CreateSamplingHierarchy(
+                    humanoidRoot.transform,
+                    sourceAnimator.avatar,
+                    out var sampleAnimator);
+                poseHandler = new HumanPoseHandler(sampleAnimator.avatar, sampleRoot.transform);
+
+                var neutralPose = new HumanPose();
+                poseHandler.GetHumanPose(ref neutralPose);
+                if (neutralPose.muscles == null || neutralPose.muscles.Length == 0)
+                {
+                    throw new InvalidOperationException(
+                        "Unity returned no Humanoid muscles while sampling the neutral pose.");
+                }
+
+                Array.Clear(neutralPose.muscles, 0, neutralPose.muscles.Length);
+                poseHandler.SetHumanPose(ref neutralPose);
+
+                var rotations = new Dictionary<HumanBodyBones, Quaternion>();
+                foreach (var bone in bones.Distinct().OrderBy(value => (int)value))
+                {
+                    var target = sampleAnimator.GetBoneTransform(bone);
+                    if (target == null)
+                    {
+                        throw new InvalidOperationException(
+                            $"Unity could not resolve Humanoid bone '{bone}' in the neutral-pose sampling hierarchy.");
+                    }
+                    if (!outputBoneParentPaths.TryGetValue(bone, out var poseParentPath))
+                    {
+                        throw new InvalidOperationException(
+                            $"Humanoid bone '{bone}' has no sampling pose-parent path.");
+                    }
+
+                    var poseParent = string.IsNullOrEmpty(poseParentPath)
+                        ? sampleRoot.transform
+                        : sampleRoot.transform.Find(poseParentPath);
+                    if (poseParent == null)
+                    {
+                        throw new InvalidOperationException(
+                            $"Unity could not resolve sampling pose parent '{poseParentPath}' for Humanoid bone '{bone}'.");
+                    }
+
+                    rotations[bone] = ReadRelativeRotation(target, poseParent);
+                }
+
+                return rotations;
+            }
+            finally
+            {
+                poseHandler?.Dispose();
+                if (sampleRoot != null)
+                {
+                    Object.DestroyImmediate(sampleRoot);
+                }
+            }
+        }
+
+        internal static void WriteMissingNeutralRotationCurves(
+            AnimationClip output,
+            ISet<HumanBodyBones> explicitlyAnimatedBones,
+            ISet<HumanBodyBones> completionBones,
+            IReadOnlyDictionary<HumanBodyBones, string> outputBonePaths,
+            IReadOnlyDictionary<HumanBodyBones, Quaternion> neutralBoneRotations)
+        {
+            if (output == null
+                || explicitlyAnimatedBones == null
+                || explicitlyAnimatedBones.Count == 0
+                || completionBones == null
+                || completionBones.Count == 0
+                || outputBonePaths == null
+                || neutralBoneRotations == null)
+            {
+                return;
+            }
+
+            var rotations = new Dictionary<string, Quaternion>(StringComparer.Ordinal);
+            foreach (var bone in completionBones.OrderBy(value => (int)value))
+            {
+                if (explicitlyAnimatedBones.Contains(bone))
+                {
+                    continue;
+                }
+                if (!outputBonePaths.TryGetValue(bone, out var outputPath)
+                    || string.IsNullOrEmpty(outputPath))
+                {
+                    throw new InvalidOperationException(
+                        $"Humanoid bone '{bone}' has no Driver output path.");
+                }
+                if (!neutralBoneRotations.TryGetValue(bone, out var rotation))
+                {
+                    throw new InvalidOperationException(
+                        $"Humanoid bone '{bone}' has no sampled neutral rotation.");
+                }
+                if (rotations.ContainsKey(outputPath))
+                {
+                    throw new InvalidOperationException(
+                        $"Multiple Humanoid bones resolve to Driver output path '{outputPath}'.");
+                }
+
+                rotations[outputPath] = rotation;
+            }
+
+            WriteNeutralRotationCurves(output, rotations);
+        }
+
+        internal static void WriteNeutralRotationCurves(
+            AnimationClip output,
+            IReadOnlyDictionary<string, Quaternion> rotations)
+        {
+            if (output == null)
+            {
+                throw new ArgumentNullException(nameof(output));
+            }
+
+            if (rotations == null)
+            {
+                throw new ArgumentNullException(nameof(rotations));
+            }
+
+            foreach (var pair in rotations.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+            {
+                if (string.IsNullOrEmpty(pair.Key))
+                {
+                    throw new ArgumentException(
+                        "Humanoid Driver output paths must not be empty.",
+                        nameof(rotations));
+                }
+
+                var rotation = NormalizeQuaternion(pair.Value);
+                output.SetCurve(
+                    pair.Key,
+                    typeof(Transform),
+                    "m_LocalRotation.x",
+                    PhantomAnimatorClipUtility.Constant(
+                        PhantomAnimatorClipUtility.FrameDuration,
+                        rotation.x));
+                output.SetCurve(
+                    pair.Key,
+                    typeof(Transform),
+                    "m_LocalRotation.y",
+                    PhantomAnimatorClipUtility.Constant(
+                        PhantomAnimatorClipUtility.FrameDuration,
+                        rotation.y));
+                output.SetCurve(
+                    pair.Key,
+                    typeof(Transform),
+                    "m_LocalRotation.z",
+                    PhantomAnimatorClipUtility.Constant(
+                        PhantomAnimatorClipUtility.FrameDuration,
+                        rotation.z));
+                output.SetCurve(
+                    pair.Key,
+                    typeof(Transform),
+                    "m_LocalRotation.w",
+                    PhantomAnimatorClipUtility.Constant(
+                        PhantomAnimatorClipUtility.FrameDuration,
+                        rotation.w));
+            }
+
+            output.EnsureQuaternionContinuity();
+        }
+
+        internal static Quaternion ReadRelativeRotation(
+            Transform target,
+            Transform poseParent)
+        {
+            if (target == null)
+            {
+                throw new ArgumentNullException(nameof(target));
+            }
+
+            if (poseParent == null)
+            {
+                throw new ArgumentNullException(nameof(poseParent));
+            }
+
+            if (poseParent == target.parent)
+            {
+                return NormalizeQuaternion(target.localRotation);
+            }
+
+            var relative = poseParent.worldToLocalMatrix * target.localToWorldMatrix;
+            var forward = (Vector3)relative.GetColumn(2);
+            var up = (Vector3)relative.GetColumn(1);
+            if (forward.sqrMagnitude <= Mathf.Epsilon
+                || up.sqrMagnitude <= Mathf.Epsilon)
+            {
+                return Quaternion.identity;
+            }
+
+            return NormalizeQuaternion(
+                Quaternion.LookRotation(forward.normalized, up.normalized));
         }
 
         private static AnimationClip CreateOutputClip(
@@ -1636,5 +1909,7 @@ namespace MPCCT.PhantomSystem.Editor
         public ISet<string> AnimatorParameterNames { get; set; }
         public IReadOnlyDictionary<HumanBodyBones, string> OutputBonePaths { get; set; }
         public IReadOnlyDictionary<HumanBodyBones, string> OutputBoneParentPaths { get; set; }
+        public ISet<HumanBodyBones> NeutralRotationCompletionBones { get; set; }
+        public IReadOnlyDictionary<HumanBodyBones, Quaternion> NeutralBoneRotations { get; set; }
     }
 }

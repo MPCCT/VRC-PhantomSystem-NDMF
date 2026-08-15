@@ -28,6 +28,18 @@ namespace MPCCT.PhantomSystem.Editor
 
             foreach (var slot in state.System.Slots)
             {
+                if (slot.DriverNeutralMergeAnimator != null)
+                {
+                    slot.DriverNeutralMergeAnimator.layerPriority = CheckedIncrement(
+                        fxPriority,
+                        slot,
+                        state.Report);
+                    fxPriority = slot.DriverNeutralMergeAnimator.layerPriority;
+                }
+            }
+
+            foreach (var slot in state.System.Slots)
+            {
                 if (slot.SourceGestureMergeAnimator != null)
                 {
                     slot.SourceGestureMergeAnimator.layerPriority = CheckedIncrement(

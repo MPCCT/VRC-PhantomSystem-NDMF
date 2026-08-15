@@ -26,16 +26,7 @@ namespace MPCCT.PhantomSystem.Editor
         private int filteredFxClipCount;
         private int removedFxAnimatorCurveCount;
         private int removedFxTransformCurveCount;
-        private readonly Dictionary<VirtualClip, VirtualClip>[] clipCaches =
-        {
-            new Dictionary<VirtualClip, VirtualClip>(),
-            new Dictionary<VirtualClip, VirtualClip>()
-        };
-        private readonly Dictionary<VirtualBlendTree, VirtualBlendTree>[] treeCaches =
-        {
-            new Dictionary<VirtualBlendTree, VirtualBlendTree>(),
-            new Dictionary<VirtualBlendTree, VirtualBlendTree>()
-        };
+        private IReadOnlyDictionary<HumanBodyBones, Quaternion> neutralBoneRotations;
 
         private PhantomPlayableMotionConverter(
             BuildContext context,
@@ -94,11 +85,16 @@ namespace MPCCT.PhantomSystem.Editor
                 ? baseController.layers
                 : Array.Empty<AnimatorControllerLayer>();
             var controllerContext = context.Extension<AnimatorServicesContext>().ControllerContext;
+            var sourceLayerMasks = new AvatarMask[layers.Length];
             for (var layerIndex = 0; layerIndex < layers.Length; layerIndex++)
             {
-                var sourceLayerMask = layerIndex < physicalLayers.Length
-                    ? physicalLayers[layerIndex].avatarMask
+                var physicalLayerIndex = layers[layerIndex].OriginalPhysicalLayerIndex
+                                         ?? layerIndex;
+                var sourceLayerMask = physicalLayerIndex >= 0
+                                      && physicalLayerIndex < physicalLayers.Length
+                    ? physicalLayers[physicalLayerIndex].avatarMask
                     : null;
+                sourceLayerMasks[layerIndex] = sourceLayerMask;
                 var convertedMask = PhantomAvatarMaskConverter.Convert(
                     slot,
                     descriptorMask,
@@ -148,8 +144,21 @@ namespace MPCCT.PhantomSystem.Editor
             }
 
             var processedStateMachines = new HashSet<VirtualStateMachine>();
-            foreach (var layer in layers)
+            for (var layerIndex = 0; layerIndex < layers.Length; layerIndex++)
             {
+                var layer = layers[layerIndex];
+                var completionEnabled = ShouldCompleteHumanoidRotations(
+                    playable,
+                    layer.BlendingMode,
+                    false);
+                var completionBones = completionEnabled
+                    ? PhantomAvatarMaskConverter.CollectActiveHumanoidBones(
+                        slot,
+                        descriptorMask,
+                        sourceLayerMasks[layerIndex])
+                    : new HashSet<HumanBodyBones>();
+                var session = new MotionConversionSession(completionBones);
+
                 if (layer.SyncedLayerIndex >= 0)
                 {
                     var overrides = layer.SyncedLayerMotionOverrides.ToBuilder();
@@ -157,7 +166,9 @@ namespace MPCCT.PhantomSystem.Editor
                     {
                         overrides[pair.Key] = ConvertMotion(
                             pair.Value,
-                            stateMirrors.TryGetValue(pair.Key, out var mirror) && mirror);
+                            stateMirrors.TryGetValue(pair.Key, out var mirror) && mirror,
+                            session,
+                            completionEnabled);
                     }
                     layer.SyncedLayerMotionOverrides = overrides.ToImmutable();
                     continue;
@@ -173,7 +184,9 @@ namespace MPCCT.PhantomSystem.Editor
                 {
                     state.Motion = ConvertMotion(
                         state.Motion,
-                        stateMirrors.TryGetValue(state, out var mirror) && mirror);
+                        stateMirrors.TryGetValue(state, out var mirror) && mirror,
+                        session,
+                        completionEnabled);
                 }
             }
 
@@ -184,11 +197,26 @@ namespace MPCCT.PhantomSystem.Editor
             }
         }
 
-        private VirtualMotion ConvertMotion(VirtualMotion motion, bool inheritedMirror)
+        internal static bool ShouldCompleteHumanoidRotations(
+            VRCAvatarDescriptor.AnimLayerType playable,
+            AnimatorLayerBlendingMode blendingMode,
+            bool insideDirectBlendTree)
+        {
+            return !insideDirectBlendTree
+                   && blendingMode == AnimatorLayerBlendingMode.Override
+                   && (playable == VRCAvatarDescriptor.AnimLayerType.Gesture
+                       || playable == VRCAvatarDescriptor.AnimLayerType.Action);
+        }
+
+        private VirtualMotion ConvertMotion(
+            VirtualMotion motion,
+            bool inheritedMirror,
+            MotionConversionSession session,
+            bool completionEnabled)
         {
             if (motion is VirtualClip clip)
             {
-                return ConvertClip(clip, inheritedMirror);
+                return ConvertClip(clip, inheritedMirror, session, completionEnabled);
             }
 
             if (!(motion is VirtualBlendTree sourceTree))
@@ -196,16 +224,23 @@ namespace MPCCT.PhantomSystem.Editor
                 return motion;
             }
 
-            var treeCache = treeCaches[inheritedMirror ? 1 : 0];
+            var cacheIndex = MotionConversionSession.CacheIndex(
+                inheritedMirror,
+                completionEnabled);
+            var treeCache = session.TreeCaches[cacheIndex];
             if (treeCache.TryGetValue(sourceTree, out var existingTree))
             {
                 return existingTree;
             }
 
+            var childCompletionEnabled = completionEnabled
+                                         && sourceTree.BlendType != BlendTreeType.Direct;
             var convertedMotions = sourceTree.Children
                 .Select(child => ConvertMotion(
                     child.Motion,
-                    CombineMirror(inheritedMirror, child.Mirror)))
+                    CombineMirror(inheritedMirror, child.Mirror),
+                    session,
+                    childCompletionEnabled))
                 .ToArray();
             var changed = sourceTree.Children
                 .Zip(convertedMotions, (source, converted) =>
@@ -221,7 +256,8 @@ namespace MPCCT.PhantomSystem.Editor
                 sourceTree,
                 convertedMotions,
                 $"PhantomSystem_{slot.SlotId}_{playable}_{sourceTree.Name}"
-                + (inheritedMirror ? "_Mirrored" : string.Empty));
+                + (inheritedMirror ? "_Mirrored" : string.Empty)
+                + (completionEnabled ? "_NeutralCompleted" : string.Empty));
             treeCache[sourceTree] = tree;
             return tree;
         }
@@ -271,14 +307,20 @@ namespace MPCCT.PhantomSystem.Editor
             return inheritedMirror ^ localMirror;
         }
 
-        private VirtualClip ConvertClip(VirtualClip source, bool inheritedMirror)
+        private VirtualClip ConvertClip(
+            VirtualClip source,
+            bool inheritedMirror,
+            MotionConversionSession session,
+            bool completionEnabled)
         {
             if (source == null)
             {
                 return null;
             }
 
-            var clipCache = clipCaches[inheritedMirror ? 1 : 0];
+            var clipCache = session.ClipCaches[MotionConversionSession.CacheIndex(
+                inheritedMirror,
+                completionEnabled)];
             if (clipCache.TryGetValue(source, out var existing))
             {
                 return existing;
@@ -329,7 +371,14 @@ namespace MPCCT.PhantomSystem.Editor
                                 pair => TransformPathUtility.GetRelativePath(
                                     pair.Value,
                                     slot.CloneRoot.transform)),
-                            OutputBoneParentPaths = slot.AnimationDriverPoseParentClonePaths
+                            OutputBoneParentPaths = slot.AnimationDriverPoseParentClonePaths,
+                            NeutralRotationCompletionBones = completionEnabled
+                                ? session.CompletionBones
+                                : null,
+                            NeutralBoneRotations = completionEnabled
+                                && session.CompletionBones.Count > 0
+                                ? GetNeutralBoneRotations()
+                                : null
                         });
                     converted = result.Clip;
                 }
@@ -342,7 +391,8 @@ namespace MPCCT.PhantomSystem.Editor
                 RedirectBoneBindings(converted);
                 converted.hideFlags = HideFlags.None;
                 converted.name = $"PhantomSystem_{slot.SlotId}_{playable}_{sourceName}"
-                                 + (inheritedMirror ? "_Mirrored" : string.Empty);
+                                 + (inheritedMirror ? "_Mirrored" : string.Empty)
+                                 + (completionEnabled ? "_NeutralCompleted" : string.Empty);
                 var imported = PhantomVirtualClipAdapter.ImportConverted(
                     context,
                     converted,
@@ -441,6 +491,14 @@ namespace MPCCT.PhantomSystem.Editor
                 Playable = playable.ToString(),
                 SourceClipName = sourceName
             };
+        }
+
+        private IReadOnlyDictionary<HumanBodyBones, Quaternion> GetNeutralBoneRotations()
+        {
+            return neutralBoneRotations ??= PhantomHumanoidClipBaker.SampleNeutralBoneRotations(
+                slot.CloneRoot,
+                slot.AnimationDriverPoseParentClonePaths,
+                slot.AnimationDriverBones.Keys);
         }
 
         private void ReportFxBoneAnimationFiltering()
@@ -578,6 +636,36 @@ namespace MPCCT.PhantomSystem.Editor
                 var redirected = binding;
                 redirected.path = targetPath;
                 AnimationUtility.SetObjectReferenceCurve(clip, redirected, curve);
+            }
+        }
+
+        private sealed class MotionConversionSession
+        {
+            internal readonly ISet<HumanBodyBones> CompletionBones;
+            internal readonly Dictionary<VirtualClip, VirtualClip>[] ClipCaches;
+            internal readonly Dictionary<VirtualBlendTree, VirtualBlendTree>[] TreeCaches;
+
+            internal MotionConversionSession(ISet<HumanBodyBones> completionBones)
+            {
+                CompletionBones = completionBones ?? new HashSet<HumanBodyBones>();
+                ClipCaches = CreateCaches<VirtualClip>();
+                TreeCaches = CreateCaches<VirtualBlendTree>();
+            }
+
+            internal static int CacheIndex(bool inheritedMirror, bool completionEnabled)
+            {
+                return (inheritedMirror ? 1 : 0) | (completionEnabled ? 2 : 0);
+            }
+
+            private static Dictionary<T, T>[] CreateCaches<T>() where T : class
+            {
+                return new[]
+                {
+                    new Dictionary<T, T>(),
+                    new Dictionary<T, T>(),
+                    new Dictionary<T, T>(),
+                    new Dictionary<T, T>()
+                };
             }
         }
     }

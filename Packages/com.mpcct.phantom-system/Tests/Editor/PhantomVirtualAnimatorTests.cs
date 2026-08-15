@@ -28,6 +28,302 @@ namespace MPCCT.PhantomSystem.Editor.Tests
         }
 
         [Test]
+        public void DriverNeutralPose_WritesOneFrameQuaternionCurvesOnly()
+        {
+            var clip = new AnimationClip { name = "DriverNeutral" };
+            try
+            {
+                PhantomHumanoidClipBaker.WriteNeutralRotationCurves(
+                    clip,
+                    new Dictionary<string, Quaternion>
+                    {
+                        ["Driver/Hips"] = Quaternion.Euler(5f, 10f, 15f),
+                        ["Driver/Hips/LeftUpperLeg"] = Quaternion.Euler(-20f, 3f, 8f)
+                    });
+
+                var bindings = AnimationUtility.GetCurveBindings(clip);
+                Assert.AreEqual(8, bindings.Length);
+                Assert.IsTrue(bindings.All(binding => binding.type == typeof(Transform)));
+                Assert.IsTrue(bindings.All(binding =>
+                    binding.propertyName.StartsWith("m_LocalRotation.")));
+                Assert.AreEqual(2, bindings.Select(binding => binding.path).Distinct().Count());
+                Assert.IsFalse(bindings.Any(binding =>
+                    binding.propertyName.StartsWith("m_LocalPosition.")
+                    || binding.propertyName.StartsWith("m_LocalScale.")));
+
+                foreach (var binding in bindings)
+                {
+                    var curve = AnimationUtility.GetEditorCurve(clip, binding);
+                    Assert.AreEqual(2, curve.length);
+                    Assert.AreEqual(0f, curve.keys[0].time, 0.000001f);
+                    Assert.AreEqual(
+                        PhantomAnimatorClipUtility.FrameDuration,
+                        curve.keys[1].time,
+                        0.000001f);
+                    Assert.AreEqual(curve.keys[0].value, curve.keys[1].value, 0.000001f);
+                }
+
+                Assert.AreEqual(
+                    PhantomAnimatorClipUtility.FrameDuration,
+                    clip.length,
+                    0.000001f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(clip);
+            }
+        }
+
+        [Test]
+        public void DriverNeutralPose_ControllerHasOneDefaultWeightOverrideLayer()
+        {
+            var clip = new AnimationClip { name = "Neutral" };
+            var controller = PhantomDriverNeutralAnimatorBuilder.CreateController(
+                "Slot1",
+                "Slot_1",
+                clip);
+            try
+            {
+                Assert.AreEqual("PhantomSystem_Slot1_DriverNeutral_FX", controller.name);
+                Assert.AreEqual(1, controller.layers.Length);
+                var layer = controller.layers.Single();
+                Assert.AreEqual(
+                    "PhantomSystem_Slot_1_DriverNeutralPose",
+                    layer.name);
+                Assert.AreEqual(1f, layer.defaultWeight);
+                Assert.AreEqual(AnimatorLayerBlendingMode.Override, layer.blendingMode);
+                Assert.AreSame(clip, layer.stateMachine.defaultState.motion);
+                Assert.AreEqual(1, layer.stateMachine.states.Length);
+            }
+            finally
+            {
+                DestroyControllerGraph(controller, null);
+            }
+        }
+
+        [Test]
+        public void DriverNeutralPose_ReadsRotationRelativeToConfiguredPoseParent()
+        {
+            var root = new GameObject("Root");
+            try
+            {
+                root.transform.localRotation = Quaternion.Euler(11f, -7f, 4f);
+                var poseParent = CreateChild(root.transform, "PoseParent").transform;
+                poseParent.localRotation = Quaternion.Euler(-8f, 17f, 2f);
+                var unmappedIntermediate = CreateChild(poseParent, "Intermediate").transform;
+                unmappedIntermediate.localRotation = Quaternion.Euler(13f, 6f, -9f);
+                var target = CreateChild(unmappedIntermediate, "Target").transform;
+                target.localRotation = Quaternion.Euler(-21f, 3f, 14f);
+
+                var expected = Quaternion.Inverse(poseParent.rotation) * target.rotation;
+                var actual = PhantomHumanoidClipBaker.ReadRelativeRotation(
+                    target,
+                    poseParent);
+
+                Assert.Less(Quaternion.Angle(expected, actual), 0.001f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void DriverNeutralPose_RequiresRetainedGestureOrActionAndDriver()
+        {
+            var root = new GameObject("Root");
+            try
+            {
+                var slot = new PhantomSlotBuildState
+                {
+                    Slot = new PhantomSlot(),
+                    SourceFxMergeAnimator = AddFxMergeAnimator(root, "Fx")
+                };
+
+                Assert.IsFalse(PhantomDriverNeutralAnimatorBuilder.ShouldBuild(slot));
+
+                slot.SourceGestureMergeAnimator = AddFxMergeAnimator(root, "Gesture");
+                Assert.IsFalse(PhantomDriverNeutralAnimatorBuilder.ShouldBuild(slot));
+
+                slot.AnimationDriverBones[HumanBodyBones.Hips] =
+                    CreateChild(root.transform, "DriverHips").transform;
+                Assert.IsTrue(PhantomDriverNeutralAnimatorBuilder.ShouldBuild(slot));
+
+                slot.SourceGestureMergeAnimator = null;
+                slot.SourceActionMergeAnimator = AddFxMergeAnimator(root, "Action");
+                Assert.IsTrue(PhantomDriverNeutralAnimatorBuilder.ShouldBuild(slot));
+
+                slot.Slot.removeSourceControls = true;
+                Assert.IsFalse(PhantomDriverNeutralAnimatorBuilder.ShouldBuild(slot));
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [TestCase(VRCAvatarDescriptor.AnimLayerType.Gesture, AnimatorLayerBlendingMode.Override, false, true)]
+        [TestCase(VRCAvatarDescriptor.AnimLayerType.Action, AnimatorLayerBlendingMode.Override, false, true)]
+        [TestCase(VRCAvatarDescriptor.AnimLayerType.FX, AnimatorLayerBlendingMode.Override, false, false)]
+        [TestCase(VRCAvatarDescriptor.AnimLayerType.Gesture, AnimatorLayerBlendingMode.Additive, false, false)]
+        [TestCase(VRCAvatarDescriptor.AnimLayerType.Action, AnimatorLayerBlendingMode.Override, true, false)]
+        public void HumanoidNeutralCompletion_OnlyAppliesToOverrideGestureAndActionOutsideDirectTrees(
+            VRCAvatarDescriptor.AnimLayerType playable,
+            AnimatorLayerBlendingMode blendingMode,
+            bool insideDirectBlendTree,
+            bool expected)
+        {
+            Assert.AreEqual(
+                expected,
+                PhantomPlayableMotionConverter.ShouldCompleteHumanoidRotations(
+                    playable,
+                    blendingMode,
+                    insideDirectBlendTree));
+        }
+
+        [Test]
+        public void HumanoidNeutralCompletion_WritesEveryAllowedMissingBoneButNotAnimatedBone()
+        {
+            var clip = new AnimationClip { name = "Completed" };
+            try
+            {
+                var animatedRotation = Quaternion.Euler(12f, -8f, 3f);
+                PhantomHumanoidClipBaker.WriteNeutralRotationCurves(
+                    clip,
+                    new Dictionary<string, Quaternion>
+                    {
+                        ["Driver/LeftLowerLeg"] = animatedRotation
+                    });
+
+                PhantomHumanoidClipBaker.WriteMissingNeutralRotationCurves(
+                    clip,
+                    new HashSet<HumanBodyBones> { HumanBodyBones.LeftLowerLeg },
+                    new HashSet<HumanBodyBones>
+                    {
+                        HumanBodyBones.LeftLowerLeg,
+                        HumanBodyBones.RightLowerLeg,
+                        HumanBodyBones.LeftToes
+                    },
+                    new Dictionary<HumanBodyBones, string>
+                    {
+                        [HumanBodyBones.LeftLowerLeg] = "Driver/LeftLowerLeg",
+                        [HumanBodyBones.RightLowerLeg] = "Driver/RightLowerLeg",
+                        [HumanBodyBones.LeftToes] = "Driver/LeftToes"
+                    },
+                    new Dictionary<HumanBodyBones, Quaternion>
+                    {
+                        [HumanBodyBones.LeftLowerLeg] = Quaternion.identity,
+                        [HumanBodyBones.RightLowerLeg] = Quaternion.Euler(-7f, 4f, 2f),
+                        [HumanBodyBones.LeftToes] = Quaternion.Euler(9f, 0f, 0f)
+                    });
+
+                var bindings = AnimationUtility.GetCurveBindings(clip);
+                Assert.AreEqual(12, bindings.Length);
+                CollectionAssert.AreEquivalent(
+                    new[]
+                    {
+                        "Driver/LeftLowerLeg",
+                        "Driver/RightLowerLeg",
+                        "Driver/LeftToes"
+                    },
+                    bindings.Select(binding => binding.path).Distinct().ToArray());
+                Assert.IsTrue(bindings.All(binding =>
+                    binding.propertyName.StartsWith("m_LocalRotation.")));
+
+                var xBinding = EditorCurveBinding.FloatCurve(
+                    "Driver/LeftLowerLeg",
+                    typeof(Transform),
+                    "m_LocalRotation.x");
+                var leftCurve = AnimationUtility.GetEditorCurve(clip, xBinding);
+                Assert.AreEqual(animatedRotation.normalized.x, leftCurve.keys[0].value, 0.000001f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(clip);
+            }
+        }
+
+        [Test]
+        public void HumanoidNeutralCompletion_DoesNotTurnNonHumanoidClipIntoPose()
+        {
+            var clip = new AnimationClip { name = "GenericOnly" };
+            try
+            {
+                PhantomHumanoidClipBaker.WriteMissingNeutralRotationCurves(
+                    clip,
+                    new HashSet<HumanBodyBones>(),
+                    new HashSet<HumanBodyBones> { HumanBodyBones.LeftLowerLeg },
+                    new Dictionary<HumanBodyBones, string>
+                    {
+                        [HumanBodyBones.LeftLowerLeg] = "Driver/LeftLowerLeg"
+                    },
+                    new Dictionary<HumanBodyBones, Quaternion>
+                    {
+                        [HumanBodyBones.LeftLowerLeg] = Quaternion.identity
+                    });
+
+                Assert.IsEmpty(AnimationUtility.GetCurveBindings(clip));
+            }
+            finally
+            {
+                Object.DestroyImmediate(clip);
+            }
+        }
+
+        [Test]
+        public void HumanoidNeutralCompletion_RespectsHumanoidAvatarMask()
+        {
+            var clone = new GameObject("Clone");
+            var mask = new AvatarMask();
+            try
+            {
+                var leftBone = CreateChild(clone.transform, "LeftLowerLeg").transform;
+                var rightBone = CreateChild(clone.transform, "RightLowerLeg").transform;
+                var driverRoot = CreateChild(clone.transform, "Driver");
+                var slot = new PhantomSlotBuildState { CloneRoot = clone };
+                slot.CloneBones[HumanBodyBones.LeftLowerLeg] = leftBone;
+                slot.CloneBones[HumanBodyBones.RightLowerLeg] = rightBone;
+                slot.AnimationDriverBones[HumanBodyBones.LeftLowerLeg] =
+                    CreateChild(driverRoot.transform, "LeftLowerLeg").transform;
+                slot.AnimationDriverBones[HumanBodyBones.RightLowerLeg] =
+                    CreateChild(driverRoot.transform, "RightLowerLeg").transform;
+
+                CollectionAssert.AreEquivalent(
+                    new[]
+                    {
+                        HumanBodyBones.LeftLowerLeg,
+                        HumanBodyBones.RightLowerLeg
+                    },
+                    PhantomAvatarMaskConverter.CollectActiveHumanoidBones(
+                        slot,
+                        null,
+                        null));
+
+                for (var part = AvatarMaskBodyPart.Root;
+                     part < AvatarMaskBodyPart.LastBodyPart;
+                     part++)
+                {
+                    mask.SetHumanoidBodyPartActive(part, false);
+                }
+                mask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.LeftLeg, true);
+
+                var bones = PhantomAvatarMaskConverter.CollectActiveHumanoidBones(
+                    slot,
+                    null,
+                    mask);
+
+                CollectionAssert.AreEquivalent(
+                    new[] { HumanBodyBones.LeftLowerLeg },
+                    bones);
+            }
+            finally
+            {
+                Object.DestroyImmediate(mask);
+                Object.DestroyImmediate(clone);
+            }
+        }
+
+        [Test]
         public void AnimatorParameterBinding_IsNotClassifiedAsHumanoid()
         {
             const string parameterName = "FaceEmo_Hai_GestureLWProxy";
@@ -496,6 +792,7 @@ namespace MPCCT.PhantomSystem.Editor.Tests
                     var slot = new PhantomSlotBuildState
                     {
                         SlotId = $"Slot{index + 1}",
+                        DriverNeutralMergeAnimator = AddFxMergeAnimator(host, "Neutral"),
                         SourceGestureMergeAnimator = AddFxMergeAnimator(host, "Gesture"),
                         SourceActionMergeAnimator = AddFxMergeAnimator(host, "Action"),
                         SourceFxMergeAnimator = AddFxMergeAnimator(host, "SourceFx"),
@@ -509,9 +806,11 @@ namespace MPCCT.PhantomSystem.Editor.Tests
                 PhantomMergeAnimatorFinalizer.Apply(context, state);
 
                 CollectionAssert.AreEqual(
-                    Enumerable.Range(11, 12).ToArray(),
+                    Enumerable.Range(11, 14).ToArray(),
                     new[]
                     {
+                        state.System.Slots[0].DriverNeutralMergeAnimator.layerPriority,
+                        state.System.Slots[1].DriverNeutralMergeAnimator.layerPriority,
                         state.System.Slots[0].SourceGestureMergeAnimator.layerPriority,
                         state.System.Slots[1].SourceGestureMergeAnimator.layerPriority,
                         state.System.Slots[0].SourceActionMergeAnimator.layerPriority,
@@ -528,6 +827,7 @@ namespace MPCCT.PhantomSystem.Editor.Tests
                 Assert.IsTrue(state.System.Slots
                     .SelectMany(slot => new[]
                     {
+                        slot.DriverNeutralMergeAnimator,
                         slot.SourceGestureMergeAnimator,
                         slot.SourceActionMergeAnimator,
                         slot.SourceFxMergeAnimator,
@@ -556,7 +856,7 @@ namespace MPCCT.PhantomSystem.Editor.Tests
             var slot = new PhantomSlotBuildState
             {
                 SlotId = "Slot1",
-                SourceGestureMergeAnimator = AddFxMergeAnimator(runtimeRoot, "Gesture")
+                DriverNeutralMergeAnimator = AddFxMergeAnimator(runtimeRoot, "Neutral")
             };
             var state = new PhantomBuildState
             {
@@ -568,7 +868,7 @@ namespace MPCCT.PhantomSystem.Editor.Tests
             {
                 PhantomMergeAnimatorFinalizer.Apply(context, state);
 
-                Assert.AreEqual(int.MaxValue, slot.SourceGestureMergeAnimator.layerPriority);
+                Assert.AreEqual(int.MaxValue, slot.DriverNeutralMergeAnimator.layerPriority);
                 Assert.IsTrue(state.Report.HasErrors);
                 Assert.That(state.Report.Errors.Single(), Does.Contain("int.MaxValue"));
             }

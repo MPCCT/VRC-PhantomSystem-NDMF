@@ -83,6 +83,7 @@ namespace MPCCT.PhantomSystem.Editor
         public readonly Dictionary<HumanBodyBones, Transform> PhantomGrabbingBodyOutputConstraintHosts =
             new Dictionary<HumanBodyBones, Transform>();
         public AnimatorController GeneratedController;
+        internal AnimatorController GeneratedDriverNeutralController;
         public AnimatorController GeneratedTrackingController;
         public AnimatorController GeneratedPhantomViewController;
         public RuntimeAnimatorController ProcessedFxController;
@@ -94,6 +95,7 @@ namespace MPCCT.PhantomSystem.Editor
         public ModularAvatarMergeAnimator CoreMergeAnimator;
         public ModularAvatarMergeAnimator TrackingMergeAnimator;
         public ModularAvatarMergeAnimator PhantomViewMergeAnimator;
+        internal ModularAvatarMergeAnimator DriverNeutralMergeAnimator;
         public ModularAvatarMergeAnimator SourceFxMergeAnimator;
         public ModularAvatarMergeAnimator SourceGestureMergeAnimator;
         public ModularAvatarMergeAnimator SourceActionMergeAnimator;

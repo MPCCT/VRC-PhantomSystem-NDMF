@@ -21,6 +21,8 @@ namespace MPCCT.PhantomSystem.Editor
             slot.SourceFxMergeAnimator = null;
             slot.SourceActionMergeAnimator = null;
             slot.SourceGestureMergeAnimator = null;
+            slot.GeneratedDriverNeutralController = null;
+            slot.DriverNeutralMergeAnimator = null;
             var descriptor = slot.BakedAvatar;
             if (descriptor == null || slot.Slot == null || slot.Slot.removeSourceControls)
             {
@@ -82,6 +84,13 @@ namespace MPCCT.PhantomSystem.Editor
                     };
                 AssignMergeAnimator(slot, playable, mergeAnimator);
             }
+
+            PhantomDriverNeutralAnimatorBuilder.Install(
+                ctx,
+                system,
+                slot,
+                host,
+                report);
 
             var sourceControllers = slot.SourcePlayableRegistrations.Values
                 .Select(registration => registration.Source.Controller)
