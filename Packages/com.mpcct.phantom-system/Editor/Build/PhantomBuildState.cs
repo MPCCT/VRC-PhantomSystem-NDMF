@@ -46,6 +46,7 @@ namespace MPCCT.PhantomSystem.Editor
         public VRCAvatarDescriptor SourceAvatar;
         public GameObject PrebakedRoot;
         public GameObject SlotRoot;
+        public GameObject MirrorRoot;
         public GameObject CloneRoot;
         public VRCAvatarDescriptor BakedAvatar;
         public Animator CloneAnimator;
@@ -56,6 +57,7 @@ namespace MPCCT.PhantomSystem.Editor
         public Transform PhantomGrabbingHipsConstraintHost;
         public Transform PhantomGrabbingBoneDisplayHost;
         public Transform PhantomViewRoot;
+        public Transform PhantomViewAnchor;
         public Transform PhantomViewCaptureRoot;
         public Transform PhantomViewLeftCamera;
         public Transform PhantomViewRightCamera;
@@ -116,6 +118,12 @@ namespace MPCCT.PhantomSystem.Editor
         internal readonly Dictionary<string, HashSet<string>> UnresolvedSourceParameterReferences =
             new Dictionary<string, HashSet<string>>(System.StringComparer.Ordinal);
         internal bool UnresolvedSourceParametersReported;
+
+        internal Transform ContentRoot => MirrorRoot != null
+            ? MirrorRoot.transform
+            : SlotRoot != null
+                ? SlotRoot.transform
+                : null;
     }
 
     internal enum PhantomSourceComponentParameterKind

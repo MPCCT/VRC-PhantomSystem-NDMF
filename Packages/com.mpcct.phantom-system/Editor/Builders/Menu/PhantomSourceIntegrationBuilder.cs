@@ -206,13 +206,13 @@ namespace MPCCT.PhantomSystem.Editor
                 return slot.SourceIntegrationHost;
             }
 
-            if (slot.SlotRoot == null)
+            if (slot.ContentRoot == null)
             {
                 return null;
             }
 
             var host = new GameObject("PhantomSourceControls_MA");
-            host.transform.SetParent(slot.SlotRoot.transform, false);
+            host.transform.SetParent(slot.ContentRoot, false);
             slot.SourceIntegrationHost = host;
             return host;
         }

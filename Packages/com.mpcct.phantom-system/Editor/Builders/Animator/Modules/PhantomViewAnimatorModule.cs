@@ -183,36 +183,13 @@ namespace MPCCT.PhantomSystem.Editor
             PhantomAnimatorBuildContext context,
             string stereoStrengthParameter)
         {
-            Motion motion;
-            if (context.Slot.Slot.enableScaleControl)
-            {
-                var minimumScaleTree = CreateStereoStrengthTree(
-                    context,
-                    "PhantomViewStereoStrengthMinimumScaleTree",
-                    stereoStrengthParameter,
-                    ScaleControlAnimatorModule.MinimumScale);
-                var maximumScaleTree = CreateStereoStrengthTree(
-                    context,
-                    "PhantomViewStereoStrengthMaximumScaleTree",
-                    stereoStrengthParameter,
-                    ScaleControlAnimatorModule.MaximumScale);
-                var scaleTree = context.CreateBlendTree(
-                    "PhantomViewStereoStrengthScaleTree",
-                    PhantomParameterNames.Scale(context.Slot.Slot));
-                scaleTree.AddChild(minimumScaleTree, 0f);
-                scaleTree.AddChild(maximumScaleTree, 1f);
-                motion = scaleTree;
-            }
-            else
-            {
-                motion = CreateStereoStrengthTree(
-                    context,
-                    "PhantomViewStereoStrengthTree",
-                    stereoStrengthParameter,
-                    1f);
-            }
-
-            return motion;
+            // Left/right cameras inherit the positive SlotRoot scale. Their local
+            // separation therefore needs only the user stereo-strength parameter;
+            // multiplying it by Scale again would apply the scale twice.
+            return CreateStereoStrengthTree(
+                context,
+                "PhantomViewStereoStrengthTree",
+                stereoStrengthParameter);
         }
 
         private static Motion CreateNearClipMotion(
@@ -366,8 +343,7 @@ namespace MPCCT.PhantomSystem.Editor
         private static BlendTree CreateStereoStrengthTree(
             PhantomAnimatorBuildContext context,
             string treeName,
-            string stereoStrengthParameter,
-            float scaleMultiplier)
+            string stereoStrengthParameter)
         {
             var minimumClip = CreateStereoStrengthClip(
                 context,
@@ -376,7 +352,7 @@ namespace MPCCT.PhantomSystem.Editor
             var maximumClip = CreateStereoStrengthClip(
                 context,
                 $"{treeName}Maximum",
-                MaximumStereoStrength * scaleMultiplier);
+                MaximumStereoStrength);
             var tree = context.CreateBlendTree(
                 treeName,
                 stereoStrengthParameter);

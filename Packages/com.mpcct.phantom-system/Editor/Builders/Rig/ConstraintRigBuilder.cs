@@ -34,7 +34,7 @@ namespace MPCCT.PhantomSystem.Editor
 
             if (slot.BaseAvatarPosition == null)
             {
-                var baseAvatarPosition = EnsureChild(slot.SlotRoot.transform, "BaseAvatarPosition");
+                var baseAvatarPosition = EnsureChild(slot.ContentRoot, "BaseAvatarPosition");
                 baseAvatarPosition.SetPositionAndRotation(ctx.AvatarRootTransform.position, ctx.AvatarRootTransform.rotation);
                 var armatureTarget = EnsureChild(baseAvatarPosition, "ArmatureConstraintTarget");
                 slot.BaseAvatarPosition = baseAvatarPosition;
@@ -46,7 +46,7 @@ namespace MPCCT.PhantomSystem.Editor
             }
 
             var armatureConstraintTarget = slot.ArmatureConstraintTarget;
-            var spawnPosition = EnsureChild(slot.SlotRoot.transform, "PhantomSpawnPosition");
+            var spawnPosition = EnsureChild(slot.ContentRoot, "PhantomSpawnPosition");
             if (slot.Slot.spawnPositionOverride != null)
             {
                 spawnPosition.SetPositionAndRotation(slot.Slot.spawnPositionOverride.position, slot.Slot.spawnPositionOverride.rotation);

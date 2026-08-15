@@ -373,6 +373,7 @@ namespace MPCCT.PhantomSystem.Editor
             {
                 yield return Definition(PhantomParameterNames.Scale(slot), AnimatorControllerParameterType.Float, true, false, ScaleControlAnimatorModule.DefaultScaleParameter);
                 yield return Definition(PhantomParameterNames.Mirror(slot), AnimatorControllerParameterType.Bool, true, false, 0f);
+                yield return Definition(PhantomParameterNames.ScaleDirectWeight(slot), AnimatorControllerParameterType.Float, false, true, 1f);
                 yield return Definition(PhantomParameterNames.ScaleReset(slot), AnimatorControllerParameterType.Bool, false, false, 0f);
             }
 

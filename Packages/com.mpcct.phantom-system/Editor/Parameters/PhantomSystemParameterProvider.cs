@@ -71,6 +71,13 @@ namespace MPCCT.PhantomSystem.Editor
                         PhantomParameterNames.Mirror(slot),
                         AnimatorControllerParameterType.Bool,
                         0f);
+                    AddAnimatorOnlyParameter(
+                        output,
+                        component,
+                        analysis.BaseParameters,
+                        PhantomParameterNames.ScaleDirectWeight(slot),
+                        AnimatorControllerParameterType.Float,
+                        1f);
                     AddLocalParameter(
                         output,
                         component,

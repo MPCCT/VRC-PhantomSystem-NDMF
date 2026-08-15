@@ -45,6 +45,7 @@ PhantomSystem は、VRChat アバターに 1 体以上の Humanoid 分身（Phan
 
 - 分身の頭部から見たローカル専用のステレオビューを表示します。
 - ステレオの強さと中央ビューマスクの大きさを調整できます。
+- カメラの中心位置と左右のカメラ間隔は、分身全体のスケールに追従します。
 - Advanced の Camera Near Clip は Phantom Scale に合わせて変化し、拡大した分身の顔が
   ビューを遮る場合に調整できます。
 - ビューが重ならないよう、同時に表示される Phantom View は 1 つの Slot だけです。
@@ -82,8 +83,7 @@ https://mpcct.github.io/VRC-PhantomSystem-NDMF/index.json
    分身元の `VRCAvatarDescriptor` を指定します。
 4. 必要に応じて Phantom Grabbing、Scale Control、Phantom View、分身元メニューを
    有効にします。
-5. **Review Any Alerts** を確認し、Error を修正して必要な Warning を確認します。
-6. 通常どおり VRChat SDK から Build & Test またはアップロードを実行します。分身元は
+5. 通常どおり VRChat SDK から Build & Test またはアップロードを実行します。分身元は
    メインビルドの前に自動で Prebake されます。
 
 確認用の Manual Bake には、コンポーネントの **Bake Avatar with PhantomSystem** を使用
@@ -133,8 +133,9 @@ View のパフォーマンスを調整したい場合だけ変更してくださ
 - **Activate**：分身の表示を有効または無効にします。
 - **Freeze**：通常のボーン追従を止め、現在の状態を保持します。
 - **Position Lock**：生成された位置固定方式を切り替えます。
-- **Scale / Reset Scale / Mirror**：Slot 全体のサイズ変更、リセット、反転を行います。
-- **Bone Display**：Freeze 中にポーズ操作用の簡易ボーンを表示します。
+- **Settings > Scale / Reset Scale / Mirror**：Slot 全体のサイズ変更、リセット、反転を
+  行います。
+- **Settings > Bone Display**：Freeze 中にポーズ操作用の簡易ボーンを表示します。
 - **Settings > Phantom View**：ビューを有効にし、Stereo Strength と Mask Size を
   調整します。
 
@@ -144,8 +145,9 @@ View のパフォーマンスを調整したい場合だけ変更してくださ
   必要があります。
 - WD Off FX が複数の Playable Controller 間で Transform を占有する問題を避けるため、保持する
   分身元の Gesture、Action、FX Controller は最終 FX Controller に統合されます。変換処理と
-  論理上の役割はそれぞれ維持されます。Write Defaults の混在、空の Motion などに対する互換性は、
-  引き続き元 Controller の設計と Modular Avatar の処理結果に依存します。
+  論理上の役割はそれぞれ維持されます。Write Defaults の混在、WD Off 状態の空 Motion
+  などに対する互換性は、引き続き元 Controller の設計と Modular Avatar の処理結果に
+  依存します。
 - 1 つの本体アバターに配置できる PhantomSystem コンポーネントは 1 つだけです。
 - 分身元は本体階層の外に配置し、別の PhantomSystem を含めないでください。
 - プレイヤー本体専用の Animator State Behaviour の一部は、分身上で直接実行できません。

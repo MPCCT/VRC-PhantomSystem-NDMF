@@ -55,7 +55,7 @@ namespace MPCCT.PhantomSystem.Editor
             }
 
             var rigRoot = ConstraintRigBuilder.EnsureChild(
-                slot.SlotRoot.transform,
+                slot.ContentRoot,
                 "PhantomGrabbingBodyRig");
             var proxyAnchor = ConstraintRigBuilder.EnsureChild(rigRoot, "ProxyAnchor");
             proxyAnchor.SetPositionAndRotation(cloneHips.position, cloneHips.rotation);

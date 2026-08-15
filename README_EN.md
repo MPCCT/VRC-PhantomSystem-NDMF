@@ -52,6 +52,8 @@ retained.
 
 - Displays a local-only stereo view captured from the phantom's head.
 - Adjusts stereo strength and the size of the central view mask.
+- The capture position and stereo eye separation follow the phantom's overall
+  scale.
 - Provides an Advanced camera Near Clip setting that follows Phantom Scale to
   keep an enlarged phantom's face from obscuring the view.
 - Only one Slot's Phantom View is shown at a time to prevent overlapping views.
@@ -94,8 +96,7 @@ https://mpcct.github.io/VRC-PhantomSystem-NDMF/index.json
    `VRCAvatarDescriptor` to **Phantom Avatar**.
 4. Enable Phantom Grabbing, Scale Control, Phantom View, or the source menu as
    needed.
-5. Review **Review Any Alerts**, resolve Errors, and check relevant Warnings.
-6. Build, test, or upload through the VRChat SDK normally. Phantom sources are
+5. Build, test, or upload through the VRChat SDK normally. Phantom sources are
    prebaked automatically before the main build.
 
 For an inspectable manual bake, use **Bake Avatar with PhantomSystem** on the
@@ -152,8 +153,10 @@ size, or Phantom View performance needs tuning.
 - **Activate** enables or disables the phantom.
 - **Freeze** stops normal bone following and holds the current state.
 - **Position Lock** changes the generated position-lock behavior.
-- **Scale / Reset Scale / Mirror** resizes, resets, or mirrors the whole Slot.
-- **Bone Display** shows the simplified poseable skeleton while frozen.
+- **Settings > Scale / Reset Scale / Mirror** resizes, resets, or mirrors the
+  whole Slot.
+- **Settings > Bone Display** shows the simplified poseable skeleton while
+  frozen.
 - **Settings > Phantom View** enables the view and adjusts Stereo Strength and
   Mask Size.
 
@@ -164,9 +167,9 @@ size, or Phantom View performance needs tuning.
 - To prevent WD Off FX from claiming Transform properties across separate
   playable controllers, retained source Gesture, Action, and FX controllers are
   merged into the final FX Controller. Their conversion and logical semantics
-  remain separate. Compatibility with mixed Write Defaults, empty motions, and
-  similar source-controller patterns still depends on the original controller
-  design and Modular Avatar's processing.
+  remain separate. Compatibility with mixed Write Defaults, empty motions in
+  Write Defaults Off controllers, and similar source-controller patterns still
+  depends on the original controller design and Modular Avatar's processing.
 - A base avatar can contain only one PhantomSystem component.
 - A phantom source must remain outside the base avatar hierarchy and cannot
   contain another PhantomSystem.

@@ -18,6 +18,7 @@ namespace MPCCT.PhantomSystem.Editor
         public AnimatorController Controller { get; }
 
         public string SlotPath { get; }
+        public string MirrorPath { get; }
         public string RootPath { get; }
         public string BaseAvatarPositionPath { get; }
         public string ArmaturePath { get; }
@@ -52,6 +53,11 @@ namespace MPCCT.PhantomSystem.Editor
                 ? null
                 : TransformPathUtility.GetRelativePath(
                     slot.SlotRoot.transform,
+                    system.AvatarRoot);
+            MirrorPath = slot.MirrorRoot == null
+                ? null
+                : TransformPathUtility.GetRelativePath(
+                    slot.MirrorRoot.transform,
                     system.AvatarRoot);
             RootPath = TransformPathUtility.GetRelativePath(
                 slot.CloneRoot.transform,

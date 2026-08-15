@@ -17,30 +17,42 @@ namespace MPCCT.PhantomSystem.Editor
             var slot = context.Slot.Slot;
             var scaleParameter = PhantomParameterNames.Scale(slot);
             var mirrorParameter = PhantomParameterNames.Mirror(slot);
+            var directWeightParameter = PhantomParameterNames.ScaleDirectWeight(slot);
             var resetParameter = PhantomParameterNames.ScaleReset(slot);
             AddFloatParameter(context.Controller, scaleParameter, DefaultScaleParameter);
-            AddBoolParameter(context.Controller, mirrorParameter, false);
+            AddFloatParameter(context.Controller, mirrorParameter, 0f);
+            AddFloatParameter(context.Controller, directWeightParameter, 1f);
             AddBoolParameter(context.Controller, resetParameter, false);
 
-            if (context.SlotPath == null || context.Slot.SlotRoot == null)
+            if (context.SlotPath == null
+                || context.MirrorPath == null
+                || context.Slot.SlotRoot == null
+                || context.Slot.MirrorRoot == null)
             {
                 context.Report.Error(
-                    $"Slot '{context.Slot.SlotId}' could not resolve the Scale Control slot path.",
+                    $"Slot '{context.Slot.SlotId}' could not resolve its ScaleRoot or MirrorRoot path.",
                     context.ErrorContext);
                 return;
             }
 
-            var normalTree = CreateScaleTree(context, scaleParameter, false);
-            var mirroredTree = CreateScaleTree(context, scaleParameter, true);
+            var scaleTree = CreateScaleTree(context, scaleParameter);
+            var mirrorTree = CreateMirrorTree(context, mirrorParameter);
+            var directTree = new BlendTree
+            {
+                name = "PhantomScaleControlDirect",
+                blendType = BlendTreeType.Direct,
+                useAutomaticThresholds = false
+            };
+            context.RegisterBlendTree(directTree);
+            AddDirectChild(directTree, scaleTree, directWeightParameter);
+            AddDirectChild(directTree, mirrorTree, directWeightParameter);
+
             var layer = AddLayer(context, "PhantomScaleControl");
             var machine = layer.stateMachine;
-            var normal = machine.AddState("PhantomScaleNormal");
-            normal.motion = normalTree;
-            var mirrored = machine.AddState("PhantomScaleMirrored");
-            mirrored.motion = mirroredTree;
-            machine.defaultState = normal;
-            AddTransition(normal, mirrored, BoolCondition(mirrorParameter, true));
-            AddTransition(mirrored, normal, BoolCondition(mirrorParameter, false));
+            var state = machine.AddState("PhantomScaleControl");
+            state.motion = directTree;
+            state.writeDefaultValues = true;
+            machine.defaultState = state;
             BuildResetLayer(context, scaleParameter, resetParameter);
         }
 
@@ -63,45 +75,78 @@ namespace MPCCT.PhantomSystem.Editor
 
         private static BlendTree CreateScaleTree(
             PhantomAnimatorBuildContext context,
-            string scaleParameter,
-            bool mirrored)
+            string scaleParameter)
         {
-            var modeName = mirrored ? "Mirrored" : "Normal";
             var small = CreateScaleClip(
                 context,
-                $"PhantomScale{modeName}Small",
-                MinimumScale,
-                mirrored);
+                "PhantomScaleSmall",
+                MinimumScale);
             var big = CreateScaleClip(
                 context,
-                $"PhantomScale{modeName}Big",
-                MaximumScale,
-                mirrored);
+                "PhantomScaleBig",
+                MaximumScale);
             var tree = context.CreateBlendTree(
-                $"PhantomScale{modeName}Tree",
+                "PhantomScaleTree",
                 scaleParameter);
             tree.AddChild(small, 0f);
             tree.AddChild(big, 1f);
             return tree;
         }
 
+        private static BlendTree CreateMirrorTree(
+            PhantomAnimatorBuildContext context,
+            string mirrorParameter)
+        {
+            var normal = CreateMirrorClip(context, "PhantomMirrorOff", false);
+            var mirrored = CreateMirrorClip(context, "PhantomMirrorOn", true);
+            var tree = context.CreateBlendTree(
+                "PhantomMirrorTree",
+                mirrorParameter);
+            tree.AddChild(normal, 0f);
+            tree.AddChild(mirrored, 1f);
+            return tree;
+        }
+
         private static AnimationClip CreateScaleClip(
             PhantomAnimatorBuildContext context,
             string name,
-            float multiplier,
-            bool mirrored)
+            float multiplier)
         {
             var clip = context.CreateClip(name);
             var baseScale = context.Slot.SlotRoot.transform.localScale;
-            SetFloat(
-                clip,
-                context.SlotPath,
-                typeof(Transform),
-                "m_LocalScale.x",
-                baseScale.x * multiplier * (mirrored ? -1f : 1f));
+            SetFloat(clip, context.SlotPath, typeof(Transform), "m_LocalScale.x", baseScale.x * multiplier);
             SetFloat(clip, context.SlotPath, typeof(Transform), "m_LocalScale.y", baseScale.y * multiplier);
             SetFloat(clip, context.SlotPath, typeof(Transform), "m_LocalScale.z", baseScale.z * multiplier);
             return clip;
+        }
+
+        private static AnimationClip CreateMirrorClip(
+            PhantomAnimatorBuildContext context,
+            string name,
+            bool mirrored)
+        {
+            var clip = context.CreateClip(name);
+            var baseScale = context.Slot.MirrorRoot.transform.localScale;
+            SetFloat(
+                clip,
+                context.MirrorPath,
+                typeof(Transform),
+                "m_LocalScale.x",
+                baseScale.x * (mirrored ? -1f : 1f));
+            SetFloat(clip, context.MirrorPath, typeof(Transform), "m_LocalScale.y", baseScale.y);
+            SetFloat(clip, context.MirrorPath, typeof(Transform), "m_LocalScale.z", baseScale.z);
+            return clip;
+        }
+
+        private static void AddDirectChild(
+            BlendTree direct,
+            Motion motion,
+            string directWeightParameter)
+        {
+            direct.AddChild(motion, 1f);
+            var children = direct.children;
+            children[children.Length - 1].directBlendParameter = directWeightParameter;
+            direct.children = children;
         }
     }
 }

@@ -28,7 +28,10 @@ namespace MPCCT.PhantomSystem.Editor
                 slot.SlotRoot = new GameObject(slot.HierarchyName);
                 slot.SlotRoot.transform.SetParent(system.SlotsRoot.transform, false);
 
-                var clone = Object.Instantiate(slot.PrebakedRoot, slot.SlotRoot.transform);
+                slot.MirrorRoot = new GameObject("MirrorRoot");
+                slot.MirrorRoot.transform.SetParent(slot.SlotRoot.transform, false);
+
+                var clone = Object.Instantiate(slot.PrebakedRoot, slot.MirrorRoot.transform);
                 clone.name = "PhantomAvatar";
                 clone.transform.localPosition = Vector3.zero;
                 clone.transform.localRotation = Quaternion.identity;

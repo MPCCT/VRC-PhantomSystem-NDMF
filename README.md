@@ -42,6 +42,7 @@ Avatar 作为分身加入本体，并在构建时自动准备动画、参数、�
 
 - 从分身头部生成仅本地可见的立体视角。
 - 可以调整立体强度和中心视野遮罩大小。
+- 相机中心位置和左右眼间距会随分身整体缩放。
 - 可以在 Advanced 中调整相机 Near Clip；该距离会跟随分身缩放，避免放大后的脸部遮挡视野。
 - 同一时间只显示一个 Slot 的 Phantom View，避免视野相互覆盖。
 
@@ -76,8 +77,7 @@ https://mpcct.github.io/VRC-PhantomSystem-NDMF/index.json
 3. 选中生成的 `PhantomSystem` 子物体，在 Slot 的 **Phantom Avatar** 中指定分身源的
    `VRCAvatarDescriptor`。
 4. 根据需要启用 Phantom Grabbing、Scale Control、Phantom View 或分身源菜单。
-5. 检查 **Review Any Alerts**，修正 Error，并确认需要关注的 Warning。
-6. 正常使用 VRChat SDK 执行 Build & Test 或上传。分身源会在构建前自动 Prebake。
+5. 正常使用 VRChat SDK 执行 Build & Test 或上传。分身源会在构建前自动 Prebake。
 
 如需生成供检查使用的手动 Bake，请使用组件中的 **Bake Avatar with PhantomSystem**。
 普通 Modular Avatar Manual Bake 不会执行 PhantomSystem 所需的分身源 Prebake。
@@ -120,8 +120,8 @@ PhysBone Immobile Type 覆盖。
 - **Activate**：显示或关闭分身。
 - **Freeze**：停止正常骨骼跟随并保持当前状态。
 - **Position Lock**：切换位置锁定方式。
-- **Scale / Reset Scale / Mirror**：调整大小、恢复比例或镜像整个 Slot。
-- **Bone Display**：在 Freeze 时显示可操作的简化骨骼。
+- **Settings > Scale / Reset Scale / Mirror**：调整大小、恢复比例或镜像整个 Slot。
+- **Settings > Bone Display**：在 Freeze 时显示可操作的简化骨骼。
 - **Settings > Phantom View**：启用分身视角并调整 Stereo Strength 与 Mask Size。
 
 ## 使用限制
@@ -129,7 +129,7 @@ PhysBone Immobile Type 覆盖。
 - 本体和所有分身源都必须是有效的 Humanoid Avatar，并能解析必要的 Humanoid 骨骼。
 - 为避免 WD Off FX 在多个 Playable Controller 之间抢占 Transform，保留的分身源 Gesture、
   Action 和 FX 会统一合并到最终 FX Controller；三者的转换和语义仍分别处理。模型自身的混合
-  Write Defaults、空 Motion 等兼容性仍取决于原控制器设计和 Modular Avatar 的处理结果。
+  Write Defaults、WD Off 的情况下的空 Motion 等兼容性仍取决于原控制器设计和 Modular Avatar 的处理结果。
 - 一个本体只能包含一个 PhantomSystem 组件。
 - 分身源必须位于本体层级外，并且不能包含另一个 PhantomSystem。
 - 部分只适用于玩家本体的 Animator State Behaviour 无法直接用于分身；PhantomSystem 会转换

@@ -20,7 +20,7 @@ namespace MPCCT.PhantomSystem.Editor
             }
 
             var host = new GameObject("PhantomMA");
-            host.transform.SetParent(slot.SlotRoot.transform, false);
+            host.transform.SetParent(slot.ContentRoot, false);
 
             slot.GeneratedCoreMenu = PhantomCoreMenuBuilder.Install(ctx, system, slot, host);
             PhantomSourceIntegrationBuilder.Install(ctx, system, slot, report);

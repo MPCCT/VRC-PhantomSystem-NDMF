@@ -34,7 +34,7 @@ namespace MPCCT.PhantomSystem.Editor
             hipsConstraint.RebakeOffsetsWhenUnfrozen = false;
 
             var grabbingHipsConstraintHost = ConstraintRigBuilder.EnsureChild(
-                slot.SlotRoot.transform,
+                slot.ContentRoot,
                 "PhantomGrabbingHipsConstraint");
             slot.PhantomGrabbingHipsConstraintHost = grabbingHipsConstraintHost;
 

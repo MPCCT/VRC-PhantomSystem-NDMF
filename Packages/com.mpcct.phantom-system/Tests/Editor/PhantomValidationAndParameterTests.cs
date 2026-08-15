@@ -130,11 +130,12 @@ namespace MPCCT.PhantomSystem.Editor.Tests
         }
 
         [Test]
-        public void PhantomViewNearClip_IsScaleAdaptedInsideExistingDirectTree()
+        public void PhantomViewControls_UseHierarchyScaleForStereoAndAnimatorScaleForNearClip()
         {
             var avatar = new GameObject("Avatar");
             var slotRoot = new GameObject("Slot1");
             var cloneRoot = new GameObject("Clone");
+            var captureRoot = new GameObject("CaptureRoot");
             var leftCamera = new GameObject("LeftCamera");
             var rightCamera = new GameObject("RightCamera");
             var display = new GameObject("Display");
@@ -144,8 +145,9 @@ namespace MPCCT.PhantomSystem.Editor.Tests
             {
                 slotRoot.transform.SetParent(avatar.transform, false);
                 cloneRoot.transform.SetParent(slotRoot.transform, false);
-                leftCamera.transform.SetParent(avatar.transform, false);
-                rightCamera.transform.SetParent(avatar.transform, false);
+                captureRoot.transform.SetParent(slotRoot.transform, false);
+                leftCamera.transform.SetParent(captureRoot.transform, false);
+                rightCamera.transform.SetParent(captureRoot.transform, false);
                 display.transform.SetParent(avatar.transform, false);
 
                 var slot = new PhantomSlot
@@ -194,6 +196,28 @@ namespace MPCCT.PhantomSystem.Editor.Tests
                     child.directBlendParameter
                     == PhantomParameterNames.PhantomViewDirectWeight(slot)));
 
+                var stereoTree = directTree.children
+                    .Select(child => child.motion)
+                    .OfType<BlendTree>()
+                    .Single(tree => tree.name == "PhantomViewStereoStrengthTree");
+                Assert.AreEqual(BlendTreeType.Simple1D, stereoTree.blendType);
+                Assert.AreEqual(
+                    PhantomParameterNames.PhantomViewStereoStrength(slot),
+                    stereoTree.blendParameter);
+                Assert.IsFalse(context.GeneratedBlendTrees.Any(tree =>
+                    tree.name == "PhantomViewStereoStrengthScaleTree"));
+
+                var leftPositionBinding = new EditorCurveBinding
+                {
+                    path = context.PhantomViewLeftCameraPath,
+                    type = typeof(Transform),
+                    propertyName = "m_LocalPosition.x"
+                };
+                var maximumStereoCurve = AnimationUtility.GetEditorCurve(
+                    (AnimationClip)stereoTree.children[1].motion,
+                    leftPositionBinding);
+                Assert.AreEqual(-0.05f, maximumStereoCurve.Evaluate(0f), 0.000001f);
+
                 var nearClipTree = directTree.children
                     .Select(child => child.motion)
                     .OfType<BlendTree>()
@@ -217,6 +241,133 @@ namespace MPCCT.PhantomSystem.Editor.Tests
                     minimumCurve.Evaluate(0f), 0.000001f);
                 Assert.AreEqual(0.1f * ScaleControlAnimatorModule.MaximumScale,
                     maximumCurve.Evaluate(0f), 0.000001f);
+            }
+            finally
+            {
+                if (context != null)
+                {
+                    foreach (var clip in context.GeneratedClips)
+                    {
+                        Object.DestroyImmediate(clip);
+                    }
+                    foreach (var tree in context.GeneratedBlendTrees)
+                    {
+                        Object.DestroyImmediate(tree);
+                    }
+                }
+                if (controller != null)
+                {
+                    Object.DestroyImmediate(controller);
+                }
+                Object.DestroyImmediate(avatar);
+            }
+        }
+
+        [Test]
+        public void ScaleControl_UsesPositiveScaleAndSeparateMirrorTreesInsideDirectBlendTree()
+        {
+            var avatar = new GameObject("Avatar");
+            var slotRoot = new GameObject("Slot1");
+            var mirrorRoot = new GameObject("MirrorRoot");
+            var cloneRoot = new GameObject("Clone");
+            AnimatorController controller = null;
+            PhantomAnimatorBuildContext context = null;
+            try
+            {
+                slotRoot.transform.SetParent(avatar.transform, false);
+                mirrorRoot.transform.SetParent(slotRoot.transform, false);
+                cloneRoot.transform.SetParent(mirrorRoot.transform, false);
+
+                var slot = new PhantomSlot
+                {
+                    id = "Slot1",
+                    enableScaleControl = true
+                };
+                var slotState = new PhantomSlotBuildState
+                {
+                    Slot = slot,
+                    SlotId = "Slot1",
+                    Identity = PhantomSlotIdentity.Create(slot),
+                    SlotRoot = slotRoot,
+                    MirrorRoot = mirrorRoot,
+                    CloneRoot = cloneRoot
+                };
+                var system = new PhantomSystemBuildState
+                {
+                    AvatarRoot = avatar.transform
+                };
+                system.Slots.Add(slotState);
+                controller = new AnimatorController
+                {
+                    layers = new AnimatorControllerLayer[0]
+                };
+                context = new PhantomAnimatorBuildContext(
+                    null,
+                    system,
+                    slotState,
+                    new PhantomBuildReport(),
+                    controller);
+
+                ScaleControlAnimatorModule.Build(context);
+
+                var layer = controller.layers.Single(candidate =>
+                    candidate.name.EndsWith("_PhantomScaleControl", System.StringComparison.Ordinal));
+                var direct = layer.stateMachine.defaultState.motion as BlendTree;
+                Assert.IsNotNull(direct);
+                Assert.AreEqual(BlendTreeType.Direct, direct.blendType);
+                Assert.AreEqual(2, direct.children.Length);
+                Assert.IsTrue(direct.children.All(child =>
+                    child.directBlendParameter == PhantomParameterNames.ScaleDirectWeight(slot)));
+                Assert.IsTrue(layer.stateMachine.defaultState.writeDefaultValues);
+
+                var scaleTree = direct.children
+                    .Select(child => child.motion)
+                    .OfType<BlendTree>()
+                    .Single(tree => tree.name == "PhantomScaleTree");
+                var mirrorTree = direct.children
+                    .Select(child => child.motion)
+                    .OfType<BlendTree>()
+                    .Single(tree => tree.name == "PhantomMirrorTree");
+                Assert.AreEqual(PhantomParameterNames.Scale(slot), scaleTree.blendParameter);
+                Assert.AreEqual(PhantomParameterNames.Mirror(slot), mirrorTree.blendParameter);
+                Assert.AreEqual(
+                    AnimatorControllerParameterType.Float,
+                    controller.parameters.Single(parameter =>
+                        parameter.name == PhantomParameterNames.Mirror(slot)).type);
+
+                var scaleBinding = EditorCurveBinding.FloatCurve(
+                    context.SlotPath,
+                    typeof(Transform),
+                    "m_LocalScale.x");
+                Assert.AreEqual(
+                    ScaleControlAnimatorModule.MinimumScale,
+                    AnimationUtility.GetEditorCurve(
+                        (AnimationClip)scaleTree.children[0].motion,
+                        scaleBinding).Evaluate(0f),
+                    0.000001f);
+                Assert.AreEqual(
+                    ScaleControlAnimatorModule.MaximumScale,
+                    AnimationUtility.GetEditorCurve(
+                        (AnimationClip)scaleTree.children[1].motion,
+                        scaleBinding).Evaluate(0f),
+                    0.000001f);
+
+                var mirrorBinding = EditorCurveBinding.FloatCurve(
+                    context.MirrorPath,
+                    typeof(Transform),
+                    "m_LocalScale.x");
+                Assert.AreEqual(
+                    1f,
+                    AnimationUtility.GetEditorCurve(
+                        (AnimationClip)mirrorTree.children[0].motion,
+                        mirrorBinding).Evaluate(0f),
+                    0.000001f);
+                Assert.AreEqual(
+                    -1f,
+                    AnimationUtility.GetEditorCurve(
+                        (AnimationClip)mirrorTree.children[1].motion,
+                        mirrorBinding).Evaluate(0f),
+                    0.000001f);
             }
             finally
             {

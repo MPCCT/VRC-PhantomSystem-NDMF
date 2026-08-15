@@ -71,7 +71,19 @@ namespace MPCCT.PhantomSystem.Editor
             viewRoot.gameObject.layer = PlayerLocalLayer;
             slot.PhantomViewRoot = viewRoot;
 
-            var captureRoot = ConstraintRigBuilder.EnsureChild(viewRoot, "CaptureRoot");
+            // Keep a zero-offset source under the animated Head so the descriptor
+            // viewpoint follows Head motion and inherits the Slot's scale naturally.
+            // The cameras themselves remain outside MirrorRoot to avoid swapping the
+            // stereo eyes when MirrorRoot uses a negative X scale.
+            var viewAnchor = ConstraintRigBuilder.EnsureChild(
+                phantomHead,
+                "PhantomViewAnchor");
+            viewAnchor.gameObject.layer = PlayerLocalLayer;
+            slot.PhantomViewAnchor = viewAnchor;
+
+            var captureRoot = ConstraintRigBuilder.EnsureChild(
+                slot.SlotRoot.transform,
+                "PhantomViewCapture");
             captureRoot.gameObject.layer = PlayerLocalLayer;
             // Humanoid Head bone axes are not guaranteed to use Unity's camera-forward
             // convention. Start from the phantom root rotation so the child cameras'
@@ -80,10 +92,13 @@ namespace MPCCT.PhantomSystem.Editor
             // the descriptor View Position rather than at the Head bone origin.
             var phantomViewPosition = slot.BakedAvatar.transform.TransformPoint(
                 slot.BakedAvatar.ViewPosition);
-            captureRoot.SetPositionAndRotation(
+            viewAnchor.SetPositionAndRotation(
                 phantomViewPosition,
                 slot.CloneRoot.transform.rotation);
-            AddParentConstraint(captureRoot, phantomHead);
+            captureRoot.SetPositionAndRotation(
+                viewAnchor.position,
+                viewAnchor.rotation);
+            AddParentConstraint(captureRoot, viewAnchor);
             slot.PhantomViewCaptureRoot = captureRoot;
 
             EnsureGlobalRenderTextures(context, system);

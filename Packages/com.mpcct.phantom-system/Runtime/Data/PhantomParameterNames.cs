@@ -7,6 +7,8 @@ namespace MPCCT.PhantomSystem
         public static string PositionLock(PhantomSlot slot) => Name(slot, "PositionLock");
         public static string Scale(PhantomSlot slot) => Name(slot, "Scale");
         public static string Mirror(PhantomSlot slot) => Name(slot, "Mirror");
+        public static string ScaleDirectWeight(PhantomSlot slot) =>
+            Name(slot, "ScaleDirectWeight");
         public static string ScaleReset(PhantomSlot slot) => Name(slot, "ScaleReset");
         public static string PhantomViewEnabled(PhantomSlot slot) =>
             Name(slot, "PhantomView/Enabled");
@@ -59,4 +61,3 @@ namespace MPCCT.PhantomSystem
         }
     }
 }
-
