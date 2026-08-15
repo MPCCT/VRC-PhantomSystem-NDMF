@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.2.2
+
+### Changed
+
+- Retained source Gesture, Action, and FX controllers are now all merged into the final FX Controller in a deterministic order. Their conversion, per-layer Avatar Masks, and logical roles remain separate, while affected Animator Layer Controls and binary Action Playable Layer Controls are retargeted to the final FX layers.
+- Refactored Scale Control around a positive Slot scale root and a separate X-axis Mirror root. Scale and Mirror now use independent 1D BlendTrees inside one Direct BlendTree; Mirror remains a synced Bool and is expanded to Float only inside the Animator.
+- The Phantom View camera capture root now follows a scale-aware Head anchor while remaining outside the mirrored subtree. Its capture position and stereo eye separation inherit the Slot's overall scale, while Near Clip continues to receive explicit world-space scale compensation.
+
+### Fixed
+
+- Preserved Animator parameter curves embedded in Humanoid clips instead of treating them as unsupported Humanoid bindings during Gesture and Action conversion.
+- Removed Humanoid, Root Motion, and skeletal Transform pose curves from retained source FX clips while preserving parameter, BlendShape, material, object-reference, and other component animation. A duration-preserving dummy binding is added when pose curves are removed so the result does not become an empty clip.
+- Added a lower-priority neutral pose for each animation driver skeleton and completed missing rotations in converted Override Gesture and Action clips within their effective Avatar Masks. Partial Humanoid clips no longer leave omitted bones in an unrelated previous pose or T-pose.
+- Fixed Layer Control resolution after Gesture and Action layers are moved into the final FX Controller, including multi-layer Action enable and disable controls.
+
 ## 0.2.1
 
 ### Added
