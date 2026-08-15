@@ -397,17 +397,29 @@ namespace MPCCT.PhantomSystem.Editor
             for (var index = 0; index < state.Slot.ConvertedActionLayers.Count; index++)
             {
                 var actionLayer = state.Slot.ConvertedActionLayers[index];
-                var marker = ScriptableObject.CreateInstance<PhantomAnimatorLayerControlMarker>();
-                marker.name = "Phantom Action Playable Layer Control Retarget";
-                marker.targetPlayable = VRCAvatarDescriptor.AnimLayerType.Gesture;
-                marker.targetLayerName = actionLayer.LayerName;
-                marker.goalWeight = enabled ? actionLayer.EnabledWeight : 0f;
-                marker.blendDuration = 0f;
-                marker.debugString = index == 0 ? control.debugString : string.Empty;
-                kept.Add(marker);
+                kept.Add(CreateConvertedActionLayerControlMarker(
+                    actionLayer,
+                    enabled,
+                    index == 0 ? control.debugString : string.Empty));
             }
 
             state.ActionPlayableLayerConverted++;
+        }
+
+        internal static PhantomAnimatorLayerControlMarker CreateConvertedActionLayerControlMarker(
+            PhantomConvertedActionLayer actionLayer,
+            bool enabled,
+            string debugString)
+        {
+            var marker = ScriptableObject.CreateInstance<PhantomAnimatorLayerControlMarker>();
+            marker.name = "Phantom Action Playable Layer Control Retarget";
+            marker.targetPlayable = PhantomSourceIntegrationBuilder.ResolveMergeTarget(
+                VRCAvatarDescriptor.AnimLayerType.Action);
+            marker.targetLayerName = actionLayer.LayerName;
+            marker.goalWeight = enabled ? actionLayer.EnabledWeight : 0f;
+            marker.blendDuration = 0f;
+            marker.debugString = debugString;
+            return marker;
         }
 
         private static StateMachineBehaviour ProcessLayerControl(
@@ -426,7 +438,8 @@ namespace MPCCT.PhantomSystem.Editor
                 return null;
             }
 
-            if (sourceTarget == state.OwnerPlayable)
+            var finalTarget = PhantomSourceIntegrationBuilder.ResolveMergeTarget(sourceTarget);
+            if (CanPreserveLayerControl(sourceTarget, state.OwnerPlayable))
             {
                 // NDMF has already virtualized the layer index for controls targeting
                 // the controller currently being processed. Preserve it for commit.
@@ -455,13 +468,21 @@ namespace MPCCT.PhantomSystem.Editor
 
             var marker = ScriptableObject.CreateInstance<PhantomAnimatorLayerControlMarker>();
             marker.name = "Phantom Animator Layer Control Retarget";
-            marker.targetPlayable = sourceTarget;
+            marker.targetPlayable = finalTarget;
             marker.targetLayerName = layers[targetLayerIndex];
             marker.goalWeight = control.goalWeight;
             marker.blendDuration = control.blendDuration;
             marker.debugString = control.debugString;
             state.LayerControlRetargeted++;
             return marker;
+        }
+
+        internal static bool CanPreserveLayerControl(
+            VRCAvatarDescriptor.AnimLayerType sourceTarget,
+            VRCAvatarDescriptor.AnimLayerType ownerPlayable)
+        {
+            return sourceTarget == ownerPlayable
+                   && PhantomSourceIntegrationBuilder.ResolveMergeTarget(sourceTarget) == sourceTarget;
         }
 
         private static bool TryConvertPlayable(

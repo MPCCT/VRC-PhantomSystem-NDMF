@@ -424,17 +424,230 @@ namespace MPCCT.PhantomSystem.Editor.Tests
             }
         }
 
-        [Test]
-        public void SourceAction_MergesIntoGesturePlayable()
+        [TestCase(VRCAvatarDescriptor.AnimLayerType.FX)]
+        [TestCase(VRCAvatarDescriptor.AnimLayerType.Gesture)]
+        [TestCase(VRCAvatarDescriptor.AnimLayerType.Action)]
+        public void SourcePlayable_MergesIntoFxPlayable(
+            VRCAvatarDescriptor.AnimLayerType sourcePlayable)
         {
             Assert.AreEqual(
-                VRCAvatarDescriptor.AnimLayerType.Gesture,
-                PhantomSourceIntegrationBuilder.ResolveMergeTarget(
-                    VRCAvatarDescriptor.AnimLayerType.Action));
-            Assert.AreEqual(
                 VRCAvatarDescriptor.AnimLayerType.FX,
-                PhantomSourceIntegrationBuilder.ResolveMergeTarget(
-                    VRCAvatarDescriptor.AnimLayerType.FX));
+                PhantomSourceIntegrationBuilder.ResolveMergeTarget(sourcePlayable));
+        }
+
+        [Test]
+        public void LayerControl_PreservesOnlySelfTargetAlreadyInFinalPlayable()
+        {
+            Assert.IsTrue(PhantomSourcePlayableControllerProcessor.CanPreserveLayerControl(
+                VRCAvatarDescriptor.AnimLayerType.FX,
+                VRCAvatarDescriptor.AnimLayerType.FX));
+            Assert.IsFalse(PhantomSourcePlayableControllerProcessor.CanPreserveLayerControl(
+                VRCAvatarDescriptor.AnimLayerType.Gesture,
+                VRCAvatarDescriptor.AnimLayerType.Gesture));
+            Assert.IsFalse(PhantomSourcePlayableControllerProcessor.CanPreserveLayerControl(
+                VRCAvatarDescriptor.AnimLayerType.Gesture,
+                VRCAvatarDescriptor.AnimLayerType.FX));
+        }
+
+        [TestCase(true, 0.75f)]
+        [TestCase(false, 0f)]
+        public void ConvertedActionPlayableControl_TargetsFinalFx(
+            bool enabled,
+            float expectedWeight)
+        {
+            var marker = PhantomSourcePlayableControllerProcessor
+                .CreateConvertedActionLayerControlMarker(
+                    new PhantomConvertedActionLayer("ActionTarget", 0.75f),
+                    enabled,
+                    "ActionDebug");
+            try
+            {
+                Assert.AreEqual(VRCAvatarDescriptor.AnimLayerType.FX, marker.targetPlayable);
+                Assert.AreEqual("ActionTarget", marker.targetLayerName);
+                Assert.AreEqual(expectedWeight, marker.goalWeight);
+                Assert.AreEqual(0f, marker.blendDuration);
+                Assert.AreEqual("ActionDebug", marker.debugString);
+            }
+            finally
+            {
+                Object.DestroyImmediate(marker);
+            }
+        }
+
+        [Test]
+        public void MergeAnimatorFinalizer_OrdersAllPhantomControllersInsideFx()
+        {
+            var avatar = new GameObject("Avatar");
+            var runtimeRoot = CreateChild(avatar.transform, "PhantomRuntime");
+            var externalHost = CreateChild(avatar.transform, "External");
+            var external = externalHost.AddComponent<ModularAvatarMergeAnimator>();
+            external.layerType = VRCAvatarDescriptor.AnimLayerType.FX;
+            external.layerPriority = 10;
+            var state = new PhantomBuildState
+            {
+                System = new PhantomSystemBuildState { RuntimeRoot = runtimeRoot }
+            };
+            var context = new BuildContext(avatar, null);
+            try
+            {
+                for (var index = 0; index < 2; index++)
+                {
+                    var host = CreateChild(runtimeRoot.transform, $"Slot{index + 1}");
+                    var slot = new PhantomSlotBuildState
+                    {
+                        SlotId = $"Slot{index + 1}",
+                        SourceGestureMergeAnimator = AddFxMergeAnimator(host, "Gesture"),
+                        SourceActionMergeAnimator = AddFxMergeAnimator(host, "Action"),
+                        SourceFxMergeAnimator = AddFxMergeAnimator(host, "SourceFx"),
+                        CoreMergeAnimator = AddFxMergeAnimator(host, "Core"),
+                        TrackingMergeAnimator = AddFxMergeAnimator(host, "Tracking"),
+                        PhantomViewMergeAnimator = AddFxMergeAnimator(host, "View")
+                    };
+                    state.System.Slots.Add(slot);
+                }
+
+                PhantomMergeAnimatorFinalizer.Apply(context, state);
+
+                CollectionAssert.AreEqual(
+                    Enumerable.Range(11, 12).ToArray(),
+                    new[]
+                    {
+                        state.System.Slots[0].SourceGestureMergeAnimator.layerPriority,
+                        state.System.Slots[1].SourceGestureMergeAnimator.layerPriority,
+                        state.System.Slots[0].SourceActionMergeAnimator.layerPriority,
+                        state.System.Slots[1].SourceActionMergeAnimator.layerPriority,
+                        state.System.Slots[0].SourceFxMergeAnimator.layerPriority,
+                        state.System.Slots[1].SourceFxMergeAnimator.layerPriority,
+                        state.System.Slots[0].CoreMergeAnimator.layerPriority,
+                        state.System.Slots[1].CoreMergeAnimator.layerPriority,
+                        state.System.Slots[0].TrackingMergeAnimator.layerPriority,
+                        state.System.Slots[1].TrackingMergeAnimator.layerPriority,
+                        state.System.Slots[0].PhantomViewMergeAnimator.layerPriority,
+                        state.System.Slots[1].PhantomViewMergeAnimator.layerPriority
+                    });
+                Assert.IsTrue(state.System.Slots
+                    .SelectMany(slot => new[]
+                    {
+                        slot.SourceGestureMergeAnimator,
+                        slot.SourceActionMergeAnimator,
+                        slot.SourceFxMergeAnimator,
+                        slot.CoreMergeAnimator,
+                        slot.TrackingMergeAnimator,
+                        slot.PhantomViewMergeAnimator
+                    })
+                    .All(merge => merge.layerType == VRCAvatarDescriptor.AnimLayerType.FX));
+                Assert.IsFalse(state.Report.HasErrors);
+            }
+            finally
+            {
+                Object.DestroyImmediate(avatar);
+            }
+        }
+
+        [Test]
+        public void MergeAnimatorFinalizer_ReportsPriorityOverflow()
+        {
+            var avatar = new GameObject("Avatar");
+            var runtimeRoot = CreateChild(avatar.transform, "PhantomRuntime");
+            var external = CreateChild(avatar.transform, "External")
+                .AddComponent<ModularAvatarMergeAnimator>();
+            external.layerType = VRCAvatarDescriptor.AnimLayerType.FX;
+            external.layerPriority = int.MaxValue;
+            var slot = new PhantomSlotBuildState
+            {
+                SlotId = "Slot1",
+                SourceGestureMergeAnimator = AddFxMergeAnimator(runtimeRoot, "Gesture")
+            };
+            var state = new PhantomBuildState
+            {
+                System = new PhantomSystemBuildState { RuntimeRoot = runtimeRoot }
+            };
+            state.System.Slots.Add(slot);
+            var context = new BuildContext(avatar, null);
+            try
+            {
+                PhantomMergeAnimatorFinalizer.Apply(context, state);
+
+                Assert.AreEqual(int.MaxValue, slot.SourceGestureMergeAnimator.layerPriority);
+                Assert.IsTrue(state.Report.HasErrors);
+                Assert.That(state.Report.Errors.Single(), Does.Contain("int.MaxValue"));
+            }
+            finally
+            {
+                Object.DestroyImmediate(avatar);
+            }
+        }
+
+        [Test]
+        public void LayerControlRetargeter_ResolvesFxMarkersAndDisablesActionLayers()
+        {
+            var avatar = new GameObject("Avatar");
+            var descriptor = avatar.AddComponent<VRCAvatarDescriptor>();
+            var baseState = new AnimatorState { name = "BaseState" };
+            var gestureMarker = ScriptableObject.CreateInstance<PhantomAnimatorLayerControlMarker>();
+            gestureMarker.targetPlayable = VRCAvatarDescriptor.AnimLayerType.FX;
+            gestureMarker.targetLayerName = "GestureTarget";
+            gestureMarker.goalWeight = 0.25f;
+            var actionMarker = ScriptableObject.CreateInstance<PhantomAnimatorLayerControlMarker>();
+            actionMarker.targetPlayable = VRCAvatarDescriptor.AnimLayerType.FX;
+            actionMarker.targetLayerName = "ActionTarget";
+            actionMarker.goalWeight = 1f;
+            baseState.behaviours = new StateMachineBehaviour[] { gestureMarker, actionMarker };
+            var baseMachine = CreateStateMachine("BaseMachine", baseState);
+            var gestureMachine = CreateStateMachine("GestureMachine", new AnimatorState { name = "GestureState" });
+            var actionMachine = CreateStateMachine("ActionMachine", new AnimatorState { name = "ActionState" });
+            var fxController = new AnimatorController
+            {
+                name = "FinalFx",
+                layers = new[]
+                {
+                    CreateControllerLayer("Base", baseMachine, 1f),
+                    CreateControllerLayer("GestureTarget", gestureMachine, 1f),
+                    CreateControllerLayer("ActionTarget", actionMachine, 1f)
+                }
+            };
+            descriptor.baseAnimationLayers = new[]
+            {
+                new VRCAvatarDescriptor.CustomAnimLayer
+                {
+                    type = VRCAvatarDescriptor.AnimLayerType.FX,
+                    isDefault = false,
+                    animatorController = fxController
+                }
+            };
+            var slot = new PhantomSlotBuildState { SlotId = "Slot1" };
+            slot.ConvertedActionLayers.Add(new PhantomConvertedActionLayer("ActionTarget", 1f));
+            var state = new PhantomBuildState { System = new PhantomSystemBuildState() };
+            state.System.Slots.Add(slot);
+            var context = new BuildContext(avatar, null);
+            try
+            {
+                PhantomAnimatorLayerControlRetargeter.Retarget(context, state);
+
+                var controls = baseState.behaviours.OfType<VRCAnimatorLayerControl>().ToArray();
+                Assert.AreEqual(2, controls.Length);
+                Assert.IsTrue(controls.All(control =>
+                    control.playable == VRC_AnimatorLayerControl.BlendableLayer.FX));
+                Assert.AreEqual(1, controls.Single(control => Mathf.Approximately(control.goalWeight, 0.25f)).layer);
+                Assert.AreEqual(2, controls.Single(control => Mathf.Approximately(control.goalWeight, 1f)).layer);
+                Assert.IsFalse(baseState.behaviours.Any(behaviour =>
+                    behaviour is PhantomAnimatorLayerControlMarker));
+                Assert.AreEqual(0f, fxController.layers[2].defaultWeight);
+                Assert.IsFalse(state.Report.HasErrors);
+            }
+            finally
+            {
+                DestroyControllerGraph(fxController, null);
+                if (gestureMarker != null)
+                {
+                    Object.DestroyImmediate(gestureMarker);
+                }
+                if (actionMarker != null)
+                {
+                    Object.DestroyImmediate(actionMarker);
+                }
+                Object.DestroyImmediate(avatar);
+            }
         }
 
         [Test]
@@ -673,6 +886,40 @@ namespace MPCCT.PhantomSystem.Editor.Tests
             merge.relativePathRoot = new AvatarObjectReference();
             merge.relativePathRoot.Set(cloneRoot);
             return merge;
+        }
+
+        private static ModularAvatarMergeAnimator AddFxMergeAnimator(
+            GameObject parent,
+            string name)
+        {
+            var host = CreateChild(parent.transform, name);
+            var merge = host.AddComponent<ModularAvatarMergeAnimator>();
+            merge.layerType = VRCAvatarDescriptor.AnimLayerType.FX;
+            return merge;
+        }
+
+        private static AnimatorStateMachine CreateStateMachine(
+            string name,
+            AnimatorState state)
+        {
+            var machine = new AnimatorStateMachine { name = name };
+            machine.states = new[] { new ChildAnimatorState { state = state } };
+            machine.defaultState = state;
+            return machine;
+        }
+
+        private static AnimatorControllerLayer CreateControllerLayer(
+            string name,
+            AnimatorStateMachine machine,
+            float defaultWeight)
+        {
+            return new AnimatorControllerLayer
+            {
+                name = name,
+                stateMachine = machine,
+                defaultWeight = defaultWeight,
+                syncedLayerIndex = -1
+            };
         }
 
         private static void AssertTrackingDriver(

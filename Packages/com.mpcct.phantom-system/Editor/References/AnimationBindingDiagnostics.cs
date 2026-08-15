@@ -300,15 +300,15 @@ namespace MPCCT.PhantomSystem.Editor
             }
 
             if (!controllers.TryGetValue(
-                    VRCAvatarDescriptor.AnimLayerType.Gesture,
-                    out var gestureController))
+                    VRCAvatarDescriptor.AnimLayerType.FX,
+                    out var fxController))
             {
                 state.Report.InternalError(
-                    "Final Gesture controller is missing while Converted Action layers are present.");
+                    "Final FX controller is missing while Converted Action layers are present.");
                 return;
             }
 
-            var layers = gestureController.layers;
+            var layers = fxController.layers;
             var indices = layers
                 .Select((layer, index) => new { layer.name, Index = index })
                 .GroupBy(value => value.name, StringComparer.Ordinal)
@@ -319,9 +319,9 @@ namespace MPCCT.PhantomSystem.Editor
                     || matches.Length != 1)
                 {
                     state.Report.InternalError(
-                        $"Final Gesture controller does not contain exactly one Converted Action layer "
+                        $"Final FX controller does not contain exactly one Converted Action layer "
                         + $"named '{actionLayer.LayerName}'.",
-                        gestureController);
+                        fxController);
                     continue;
                 }
 
@@ -329,15 +329,15 @@ namespace MPCCT.PhantomSystem.Editor
                 if (index == 0)
                 {
                     state.Report.InternalError(
-                        $"Converted Action layer '{actionLayer.LayerName}' became Gesture layer 0.",
-                        gestureController);
+                        $"Converted Action layer '{actionLayer.LayerName}' became FX layer 0.",
+                        fxController);
                 }
                 if (!Mathf.Approximately(layers[index].defaultWeight, 0f))
                 {
                     state.Report.InternalError(
                         $"Converted Action layer '{actionLayer.LayerName}' has final default weight "
                         + $"{layers[index].defaultWeight:0.###} instead of 0.",
-                        gestureController);
+                        fxController);
                 }
             }
         }

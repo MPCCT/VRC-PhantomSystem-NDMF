@@ -114,9 +114,15 @@ namespace MPCCT.PhantomSystem.Editor
         internal static VRCAvatarDescriptor.AnimLayerType ResolveMergeTarget(
             VRCAvatarDescriptor.AnimLayerType sourcePlayable)
         {
-            return sourcePlayable == VRCAvatarDescriptor.AnimLayerType.Action
-                ? VRCAvatarDescriptor.AnimLayerType.Gesture
-                : sourcePlayable;
+            switch (sourcePlayable)
+            {
+                case VRCAvatarDescriptor.AnimLayerType.FX:
+                case VRCAvatarDescriptor.AnimLayerType.Gesture:
+                case VRCAvatarDescriptor.AnimLayerType.Action:
+                    return VRCAvatarDescriptor.AnimLayerType.FX;
+                default:
+                    return sourcePlayable;
+            }
         }
 
         private static void AssignMergeAnimator(

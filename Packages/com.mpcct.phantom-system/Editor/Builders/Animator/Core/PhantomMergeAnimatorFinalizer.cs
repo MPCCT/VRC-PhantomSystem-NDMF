@@ -25,10 +25,30 @@ namespace MPCCT.PhantomSystem.Editor
                 allMergeAnimators,
                 phantomRoot,
                 VRCAvatarDescriptor.AnimLayerType.FX);
-            var gesturePriority = ExternalMaxPriority(
-                allMergeAnimators,
-                phantomRoot,
-                VRCAvatarDescriptor.AnimLayerType.Gesture);
+
+            foreach (var slot in state.System.Slots)
+            {
+                if (slot.SourceGestureMergeAnimator != null)
+                {
+                    slot.SourceGestureMergeAnimator.layerPriority = CheckedIncrement(
+                        fxPriority,
+                        slot,
+                        state.Report);
+                    fxPriority = slot.SourceGestureMergeAnimator.layerPriority;
+                }
+            }
+
+            foreach (var slot in state.System.Slots)
+            {
+                if (slot.SourceActionMergeAnimator != null)
+                {
+                    slot.SourceActionMergeAnimator.layerPriority = CheckedIncrement(
+                        fxPriority,
+                        slot,
+                        state.Report);
+                    fxPriority = slot.SourceActionMergeAnimator.layerPriority;
+                }
+            }
 
             foreach (var slot in state.System.Slots)
             {
@@ -63,30 +83,6 @@ namespace MPCCT.PhantomSystem.Editor
                 {
                     slot.PhantomViewMergeAnimator.layerPriority = CheckedIncrement(fxPriority, slot, state.Report);
                     fxPriority = slot.PhantomViewMergeAnimator.layerPriority;
-                }
-            }
-
-            foreach (var slot in state.System.Slots)
-            {
-                if (slot.SourceGestureMergeAnimator != null)
-                {
-                    slot.SourceGestureMergeAnimator.layerPriority = CheckedIncrement(
-                        gesturePriority,
-                        slot,
-                        state.Report);
-                    gesturePriority = slot.SourceGestureMergeAnimator.layerPriority;
-                }
-            }
-
-            foreach (var slot in state.System.Slots)
-            {
-                if (slot.SourceActionMergeAnimator != null)
-                {
-                    slot.SourceActionMergeAnimator.layerPriority = CheckedIncrement(
-                        gesturePriority,
-                        slot,
-                        state.Report);
-                    gesturePriority = slot.SourceActionMergeAnimator.layerPriority;
                 }
             }
         }
