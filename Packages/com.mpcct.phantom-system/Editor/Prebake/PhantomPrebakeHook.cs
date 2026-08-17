@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using nadena.dev.modular_avatar.core;
 using nadena.dev.ndmf;
 using nadena.dev.ndmf.platform;
 using UnityEditor;
@@ -121,6 +122,7 @@ namespace MPCCT.PhantomSystem.Editor
             stagingRoot.transform.SetParent(null, true);
             stagingRoot.SetActive(true);
             PhantomPrebakeSession.Register(stagingRoot);
+            DisableMmdWorldSupportForPrebake(stagingRoot);
 
             BuildContext context;
             using (new OverrideTemporaryDirectoryScope(GeneratedAssetRoot))
@@ -149,6 +151,30 @@ namespace MPCCT.PhantomSystem.Editor
             }
 
             return stagingRoot;
+        }
+
+        internal static void DisableMmdWorldSupportForPrebake(GameObject stagingRoot)
+        {
+            if (stagingRoot == null)
+            {
+                return;
+            }
+
+            var settings = stagingRoot.GetComponentsInChildren<ModularAvatarVRChatSettings>(true);
+            if (settings.Length == 0)
+            {
+                var temporarySettings = stagingRoot.AddComponent<ModularAvatarVRChatSettings>();
+                temporarySettings.MMDWorldSupport = false;
+                return;
+            }
+
+            if (settings.Length == 1)
+            {
+                settings[0].MMDWorldSupport = false;
+            }
+
+            // Multiple settings components are already an invalid MA configuration.
+            // Leave them untouched so MA can report the original source error.
         }
 
         private static void ValidateSources(PhantomAuthoring authoring)

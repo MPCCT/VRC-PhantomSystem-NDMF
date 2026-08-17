@@ -59,12 +59,14 @@ namespace MPCCT.PhantomSystem.Editor
             {
                 sequence.Run("Rename Phantom Armatures", ctx => PhantomBuildPassRunner.Run(ctx, RenamePhantomArmaturesPass.Execute))
                     .Then
+                    .Run("Retarget Phantom Animator Layer Controls", ctx => PhantomBuildPassRunner.Run(ctx, RetargetPhantomAnimatorLayerControlsPass.Execute))
+                    .Then
                     .Run("Cleanup Phantom Authoring Components", ctx => PhantomBuildPassRunner.Run(ctx, CleanupAuthoringComponentsPass.Execute));
             });
 
             InPhase(BuildPhase.Optimizing)
                 .AfterPlugin("nadena.dev.modular-avatar")
-                .Run("Retarget Phantom Animator Layer Controls", ctx => PhantomBuildPassRunner.Run(ctx, RetargetPhantomAnimatorLayerControlsPass.Execute))
+                .Run("Validate Phantom Animator Layer Controls", ctx => PhantomBuildPassRunner.Run(ctx, ValidatePhantomAnimatorLayerControlsPass.Execute))
                 .Then
                 .Run("Validate Phantom Animation Bindings", ctx => PhantomBuildPassRunner.Run(ctx, ValidatePhantomAnimationBindingsPass.Execute));
         }

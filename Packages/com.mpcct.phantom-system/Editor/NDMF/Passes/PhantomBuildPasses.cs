@@ -400,7 +400,16 @@ namespace MPCCT.PhantomSystem.Editor
         public static void Execute(BuildContext ctx)
         {
             var state = ctx.GetState<PhantomBuildState>();
-            PhantomAnimatorLayerControlRetargeter.Retarget(ctx, state);
+            PhantomAnimatorLayerControlRetargeter.RetargetVirtual(ctx, state);
+        }
+    }
+
+    public static class ValidatePhantomAnimatorLayerControlsPass
+    {
+        public static void Execute(BuildContext ctx)
+        {
+            var state = ctx.GetState<PhantomBuildState>();
+            PhantomAnimatorLayerControlRetargeter.VerifyFinal(ctx, state);
         }
     }
 

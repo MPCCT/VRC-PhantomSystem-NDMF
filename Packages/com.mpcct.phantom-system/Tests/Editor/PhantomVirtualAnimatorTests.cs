@@ -879,10 +879,12 @@ namespace MPCCT.PhantomSystem.Editor.Tests
         }
 
         [Test]
-        public void LayerControlRetargeter_ResolvesFxMarkersAndDisablesActionLayers()
+        public void LayerControlRetargeter_ResolvesVirtualFxMarkersBeforeCommit()
         {
             var avatar = new GameObject("Avatar");
+            avatar.AddComponent<Animator>();
             var descriptor = avatar.AddComponent<VRCAvatarDescriptor>();
+            descriptor.customizeAnimationLayers = true;
             var baseState = new AnimatorState { name = "BaseState" };
             var gestureMarker = ScriptableObject.CreateInstance<PhantomAnimatorLayerControlMarker>();
             gestureMarker.targetPlayable = VRCAvatarDescriptor.AnimLayerType.FX;
@@ -915,38 +917,105 @@ namespace MPCCT.PhantomSystem.Editor.Tests
                     animatorController = fxController
                 }
             };
+            descriptor.specialAnimationLayers = new VRCAvatarDescriptor.CustomAnimLayer[0];
             var slot = new PhantomSlotBuildState { SlotId = "Slot1" };
             slot.ConvertedActionLayers.Add(new PhantomConvertedActionLayer("ActionTarget", 1f));
             var state = new PhantomBuildState { System = new PhantomSystemBuildState() };
             state.System.Slots.Add(slot);
             var context = new BuildContext(avatar, null);
+            AnimatorController committedController = null;
             try
             {
-                PhantomAnimatorLayerControlRetargeter.Retarget(context, state);
+                var animatorServices =
+                    context.ActivateExtensionContextRecursive<AnimatorServicesContext>();
+                var virtualFx = animatorServices.ControllerContext.Controllers[
+                    VRCAvatarDescriptor.AnimLayerType.FX];
+                var virtualLayers = virtualFx.Layers.ToArray();
 
-                var controls = baseState.behaviours.OfType<VRCAnimatorLayerControl>().ToArray();
-                Assert.AreEqual(2, controls.Length);
-                Assert.IsTrue(controls.All(control =>
+                PhantomAnimatorLayerControlRetargeter.RetargetVirtual(context, state);
+
+                var virtualControls = virtualLayers[0].StateMachine.AllStates().Single()
+                    .Behaviours.OfType<VRCAnimatorLayerControl>().ToArray();
+                Assert.AreEqual(2, virtualControls.Length);
+                Assert.IsTrue(virtualControls.All(control =>
                     control.playable == VRC_AnimatorLayerControl.BlendableLayer.FX));
-                Assert.AreEqual(1, controls.Single(control => Mathf.Approximately(control.goalWeight, 0.25f)).layer);
-                Assert.AreEqual(2, controls.Single(control => Mathf.Approximately(control.goalWeight, 1f)).layer);
-                Assert.IsFalse(baseState.behaviours.Any(behaviour =>
+                Assert.AreEqual(
+                    virtualLayers[1].VirtualLayerIndex,
+                    virtualControls.Single(control => Mathf.Approximately(control.goalWeight, 0.25f)).layer);
+                Assert.AreEqual(
+                    virtualLayers[2].VirtualLayerIndex,
+                    virtualControls.Single(control => Mathf.Approximately(control.goalWeight, 1f)).layer);
+                Assert.IsFalse(virtualLayers[0].StateMachine.AllStates().Single().Behaviours.Any(behaviour =>
                     behaviour is PhantomAnimatorLayerControlMarker));
-                Assert.AreEqual(0f, fxController.layers[2].defaultWeight);
+                Assert.AreEqual(0f, virtualLayers[2].DefaultWeight);
+                Assert.IsFalse(state.Report.HasErrors);
+
+                context.DeactivateAllExtensionContexts();
+
+                committedController = descriptor.baseAnimationLayers
+                    .Single(layer => layer.type == VRCAvatarDescriptor.AnimLayerType.FX)
+                    .animatorController as AnimatorController;
+                Assert.IsNotNull(committedController);
+                var committedControls = committedController.GetBehaviours<VRCAnimatorLayerControl>();
+                Assert.AreEqual(2, committedControls.Length);
+                Assert.AreEqual(
+                    1,
+                    committedControls.Single(control => Mathf.Approximately(control.goalWeight, 0.25f)).layer);
+                Assert.AreEqual(
+                    2,
+                    committedControls.Single(control => Mathf.Approximately(control.goalWeight, 1f)).layer);
+                Assert.AreEqual(0f, committedController.layers[2].defaultWeight);
+
+                PhantomAnimatorLayerControlRetargeter.VerifyFinal(context, state);
                 Assert.IsFalse(state.Report.HasErrors);
             }
             finally
             {
+                context.DeactivateAllExtensionContexts();
+                DestroyControllerGraph(committedController, fxController);
                 DestroyControllerGraph(fxController, null);
-                if (gestureMarker != null)
-                {
-                    Object.DestroyImmediate(gestureMarker);
-                }
-                if (actionMarker != null)
-                {
-                    Object.DestroyImmediate(actionMarker);
-                }
                 Object.DestroyImmediate(avatar);
+            }
+        }
+
+        [Test]
+        public void PrebakeMmdOverride_OnlyChangesStagingClone()
+        {
+            var source = new GameObject("Source");
+            var sourceSettings = source.AddComponent<ModularAvatarVRChatSettings>();
+            sourceSettings.MMDWorldSupport = true;
+            var staging = Object.Instantiate(source);
+            try
+            {
+                PhantomPrebakeService.DisableMmdWorldSupportForPrebake(staging);
+
+                Assert.IsTrue(sourceSettings.MMDWorldSupport);
+                var stagingSettings = staging.GetComponent<ModularAvatarVRChatSettings>();
+                Assert.IsNotNull(stagingSettings);
+                Assert.IsFalse(stagingSettings.MMDWorldSupport);
+            }
+            finally
+            {
+                Object.DestroyImmediate(staging);
+                Object.DestroyImmediate(source);
+            }
+        }
+
+        [Test]
+        public void PrebakeMmdOverride_AddsTemporaryDisabledSettingWhenMissing()
+        {
+            var staging = new GameObject("Staging");
+            try
+            {
+                PhantomPrebakeService.DisableMmdWorldSupportForPrebake(staging);
+
+                var settings = staging.GetComponentsInChildren<ModularAvatarVRChatSettings>(true);
+                Assert.AreEqual(1, settings.Length);
+                Assert.IsFalse(settings[0].MMDWorldSupport);
+            }
+            finally
+            {
+                Object.DestroyImmediate(staging);
             }
         }
 
