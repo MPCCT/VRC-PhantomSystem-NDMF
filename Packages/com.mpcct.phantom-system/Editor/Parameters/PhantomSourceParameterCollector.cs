@@ -23,26 +23,32 @@ namespace MPCCT.PhantomSystem.Editor
 
         public static Dictionary<string, PhantomParameterDefinition> ReadBaseParameters(
             GameObject avatarRoot,
-            BuildContext context)
+            BuildContext context,
+            ComputeContext previewContext = null)
         {
-            return ReadParameters(avatarRoot, context, true);
+            return ReadParameters(avatarRoot, context, previewContext, true);
         }
 
         public static Dictionary<string, PhantomParameterDefinition> ReadParametersForObject(
             GameObject root,
-            BuildContext context)
+            BuildContext context,
+            ComputeContext previewContext = null)
         {
-            return ReadParameters(root, context, true);
+            return ReadParameters(root, context, previewContext, true);
         }
 
-        public static List<PhantomParameterDefinition> ReadDynamicParameterPrefixes(GameObject root)
+        public static List<PhantomParameterDefinition> ReadDynamicParameterPrefixes(
+            GameObject root,
+            ComputeContext previewContext = null)
         {
             if (root == null)
             {
                 return new List<PhantomParameterDefinition>();
             }
 
-            var result = root.GetComponentsInChildren<VRCPhysBone>(true)
+            var physBones = GetComponentsInChildren<VRCPhysBone>(root, previewContext);
+            ObserveObjects(previewContext, physBones);
+            var result = physBones
                 .Select(physBone => physBone.parameter)
                 .Where(name => !string.IsNullOrWhiteSpace(name))
                 .Distinct(StringComparer.Ordinal)
@@ -55,7 +61,9 @@ namespace MPCCT.PhantomSystem.Editor
                 })
                 .ToList();
 
-            result.AddRange(root.GetComponentsInChildren<VRCRaycast>(true)
+            var raycasts = GetComponentsInChildren<VRCRaycast>(root, previewContext);
+            ObserveObjects(previewContext, raycasts);
+            result.AddRange(raycasts
                 .Select(raycast => raycast.Parameter)
                 .Where(name => !string.IsNullOrWhiteSpace(name))
                 .Distinct(StringComparer.Ordinal)
@@ -80,7 +88,8 @@ namespace MPCCT.PhantomSystem.Editor
 
         public static PhantomSourceParameterCollection Collect(
             GameObject root,
-            BuildContext context)
+            BuildContext context,
+            ComputeContext previewContext = null)
         {
             var collection = new PhantomSourceParameterCollection();
             if (root == null)
@@ -88,15 +97,17 @@ namespace MPCCT.PhantomSystem.Editor
                 return collection;
             }
 
-            var definitions = ReadParameters(root, context, true);
+            var definitions = ReadParameters(root, context, previewContext, true);
             var retainedDefinitions =
                 new Dictionary<string, PhantomParameterDefinition>(StringComparer.Ordinal);
-            foreach (var prefix in ReadDynamicParameterPrefixes(root))
+            foreach (var prefix in ReadDynamicParameterPrefixes(root, previewContext))
             {
                 MergeDefinition(definitions, prefix);
             }
 
-            foreach (var contact in root.GetComponentsInChildren<VRCContactReceiver>(true))
+            var contacts = GetComponentsInChildren<VRCContactReceiver>(root, previewContext);
+            ObserveObjects(previewContext, contacts);
+            foreach (var contact in contacts)
             {
                 AddRetainedReference(
                     definitions,
@@ -107,7 +118,9 @@ namespace MPCCT.PhantomSystem.Editor
                     contact);
             }
 
-            foreach (var physBone in root.GetComponentsInChildren<VRCPhysBone>(true))
+            var physBones = GetComponentsInChildren<VRCPhysBone>(root, previewContext);
+            ObserveObjects(previewContext, physBones);
+            foreach (var physBone in physBones)
             {
                 AddRetainedPrefix(
                     definitions,
@@ -119,7 +132,9 @@ namespace MPCCT.PhantomSystem.Editor
                     physBone);
             }
 
-            foreach (var raycast in root.GetComponentsInChildren<VRCRaycast>(true))
+            var raycasts = GetComponentsInChildren<VRCRaycast>(root, previewContext);
+            ObserveObjects(previewContext, raycasts);
+            foreach (var raycast in raycasts)
             {
                 AddRetainedPrefix(
                     definitions,
@@ -131,9 +146,10 @@ namespace MPCCT.PhantomSystem.Editor
                     raycast);
             }
 
-            var descriptor = root.GetComponent<VRCAvatarDescriptor>();
+            var descriptor = GetComponent<VRCAvatarDescriptor>(root, previewContext);
             if (descriptor != null)
             {
+                ObserveDescriptorConfiguration(previewContext, descriptor);
                 foreach (var playable in new[]
                          {
                              VRCAvatarDescriptor.AnimLayerType.FX,
@@ -146,13 +162,16 @@ namespace MPCCT.PhantomSystem.Editor
                             playable,
                             out var layer)
                         && !layer.IsDefault
-                        && TryGetBaseController(layer.Controller, out var controller))
+                        && TryGetBaseController(
+                            layer.Controller,
+                            previewContext,
+                            out var controller))
                     {
-                        CollectControllerParameters(controller, definitions);
+                        CollectControllerParameters(controller, definitions, previewContext);
                     }
                 }
 
-                CollectMenuParameters(descriptor.expressionsMenu, definitions);
+                CollectMenuParameters(descriptor.expressionsMenu, definitions, previewContext);
             }
 
             collection.Definitions = definitions.Values
@@ -169,9 +188,12 @@ namespace MPCCT.PhantomSystem.Editor
         }
 
         public static Dictionary<string, PhantomParameterDefinition> ReadDescriptorParameters(
-            VRCAvatarDescriptor descriptor)
+            VRCAvatarDescriptor descriptor,
+            ComputeContext previewContext = null)
         {
             var result = new Dictionary<string, PhantomParameterDefinition>(StringComparer.Ordinal);
+            ObserveDescriptorConfiguration(previewContext, descriptor);
+            ObserveObject(previewContext, descriptor != null ? descriptor.expressionParameters : null);
             var parameters = descriptor != null ? descriptor.expressionParameters?.parameters : null;
             if (parameters == null)
             {
@@ -204,6 +226,7 @@ namespace MPCCT.PhantomSystem.Editor
         private static Dictionary<string, PhantomParameterDefinition> ReadParameters(
             GameObject root,
             BuildContext context,
+            ComputeContext previewContext,
             bool suppressPhantomProvider)
         {
             var result = new Dictionary<string, PhantomParameterDefinition>(StringComparer.Ordinal);
@@ -221,7 +244,7 @@ namespace MPCCT.PhantomSystem.Editor
             {
                 var info = context != null
                     ? ParameterInfo.ForContext(context)
-                    : ParameterInfo.ForPreview(ComputeContext.NullContext);
+                    : ParameterInfo.ForPreview(previewContext ?? ComputeContext.NullContext);
                 foreach (var parameter in info.GetParametersForObject(root))
                 {
                     if (parameter == null
@@ -245,7 +268,8 @@ namespace MPCCT.PhantomSystem.Editor
                 }
 
                 var descriptorDefinitions = ReadDescriptorParameters(
-                    root.GetComponent<VRCAvatarDescriptor>());
+                    GetComponent<VRCAvatarDescriptor>(root, previewContext),
+                    previewContext);
                 foreach (var pair in descriptorDefinitions)
                 {
                     if (!result.TryGetValue(pair.Key, out var definition))
@@ -270,13 +294,15 @@ namespace MPCCT.PhantomSystem.Editor
 
         internal static void CollectControllerParameters(
             AnimatorController controller,
-            IDictionary<string, PhantomParameterDefinition> definitions)
+            IDictionary<string, PhantomParameterDefinition> definitions,
+            ComputeContext previewContext = null)
         {
             if (controller == null)
             {
                 return;
             }
 
+            ObserveObject(previewContext, controller);
             foreach (var parameter in controller.parameters)
             {
                 MergeDefinition(definitions, new PhantomParameterDefinition
@@ -293,7 +319,8 @@ namespace MPCCT.PhantomSystem.Editor
             // not necessarily reachable from the source state machine's behaviour array.
             CollectBehaviourParameters(
                 controller.GetBehaviours<StateMachineBehaviour>(),
-                definitions);
+                definitions,
+                previewContext);
 
             var visitedStateMachines = new HashSet<AnimatorStateMachine>();
             var visitedMotions = new HashSet<Motion>();
@@ -303,7 +330,8 @@ namespace MPCCT.PhantomSystem.Editor
                     layer.stateMachine,
                     definitions,
                     visitedStateMachines,
-                    visitedMotions);
+                    visitedMotions,
+                    previewContext);
             }
         }
 
@@ -311,16 +339,18 @@ namespace MPCCT.PhantomSystem.Editor
             AnimatorStateMachine machine,
             IDictionary<string, PhantomParameterDefinition> definitions,
             ISet<AnimatorStateMachine> visitedStateMachines,
-            ISet<Motion> visitedMotions)
+            ISet<Motion> visitedMotions,
+            ComputeContext previewContext)
         {
             if (machine == null || !visitedStateMachines.Add(machine))
             {
                 return;
             }
 
-            CollectTransitionParameters(machine.anyStateTransitions, definitions);
-            CollectTransitionParameters(machine.entryTransitions, definitions);
-            CollectBehaviourParameters(machine.behaviours, definitions);
+            ObserveObject(previewContext, machine);
+            CollectTransitionParameters(machine.anyStateTransitions, definitions, previewContext);
+            CollectTransitionParameters(machine.entryTransitions, definitions, previewContext);
+            CollectBehaviourParameters(machine.behaviours, definitions, previewContext);
             foreach (var child in machine.states)
             {
                 var state = child.state;
@@ -329,9 +359,10 @@ namespace MPCCT.PhantomSystem.Editor
                     continue;
                 }
 
-                CollectTransitionParameters(state.transitions, definitions);
-                CollectMotionParameters(state.motion, definitions, visitedMotions);
-                CollectBehaviourParameters(state.behaviours, definitions);
+                ObserveObject(previewContext, state);
+                CollectTransitionParameters(state.transitions, definitions, previewContext);
+                CollectMotionParameters(state.motion, definitions, visitedMotions, previewContext);
+                CollectBehaviourParameters(state.behaviours, definitions, previewContext);
                 AddControllerReference(definitions, state.mirrorParameter, AnimatorControllerParameterType.Bool);
                 AddControllerReference(definitions, state.speedParameter, AnimatorControllerParameterType.Float);
                 AddControllerReference(definitions, state.timeParameter, AnimatorControllerParameterType.Float);
@@ -344,13 +375,15 @@ namespace MPCCT.PhantomSystem.Editor
                     child.stateMachine,
                     definitions,
                     visitedStateMachines,
-                    visitedMotions);
+                    visitedMotions,
+                    previewContext);
             }
         }
 
         private static void CollectTransitionParameters<TTransition>(
             IEnumerable<TTransition> transitions,
-            IDictionary<string, PhantomParameterDefinition> definitions)
+            IDictionary<string, PhantomParameterDefinition> definitions,
+            ComputeContext previewContext)
             where TTransition : AnimatorTransitionBase
         {
             foreach (var transition in transitions ?? Enumerable.Empty<TTransition>())
@@ -360,6 +393,7 @@ namespace MPCCT.PhantomSystem.Editor
                     continue;
                 }
 
+                ObserveObject(previewContext, transition);
                 foreach (var condition in transition.conditions)
                 {
                     AddControllerReference(definitions, condition.parameter, null);
@@ -370,13 +404,15 @@ namespace MPCCT.PhantomSystem.Editor
         private static void CollectMotionParameters(
             Motion motion,
             IDictionary<string, PhantomParameterDefinition> definitions,
-            ISet<Motion> visitedMotions)
+            ISet<Motion> visitedMotions,
+            ComputeContext previewContext)
         {
             if (!(motion is BlendTree tree) || !visitedMotions.Add(motion))
             {
                 return;
             }
 
+            ObserveObject(previewContext, tree);
             AddControllerReference(definitions, tree.blendParameter, AnimatorControllerParameterType.Float);
             AddControllerReference(definitions, tree.blendParameterY, AnimatorControllerParameterType.Float);
             foreach (var child in tree.children)
@@ -385,16 +421,18 @@ namespace MPCCT.PhantomSystem.Editor
                     definitions,
                     child.directBlendParameter,
                     AnimatorControllerParameterType.Float);
-                CollectMotionParameters(child.motion, definitions, visitedMotions);
+                CollectMotionParameters(child.motion, definitions, visitedMotions, previewContext);
             }
         }
 
         private static void CollectBehaviourParameters(
             IEnumerable<StateMachineBehaviour> behaviours,
-            IDictionary<string, PhantomParameterDefinition> definitions)
+            IDictionary<string, PhantomParameterDefinition> definitions,
+            ComputeContext previewContext)
         {
             foreach (var behaviour in behaviours ?? Enumerable.Empty<StateMachineBehaviour>())
             {
+                ObserveObject(previewContext, behaviour);
                 if (behaviour is VRCAnimatorPlayAudio playAudio)
                 {
                     AddControllerReference(
@@ -418,22 +456,25 @@ namespace MPCCT.PhantomSystem.Editor
 
         private static void CollectMenuParameters(
             VRCExpressionsMenu menu,
-            IDictionary<string, PhantomParameterDefinition> definitions)
+            IDictionary<string, PhantomParameterDefinition> definitions,
+            ComputeContext previewContext)
         {
             var visited = new HashSet<VRCExpressionsMenu>();
-            CollectMenuParameters(menu, definitions, visited);
+            CollectMenuParameters(menu, definitions, visited, previewContext);
         }
 
         private static void CollectMenuParameters(
             VRCExpressionsMenu menu,
             IDictionary<string, PhantomParameterDefinition> definitions,
-            ISet<VRCExpressionsMenu> visited)
+            ISet<VRCExpressionsMenu> visited,
+            ComputeContext previewContext)
         {
             if (menu == null || !visited.Add(menu) || menu.controls == null)
             {
                 return;
             }
 
+            ObserveObject(previewContext, menu);
             foreach (var control in menu.controls)
             {
                 if (control == null)
@@ -457,7 +498,7 @@ namespace MPCCT.PhantomSystem.Editor
                     }
                 }
 
-                CollectMenuParameters(control.subMenu, definitions, visited);
+                CollectMenuParameters(control.subMenu, definitions, visited, previewContext);
             }
         }
 
@@ -582,6 +623,7 @@ namespace MPCCT.PhantomSystem.Editor
 
         private static bool TryGetBaseController(
             RuntimeAnimatorController source,
+            ComputeContext previewContext,
             out AnimatorController controller)
         {
             var current = source;
@@ -593,11 +635,103 @@ namespace MPCCT.PhantomSystem.Editor
                     controller = null;
                     return false;
                 }
+                ObserveObject(previewContext, overrideController);
                 current = overrideController.runtimeAnimatorController;
             }
 
             controller = current as AnimatorController;
+            ObserveObject(previewContext, controller);
             return controller != null;
+        }
+
+        private static T GetComponent<T>(GameObject root, ComputeContext previewContext)
+            where T : class
+        {
+            return previewContext != null
+                ? previewContext.GetComponent<T>(root)
+                : root != null
+                    ? root.GetComponent<T>()
+                    : null;
+        }
+
+        private static T[] GetComponentsInChildren<T>(GameObject root, ComputeContext previewContext)
+            where T : class
+        {
+            return previewContext != null
+                ? previewContext.GetComponentsInChildren<T>(root, true)
+                : root != null
+                    ? root.GetComponentsInChildren<T>(true)
+                    : Array.Empty<T>();
+        }
+
+        private static void ObserveObjects<T>(ComputeContext previewContext, IEnumerable<T> objects)
+            where T : UnityEngine.Object
+        {
+            if (previewContext == null || objects == null)
+            {
+                return;
+            }
+
+            foreach (var obj in objects)
+            {
+                ObserveObject(previewContext, obj);
+            }
+        }
+
+        private static void ObserveObject<T>(ComputeContext previewContext, T obj)
+            where T : UnityEngine.Object
+        {
+            if (previewContext != null && obj != null)
+            {
+                previewContext.Observe(obj);
+            }
+        }
+
+        private static void ObserveDescriptorConfiguration(
+            ComputeContext previewContext,
+            VRCAvatarDescriptor descriptor)
+        {
+            if (previewContext == null || descriptor == null)
+            {
+                return;
+            }
+
+            previewContext.Observe(descriptor, DescriptorConfigurationSignature);
+        }
+
+        private static long DescriptorConfigurationSignature(VRCAvatarDescriptor descriptor)
+        {
+            unchecked
+            {
+                var hash = 1469598103934665603L;
+                AddSignatureValue(ref hash, descriptor.customizeAnimationLayers ? 1 : 0);
+                AddSignatureValue(ref hash, ObjectInstanceId(descriptor.expressionParameters));
+                AddSignatureValue(ref hash, ObjectInstanceId(descriptor.expressionsMenu));
+                var layers = descriptor.baseAnimationLayers ??
+                             Array.Empty<VRCAvatarDescriptor.CustomAnimLayer>();
+                AddSignatureValue(ref hash, layers.Length);
+                foreach (var layer in layers)
+                {
+                    AddSignatureValue(ref hash, (int)layer.type);
+                    AddSignatureValue(ref hash, layer.isDefault ? 1 : 0);
+                    AddSignatureValue(ref hash, ObjectInstanceId(layer.animatorController));
+                }
+
+                return hash;
+            }
+        }
+
+        private static void AddSignatureValue(ref long hash, int value)
+        {
+            unchecked
+            {
+                hash = (hash ^ value) * 1099511628211L;
+            }
+        }
+
+        private static int ObjectInstanceId(UnityEngine.Object obj)
+        {
+            return obj != null ? obj.GetInstanceID() : 0;
         }
 
         private static float DefaultValue(AnimatorControllerParameter parameter)

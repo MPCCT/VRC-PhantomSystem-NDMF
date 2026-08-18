@@ -8,7 +8,7 @@ using VRC.SDK3.Avatars.Components;
 namespace MPCCT.PhantomSystem
 {
     [DisallowMultipleComponent]
-    [AddComponentMenu("MPCCT/PhantomSystem")]
+    [AddComponentMenu("PhantomSystem")]
     public sealed class PhantomSystem : MonoBehaviour, INDMFEditorOnly
     {
         public List<PhantomSlot> slots = new List<PhantomSlot> { new PhantomSlot() };

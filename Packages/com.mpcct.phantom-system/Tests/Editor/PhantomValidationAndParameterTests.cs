@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using nadena.dev.ndmf;
+using nadena.dev.ndmf.preview;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.Animations;
@@ -108,6 +109,71 @@ namespace MPCCT.PhantomSystem.Editor.Tests
                 {
                     Object.DestroyImmediate(inspector);
                 }
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void InspectorAnalysis_ReplacesAndDisposesPreviewContexts()
+        {
+            var root = new GameObject("Authoring");
+            UnityEditor.Editor inspector = null;
+            ComputeContext firstContext = null;
+            ComputeContext secondContext = null;
+            try
+            {
+                var authoring = root.AddComponent<PhantomSystem>();
+                inspector = UnityEditor.Editor.CreateEditor(authoring);
+                var editorType = inspector.GetType();
+                var refresh = editorType.GetMethod(
+                    "RefreshAnalysis",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                var contextField = editorType.GetField(
+                    "analysisContext",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                var subscriptionField = editorType.GetField(
+                    "analysisInvalidationSubscription",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                var refreshPendingField = editorType.GetField(
+                    "refreshPending",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+
+                Assert.IsNotNull(refresh);
+                Assert.IsNotNull(contextField);
+                Assert.IsNotNull(subscriptionField);
+                Assert.IsNotNull(refreshPendingField);
+
+                refresh.Invoke(inspector, null);
+                firstContext = contextField.GetValue(inspector) as ComputeContext;
+                Assert.IsNotNull(firstContext);
+                Assert.IsFalse(firstContext.IsInvalidated);
+                Assert.IsNotNull(subscriptionField.GetValue(inspector));
+
+                firstContext.Invalidate();
+                Assert.DoesNotThrow(ComputeContext.FlushInvalidates);
+                Assert.IsNull(subscriptionField.GetValue(inspector));
+                Assert.IsTrue((bool)refreshPendingField.GetValue(inspector));
+
+                refresh.Invoke(inspector, null);
+                secondContext = contextField.GetValue(inspector) as ComputeContext;
+                Assert.IsNotNull(secondContext);
+                Assert.AreNotSame(firstContext, secondContext);
+                Assert.IsTrue(firstContext.IsInvalidated);
+                Assert.IsFalse(secondContext.IsInvalidated);
+
+                Object.DestroyImmediate(inspector);
+                inspector = null;
+                Assert.IsTrue(secondContext.IsInvalidated);
+            }
+            finally
+            {
+                if (inspector != null)
+                {
+                    Object.DestroyImmediate(inspector);
+                }
+                firstContext?.Invalidate();
+                secondContext?.Invalidate();
+                ComputeContext.FlushInvalidates();
                 Object.DestroyImmediate(root);
             }
         }

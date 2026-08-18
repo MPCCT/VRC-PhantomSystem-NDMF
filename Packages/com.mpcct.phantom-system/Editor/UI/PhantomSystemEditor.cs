@@ -1,4 +1,6 @@
+using System;
 using System.Linq;
+using nadena.dev.ndmf.preview;
 using UnityEditor;
 using UnityEngine;
 using PhantomAuthoring = MPCCT.PhantomSystem.PhantomSystem;
@@ -17,6 +19,8 @@ namespace MPCCT.PhantomSystem.Editor
         private PhantomSourceValidationReport validationReport;
         private string slotFoldoutStateKey;
         private bool refreshPending;
+        private ComputeContext analysisContext;
+        private IDisposable analysisInvalidationSubscription;
 
         private void OnEnable()
         {
@@ -27,15 +31,15 @@ namespace MPCCT.PhantomSystem.Editor
                 + GlobalObjectId.GetGlobalObjectIdSlow(target);
             ClearFoldoutCaches();
             Undo.undoRedoPerformed += ScheduleRefresh;
-            EditorApplication.hierarchyChanged += ScheduleRefresh;
             ScheduleRefresh();
         }
 
         private void OnDisable()
         {
             Undo.undoRedoPerformed -= ScheduleRefresh;
-            EditorApplication.hierarchyChanged -= ScheduleRefresh;
             EditorApplication.delayCall -= RefreshAnalysis;
+            refreshPending = false;
+            DisposeAnalysisContext();
         }
 
         public override void OnInspectorGUI()
@@ -102,12 +106,51 @@ namespace MPCCT.PhantomSystem.Editor
         {
             EditorApplication.delayCall -= RefreshAnalysis;
             refreshPending = false;
+            DisposeAnalysisContext();
             if (target is PhantomAuthoring authoring && authoring != null)
             {
-                parameterPlan = PhantomParameterPlanner.Analyze(authoring);
-                validationReport = PhantomSourceValidator.Validate(authoring, parameterPlan);
+                var context = new ComputeContext($"PhantomSystem Inspector: {authoring.name}");
+                analysisContext = context;
+                try
+                {
+                    parameterPlan = PhantomParameterPlanner.Analyze(authoring, context);
+                    validationReport = PhantomSourceValidator.Validate(authoring, parameterPlan, context);
+                    analysisInvalidationSubscription = context.InvokeOnInvalidate(
+                        this,
+                        editor => editor.OnAnalysisDependenciesInvalidated());
+                }
+                catch
+                {
+                    DisposeAnalysisContext();
+                    throw;
+                }
+
                 Repaint();
             }
+        }
+
+        private void OnAnalysisDependenciesInvalidated()
+        {
+            if (analysisContext == null || !analysisContext.IsInvalidated)
+            {
+                return;
+            }
+
+            // ComputeContext invalidation listeners are one-shot. NDMF is currently
+            // iterating and removing this listener while invoking us, so disposing
+            // the token here would re-enter ListenerSet.Deregister during FireAll.
+            analysisInvalidationSubscription = null;
+            ScheduleRefresh();
+        }
+
+        private void DisposeAnalysisContext()
+        {
+            analysisInvalidationSubscription?.Dispose();
+            analysisInvalidationSubscription = null;
+
+            var context = analysisContext;
+            analysisContext = null;
+            context?.Invalidate();
         }
     }
 }

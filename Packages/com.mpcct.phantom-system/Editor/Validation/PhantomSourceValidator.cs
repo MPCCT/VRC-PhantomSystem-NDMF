@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using nadena.dev.ndmf;
+using nadena.dev.ndmf.preview;
 using UnityEditor;
 using UnityEngine;
 using VRC.SDK3.Avatars.Components;
@@ -93,17 +94,26 @@ namespace MPCCT.PhantomSystem.Editor
             PhantomAuthoring authoring,
             PhantomParameterPlan parameterPlan)
         {
-            return ValidateAuthoring(authoring, parameterPlan);
+            return ValidateAuthoring(authoring, parameterPlan, null);
+        }
+
+        internal static PhantomSourceValidationReport Validate(
+            PhantomAuthoring authoring,
+            PhantomParameterPlan parameterPlan,
+            ComputeContext previewContext)
+        {
+            return ValidateAuthoring(authoring, parameterPlan, previewContext);
         }
 
         public static PhantomSourceValidationReport ValidateAuthoring(PhantomAuthoring authoring)
         {
-            return ValidateAuthoring(authoring, PhantomParameterPlanner.Analyze(authoring));
+            return ValidateAuthoring(authoring, PhantomParameterPlanner.Analyze(authoring), null);
         }
 
         private static PhantomSourceValidationReport ValidateAuthoring(
             PhantomAuthoring authoring,
-            PhantomParameterPlan parameterPlan)
+            PhantomParameterPlan parameterPlan,
+            ComputeContext previewContext)
         {
             var report = new PhantomSourceValidationReport();
             if (authoring == null)
@@ -111,21 +121,28 @@ namespace MPCCT.PhantomSystem.Editor
                 return report;
             }
 
+            ObserveObject(previewContext, authoring);
+            ObservePath(previewContext, authoring.transform);
             var slots = authoring.slots ?? new List<PhantomSlot>();
             for (var index = 0; index < slots.Count; index++)
             {
                 report.Slots.Add(new PhantomSlotValidationResult());
             }
 
-            var baseDescriptor = FindAvatarDescriptor(authoring.transform);
-            ValidateBaseAvatar(baseDescriptor, authoring, slots, report);
+            var baseDescriptor = FindAvatarDescriptor(authoring.transform, previewContext);
+            ValidateBaseAvatar(baseDescriptor, authoring, slots, report, previewContext);
             AddDuplicateSlotIdIssues(slots, report, authoring);
             AddDuplicateHierarchyNameIssues(slots, report, authoring);
             AddDuplicateNamespaceIssues(slots, report, authoring);
 
             for (var index = 0; index < slots.Count; index++)
             {
-                ValidateSlot(slots[index], report.Slots[index], baseDescriptor, authoring);
+                ValidateSlot(
+                    slots[index],
+                    report.Slots[index],
+                    baseDescriptor,
+                    authoring,
+                    previewContext);
             }
 
             parameterPlan ??= PhantomParameterPlan.Empty;
@@ -227,7 +244,8 @@ namespace MPCCT.PhantomSystem.Editor
             PhantomSlot slot,
             PhantomSlotValidationResult result,
             VRCAvatarDescriptor baseDescriptor,
-            PhantomAuthoring authoring)
+            PhantomAuthoring authoring,
+            ComputeContext previewContext)
         {
             if (slot == null)
             {
@@ -252,6 +270,8 @@ namespace MPCCT.PhantomSystem.Editor
                 return;
             }
 
+            ObserveDescriptor(previewContext, source);
+            ObservePath(previewContext, source.transform);
             if (baseDescriptor != null && source == baseDescriptor)
             {
                 Add(
@@ -273,7 +293,7 @@ namespace MPCCT.PhantomSystem.Editor
                     source);
             }
 
-            var animator = source.GetComponent<Animator>();
+            var animator = GetComponent<Animator>(previewContext, source.gameObject);
             if (animator == null)
             {
                 Add(
@@ -320,7 +340,10 @@ namespace MPCCT.PhantomSystem.Editor
                     animator);
             }
 
-            var nestedSystems = source.GetComponentsInChildren<PhantomAuthoring>(true);
+            ObserveHumanoidRig(previewContext, animator);
+            var nestedSystems = GetComponentsInChildren<PhantomAuthoring>(
+                previewContext,
+                source.gameObject);
             if (nestedSystems.Length > 0)
             {
                 Add(
@@ -333,6 +356,7 @@ namespace MPCCT.PhantomSystem.Editor
 
             var missingScriptObjects = FindMissingScriptGameObjects(
                 source.gameObject,
+                previewContext,
                 out var missingScriptCount);
             if (missingScriptCount > 0)
             {
@@ -346,17 +370,21 @@ namespace MPCCT.PhantomSystem.Editor
                     missingScriptObjects);
             }
 
-            ScanComponentCompatibility(source, result);
+            ScanComponentCompatibility(source, result, previewContext);
         }
 
         private static void ValidateBaseAvatar(
             VRCAvatarDescriptor baseDescriptor,
             PhantomAuthoring authoring,
             IReadOnlyList<PhantomSlot> slots,
-            PhantomSourceValidationReport report)
+            PhantomSourceValidationReport report,
+            ComputeContext previewContext)
         {
             var context = baseDescriptor != null ? (UnityEngine.Object)baseDescriptor : authoring;
-            var animator = baseDescriptor != null ? baseDescriptor.GetComponent<Animator>() : null;
+            ObserveDescriptor(previewContext, baseDescriptor);
+            var animator = baseDescriptor != null
+                ? GetComponent<Animator>(previewContext, baseDescriptor.gameObject)
+                : null;
             if (baseDescriptor == null)
             {
                 AddGlobal(report, PhantomValidationSeverity.ConfigurationError, "PHS100",
@@ -371,6 +399,7 @@ namespace MPCCT.PhantomSystem.Editor
                 return;
             }
 
+            ObserveHumanoidRig(previewContext, animator);
             if (animator.avatar == null || !animator.avatar.isValid || !animator.avatar.isHuman || !animator.isHuman)
             {
                 AddGlobal(report, PhantomValidationSeverity.ConfigurationError, "PHS102",
@@ -402,10 +431,13 @@ namespace MPCCT.PhantomSystem.Editor
 
         private static void ScanComponentCompatibility(
             VRCAvatarDescriptor source,
-            PhantomSlotValidationResult result)
+            PhantomSlotValidationResult result,
+            ComputeContext previewContext)
         {
             var unclassifiedComponents = new List<MonoBehaviour>();
-            foreach (var component in source.GetComponentsInChildren<MonoBehaviour>(true))
+            foreach (var component in GetComponentsInChildren<MonoBehaviour>(
+                         previewContext,
+                         source.gameObject))
             {
                 if (component == null)
                 {
@@ -563,11 +595,12 @@ namespace MPCCT.PhantomSystem.Editor
 
         private static UnityEngine.Object[] FindMissingScriptGameObjects(
             GameObject root,
+            ComputeContext previewContext,
             out int missingScriptCount)
         {
             missingScriptCount = 0;
             var gameObjects = new List<UnityEngine.Object>();
-            foreach (var transform in root.GetComponentsInChildren<Transform>(true))
+            foreach (var transform in GetComponentsInChildren<Transform>(previewContext, root))
             {
                 var count = GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(transform.gameObject);
                 if (count <= 0)
@@ -606,11 +639,16 @@ namespace MPCCT.PhantomSystem.Editor
             }
         }
 
-        private static VRCAvatarDescriptor FindAvatarDescriptor(Transform start)
+        private static VRCAvatarDescriptor FindAvatarDescriptor(
+            Transform start,
+            ComputeContext previewContext)
         {
             for (var current = start; current != null; current = current.parent)
             {
-                var descriptor = current.GetComponent<VRCAvatarDescriptor>();
+                ObservePath(previewContext, current);
+                var descriptor = GetComponent<VRCAvatarDescriptor>(
+                    previewContext,
+                    current.gameObject);
                 if (descriptor != null)
                 {
                     return descriptor;
@@ -618,6 +656,127 @@ namespace MPCCT.PhantomSystem.Editor
             }
 
             return null;
+        }
+
+        private static void ObserveDescriptor(
+            ComputeContext previewContext,
+            VRCAvatarDescriptor descriptor)
+        {
+            if (previewContext == null || descriptor == null)
+            {
+                return;
+            }
+
+            previewContext.Observe(
+                descriptor,
+                DescriptorConfigurationSignature);
+            if (descriptor.expressionParameters != null)
+            {
+                previewContext.Observe(descriptor.expressionParameters);
+            }
+            if (descriptor.expressionsMenu != null)
+            {
+                previewContext.Observe(descriptor.expressionsMenu);
+            }
+        }
+
+        private static void ObserveHumanoidRig(
+            ComputeContext previewContext,
+            Animator animator)
+        {
+            if (previewContext == null || animator == null)
+            {
+                return;
+            }
+
+            previewContext.Observe(animator, value => value.avatar);
+            if (animator.avatar != null)
+            {
+                previewContext.Observe(animator.avatar);
+            }
+
+            foreach (var transform in previewContext.GetComponentsInChildren<Transform>(
+                         animator.gameObject,
+                         true))
+            {
+                previewContext.Observe(transform.gameObject, gameObject => gameObject.name);
+                previewContext.ObservePath(transform);
+            }
+        }
+
+        private static void ObservePath(ComputeContext previewContext, Transform transform)
+        {
+            if (previewContext != null && transform != null)
+            {
+                previewContext.ObservePath(transform);
+            }
+        }
+
+        private static T GetComponent<T>(ComputeContext previewContext, GameObject gameObject)
+            where T : class
+        {
+            return previewContext != null
+                ? previewContext.GetComponent<T>(gameObject)
+                : gameObject != null
+                    ? gameObject.GetComponent<T>()
+                    : null;
+        }
+
+        private static T[] GetComponentsInChildren<T>(
+            ComputeContext previewContext,
+            GameObject gameObject)
+            where T : class
+        {
+            return previewContext != null
+                ? previewContext.GetComponentsInChildren<T>(gameObject, true)
+                : gameObject != null
+                    ? gameObject.GetComponentsInChildren<T>(true)
+                    : Array.Empty<T>();
+        }
+
+        private static void ObserveObject<T>(ComputeContext previewContext, T obj)
+            where T : UnityEngine.Object
+        {
+            if (previewContext != null && obj != null)
+            {
+                previewContext.Observe(obj);
+            }
+        }
+
+        private static long DescriptorConfigurationSignature(VRCAvatarDescriptor descriptor)
+        {
+            unchecked
+            {
+                var hash = 1469598103934665603L;
+                AddSignatureValue(ref hash, descriptor.customizeAnimationLayers ? 1 : 0);
+                AddSignatureValue(ref hash, ObjectInstanceId(descriptor.expressionParameters));
+                AddSignatureValue(ref hash, ObjectInstanceId(descriptor.expressionsMenu));
+                var layers = descriptor.baseAnimationLayers ??
+                             Array.Empty<VRCAvatarDescriptor.CustomAnimLayer>();
+                AddSignatureValue(ref hash, layers.Length);
+                foreach (var layer in layers)
+                {
+                    AddSignatureValue(ref hash, (int)layer.type);
+                    AddSignatureValue(ref hash, layer.isDefault ? 1 : 0);
+                    AddSignatureValue(ref hash, ObjectInstanceId(layer.animatorController));
+                    AddSignatureValue(ref hash, ObjectInstanceId(layer.mask));
+                }
+
+                return hash;
+            }
+        }
+
+        private static void AddSignatureValue(ref long hash, int value)
+        {
+            unchecked
+            {
+                hash = (hash ^ value) * 1099511628211L;
+            }
+        }
+
+        private static int ObjectInstanceId(UnityEngine.Object obj)
+        {
+            return obj != null ? obj.GetInstanceID() : 0;
         }
 
         private static void Add(

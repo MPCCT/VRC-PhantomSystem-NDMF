@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using nadena.dev.ndmf.preview;
 using UnityEngine;
 using VRC.SDK3.Avatars.Components;
 using PhantomAuthoring = MPCCT.PhantomSystem.PhantomSystem;
@@ -9,7 +10,9 @@ namespace MPCCT.PhantomSystem.Editor
 {
     internal static class PhantomParameterPlanner
     {
-        public static PhantomParameterPlan Analyze(PhantomAuthoring authoring)
+        public static PhantomParameterPlan Analyze(
+            PhantomAuthoring authoring,
+            ComputeContext previewContext = null)
         {
             if (authoring == null)
             {
@@ -18,7 +21,10 @@ namespace MPCCT.PhantomSystem.Editor
 
             var avatarRoot = FindAvatarRoot(authoring.transform);
             var baseParameters = avatarRoot != null
-                ? PhantomSourceParameterCollector.ReadBaseParameters(avatarRoot.gameObject, null)
+                ? PhantomSourceParameterCollector.ReadBaseParameters(
+                    avatarRoot.gameObject,
+                    null,
+                    previewContext)
                 : new Dictionary<string, PhantomParameterDefinition>(StringComparer.Ordinal);
             var inputs = new List<PhantomParameterSlotInput>();
             foreach (var slot in authoring.slots ?? new List<PhantomSlot>())
@@ -26,7 +32,8 @@ namespace MPCCT.PhantomSystem.Editor
                 var collection = slot?.phantomAvatar != null
                     ? PhantomSourceParameterCollector.Collect(
                         slot.phantomAvatar.gameObject,
-                        null)
+                        null,
+                        previewContext)
                     : new PhantomSourceParameterCollection();
                 inputs.Add(CreateInput(slot, PhantomSlotIdentity.Create(slot), collection));
             }
