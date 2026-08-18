@@ -199,7 +199,7 @@ namespace MPCCT.PhantomSystem.Editor
 
             try
             {
-                PhantomHumanoidClipBaker.WriteNeutralPoseRotations(
+                PhantomHumanoidCurveWriter.WriteNeutralPoseRotations(
                     clip,
                     slot.CloneRoot,
                     outputPaths,

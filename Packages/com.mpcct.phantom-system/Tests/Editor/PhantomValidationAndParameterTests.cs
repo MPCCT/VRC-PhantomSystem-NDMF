@@ -914,7 +914,7 @@ namespace MPCCT.PhantomSystem.Editor.Tests
                 typeof(Animator),
                 propertyName);
 
-            Assert.IsTrue(PhantomHumanoidClipBaker.TryResolveHumanoidBinding(
+            Assert.IsTrue(PhantomHumanoidBindingUtility.TryResolveHumanoidBinding(
                 binding,
                 out var actualBone,
                 out var forcePosition));
@@ -938,7 +938,7 @@ namespace MPCCT.PhantomSystem.Editor.Tests
                 typeof(Animator),
                 propertyName);
 
-            Assert.IsFalse(PhantomHumanoidClipBaker.TryResolveHumanoidBinding(
+            Assert.IsFalse(PhantomHumanoidBindingUtility.TryResolveHumanoidBinding(
                 binding,
                 out _,
                 out _));
@@ -963,7 +963,7 @@ namespace MPCCT.PhantomSystem.Editor.Tests
                     localMirror));
             Assert.AreEqual(
                 expected,
-                PhantomHumanoidClipBaker.ResolveEffectiveMirror(
+                PhantomHumanoidBindingUtility.ResolveEffectiveMirror(
                     inheritedMirror,
                     localMirror));
         }
@@ -980,7 +980,7 @@ namespace MPCCT.PhantomSystem.Editor.Tests
             HumanBodyBones source,
             HumanBodyBones expected)
         {
-            Assert.AreEqual(expected, PhantomHumanoidClipBaker.MirrorHumanoidBone(source));
+            Assert.AreEqual(expected, PhantomHumanoidBindingUtility.MirrorHumanoidBone(source));
         }
 
         [Test]
@@ -990,8 +990,8 @@ namespace MPCCT.PhantomSystem.Editor.Tests
             {
                 Assert.AreEqual(
                     bone,
-                    PhantomHumanoidClipBaker.MirrorHumanoidBone(
-                        PhantomHumanoidClipBaker.MirrorHumanoidBone(bone)),
+                    PhantomHumanoidBindingUtility.MirrorHumanoidBone(
+                        PhantomHumanoidBindingUtility.MirrorHumanoidBone(bone)),
                     bone.ToString());
             }
         }

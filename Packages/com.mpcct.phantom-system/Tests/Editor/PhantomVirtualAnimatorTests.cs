@@ -33,7 +33,7 @@ namespace MPCCT.PhantomSystem.Editor.Tests
             var clip = new AnimationClip { name = "DriverNeutral" };
             try
             {
-                PhantomHumanoidClipBaker.WriteNeutralRotationCurves(
+                PhantomHumanoidCurveWriter.WriteNeutralRotationCurves(
                     clip,
                     new Dictionary<string, Quaternion>
                     {
@@ -116,7 +116,7 @@ namespace MPCCT.PhantomSystem.Editor.Tests
                 target.localRotation = Quaternion.Euler(-21f, 3f, 14f);
 
                 var expected = Quaternion.Inverse(poseParent.rotation) * target.rotation;
-                var actual = PhantomHumanoidClipBaker.ReadRelativeRotation(
+                var actual = PhantomHumanoidPoseSampler.ReadRelativeRotation(
                     target,
                     poseParent);
 
@@ -188,14 +188,14 @@ namespace MPCCT.PhantomSystem.Editor.Tests
             try
             {
                 var animatedRotation = Quaternion.Euler(12f, -8f, 3f);
-                PhantomHumanoidClipBaker.WriteNeutralRotationCurves(
+                PhantomHumanoidCurveWriter.WriteNeutralRotationCurves(
                     clip,
                     new Dictionary<string, Quaternion>
                     {
                         ["Driver/LeftLowerLeg"] = animatedRotation
                     });
 
-                PhantomHumanoidClipBaker.WriteMissingNeutralRotationCurves(
+                PhantomHumanoidCurveWriter.WriteMissingNeutralRotationCurves(
                     clip,
                     new HashSet<HumanBodyBones> { HumanBodyBones.LeftLowerLeg },
                     new HashSet<HumanBodyBones>
@@ -249,7 +249,7 @@ namespace MPCCT.PhantomSystem.Editor.Tests
             var clip = new AnimationClip { name = "GenericOnly" };
             try
             {
-                PhantomHumanoidClipBaker.WriteMissingNeutralRotationCurves(
+                PhantomHumanoidCurveWriter.WriteMissingNeutralRotationCurves(
                     clip,
                     new HashSet<HumanBodyBones>(),
                     new HashSet<HumanBodyBones> { HumanBodyBones.LeftLowerLeg },

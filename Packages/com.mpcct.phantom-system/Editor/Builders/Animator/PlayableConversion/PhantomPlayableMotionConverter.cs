@@ -495,7 +495,7 @@ namespace MPCCT.PhantomSystem.Editor
 
         private IReadOnlyDictionary<HumanBodyBones, Quaternion> GetNeutralBoneRotations()
         {
-            return neutralBoneRotations ??= PhantomHumanoidClipBaker.SampleNeutralBoneRotations(
+            return neutralBoneRotations ??= PhantomHumanoidPoseSampler.SampleNeutralBoneRotations(
                 slot.CloneRoot,
                 slot.AnimationDriverPoseParentClonePaths,
                 slot.AnimationDriverBones.Keys);
