@@ -72,10 +72,11 @@ retained.
 
 ## Requirements
 
-- Unity 2022.3
+- Unity 2022.3.22f1
 - VRChat SDK - Avatars 3.10.3 or newer
 - NDMF 1.14.0 or newer
 - Modular Avatar 1.15.0 or newer
+- VRChat PC avatars only; Android/Quest is not supported
 
 ## Installation
 
@@ -123,7 +124,11 @@ prebake required by PhantomSystem.
 - **Remove Source Controls**: Excludes source FX, Action, Gesture, parameters,
   and menu while retaining PhantomSystem controls.
 - **Use Rotation Constraint**: May improve following when the base and phantom
-  skeleton proportions or orientations differ slightly.
+  skeleton structures or proportions differ slightly.
+- **Rotation Solve In World Space**: Uses world-space solving when corresponding
+  bones have different local axes or orientations. The phantom can no longer
+  maintain an overall facing direction independent of the base avatar while it
+  is enabled.
 - **Override PhysBone Immobile Type**: Sets the phantom's PhysBones to All
   Motion to reduce unintended base-avatar movement while frozen.
 - **Try Convert Animator Tracking Control**: Attempts to retain body-part
@@ -144,12 +149,11 @@ Open project-wide settings with **Open Global Settings** on the component or
   views.
 - **Humanoid Animation Conversion** sets the maximum sampling rate and position
   and rotation error tolerances.
-- **Humanoid Bake Cache** shows and clears project-local baked pose data. The
-  cache stays under `Library` and is not included in version control or avatar
-  uploads.
-
-The defaults suit most projects. Adjust them only when animation detail, Clip
-size, or Phantom View performance needs tuning.
+- **Humanoid Bake Cache** reuses compatible baked Humanoid poses on later builds
+  while parameter, BlendShape, material, and other non-skeletal curves still
+  come from the current source Clip. It stays under `Library`, is never included
+  in version control or avatar uploads, and can be cleared here or through
+  `Tools > PhantomSystem > Clear Humanoid Bake Cache`.
 
 ## Generated menu controls
 
@@ -181,6 +185,10 @@ size, or Phantom View performance needs tuning.
   removed or partially converted content during the build.
 - Parameter-driven Animator State Mirror changes are not supported at runtime.
   The State's default Mirror value is baked and a build warning is reported.
+- PhantomSystem disables Modular Avatar MMD World Support only on temporary
+  phantom Prebake clones so Prebake-only MMD compatibility layers cannot disturb
+  later Layer Controls. The source phantom and base avatar settings are not
+  modified.
 - Generated Prebake assets are removed automatically after a successful VRC
   build, a PhantomSystem Manual Bake, or leaving Apply on Play. They can also be
   removed with `Tools > PhantomSystem > Delete Prebake Assets`. Completed build

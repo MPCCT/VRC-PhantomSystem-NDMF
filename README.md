@@ -57,10 +57,11 @@ Avatar 作为分身加入本体，并在构建时自动准备动画、参数、�
 
 ## 环境要求
 
-- Unity 2022.3
+- Unity 2022.3.22f1
 - VRChat SDK - Avatars 3.10.3 或更高
 - NDMF 1.14.0 或更高
 - Modular Avatar 1.15.0 或更高
+- 仅面向 VRChat PC Avatar；不提供 Android/Quest 适配
 
 ## 安装
 
@@ -95,7 +96,9 @@ https://mpcct.github.io/VRC-PhantomSystem-NDMF/index.json
 - **Same-name Parameter Sharing**：选择可以与本体共享的兼容参数。
 - **Remove Source Controls**：排除分身源的 FX、Action、Gesture、参数和菜单，只保留
   PhantomSystem 控制。
-- **Use Rotation Constraint**：本体与分身骨架比例或朝向略有差异时，可尝试改善骨骼跟随。
+- **Use Rotation Constraint**：本体与分身骨架结构或比例略有差异时，可尝试改善骨骼跟随。
+- **Rotation Solve In World Space**：本体与分身的骨骼局部轴或定向不同时，可改用世界空间
+  解算；启用后分身无法再保持与本体不同的整体朝向。
 - **Override PhysBone Immobile Type**：把分身 PhysBone 的 Immobile Type 设为 All Motion，减少
   Freeze 后仍随本体移动的情况。
 - **Try Convert Animator Tracking Control**：尝试保留分身源的身体部位 Tracking 控制。
@@ -112,10 +115,9 @@ PhysBone Immobile Type 覆盖。
 
 - **Phantom View Texture Size**：设置所有分身视角使用的渲染分辨率。
 - **Humanoid Animation Conversion**：设置动画转换的最高采样率和位置、旋转误差容限。
-- **Humanoid Bake Cache**：显示项目本地骨骼烘焙缓存的大小，并可随时清理。缓存位于
-  `Library`，不会进入版本控制或 Avatar 上传内容。
-
-默认值适合一般项目。只有在动画细节不足、Clip 体积过大或 Phantom View 性能不足时，才建议调整。
+- **Humanoid Bake Cache**：重复构建时复用兼容的 Humanoid 姿态烘焙结果，同时仍从当前源
+  Clip 读取参数、BlendShape、材质等非骨骼曲线。缓存位于 `Library`，不会进入版本控制或
+  Avatar 上传内容，可在此窗口或 `Tools > PhantomSystem > Clear Humanoid Bake Cache` 清理。
 
 ## 生成的菜单控制
 
@@ -138,6 +140,8 @@ PhysBone Immobile Type 覆盖。
   支持的行为，并对被移除或部分转换的内容给出构建警告。
 - 参数驱动的 Animator State Mirror 暂不支持运行时变化；构建时会使用该 State 的默认 Mirror
   值并给出警告。
+- PhantomSystem 会仅在临时分身 Prebake 副本上关闭 Modular Avatar MMD World Support，避免
+  Prebake 专用的 MMD 兼容层干扰后续 Layer Control；分身源原物体和本体设置不会被修改。
 - 成功完成 VRC 构建、PhantomSystem 手动 Bake 或退出 Apply on Play 后，会自动清理生成的
   Prebake 资产；也可通过 `Tools > PhantomSystem > Delete Prebake Assets` 手动清理。
   已完成的构建结果不依赖这些中间资产。

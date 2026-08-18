@@ -12,6 +12,10 @@ PhantomSystem は、VRChat アバターに 1 体以上の Humanoid 分身（Phan
 
 > Inspector と生成される Expression Menu の表示は現在英語のみです。
 
+> [!NOTE]
+> この日本語 README は AI によって翻訳されています。表現や用語に誤りが含まれる
+> 可能性があります。
+
 ## 主な機能
 
 ### 複数の分身を個別に操作
@@ -61,10 +65,11 @@ PhantomSystem は、VRChat アバターに 1 体以上の Humanoid 分身（Phan
 
 ## 必要環境
 
-- Unity 2022.3
+- Unity 2022.3.22f1
 - VRChat SDK - Avatars 3.10.3 以降
 - NDMF 1.14.0 以降
 - Modular Avatar 1.15.0 以降
+- VRChat PC アバターのみ対応しています。Android／Quest には対応していません。
 
 ## インストール
 
@@ -104,8 +109,10 @@ Prebake は実行されません。
 - **Same-name Parameter Sharing**：本体と共有できる互換パラメーターを選択します。
 - **Remove Source Controls**：分身元の FX、Action、Gesture、パラメーター、メニューを除外し、
   PhantomSystem の制御だけを残します。
-- **Use Rotation Constraint**：本体と分身のボーン比率や向きが少し異なる場合に、追従を改善
-  できることがあります。
+- **Use Rotation Constraint**：本体と分身のスケルトン構造や比率が少し異なる場合に、追従を
+  改善できることがあります。
+- **Rotation Solve In World Space**：対応するボーンのローカル軸や向きが異なる場合に、
+  ワールド空間で解決します。有効にすると、分身は本体と異なる全体の向きを維持できません。
 - **Override PhysBone Immobile Type**：分身の PhysBone を All Motion に設定し、Freeze 中も
   本体の移動を引き継いでしまう現象を軽減します。
 - **Try Convert Animator Tracking Control**：分身元の身体部位 Tracking 制御の維持を
@@ -124,12 +131,11 @@ Prebake は実行されません。
 - **Phantom View Texture Size**：分身ビューで共有する描画解像度を設定します。
 - **Humanoid Animation Conversion**：最大サンプリングレートと位置・回転の誤差許容値を
   設定します。
-- **Humanoid Bake Cache**：プロジェクトローカルの Bake 済みポーズデータの容量を表示し、
-  必要に応じて削除します。キャッシュは `Library` に保存され、バージョン管理や Avatar の
-  アップロードには含まれません。
-
-既定値は一般的なプロジェクト向けです。アニメーションの精度、Clip サイズ、または Phantom
-View のパフォーマンスを調整したい場合だけ変更してください。
+- **Humanoid Bake Cache**：後続の Build で互換性のある Humanoid ポーズを再利用します。
+  パラメーター、BlendShape、マテリアルなどの非ボーンカーブは、現在の Source Clip から
+  引き続き取得されます。キャッシュは `Library` に保存され、バージョン管理や Avatar の
+  アップロードには含まれません。このウィンドウ、または
+  `Tools > PhantomSystem > Clear Humanoid Bake Cache` から削除できます。
 
 ## 生成されるメニュー操作
 
@@ -157,6 +163,9 @@ View のパフォーマンスを調整したい場合だけ変更してくださ
   対応する Behaviour は変換され、削除または一部変換された内容はビルド時に報告されます。
 - パラメーター駆動の Animator State Mirror は、実行時の変化に対応していません。State の
   既定 Mirror 値を Bake し、ビルド時に Warning を表示します。
+- PhantomSystem は一時的な分身 Prebake Clone 上でのみ Modular Avatar MMD World Support を
+  無効にし、Prebake 専用の MMD 互換 Layer が後続の Layer Control に影響することを防ぎます。
+  分身元と本体アバターの設定は変更されません。
 - 生成された Prebake アセットは、VRC Build の成功後、PhantomSystem の Manual Bake 後、
   または Apply on Play の終了後に自動削除されます。
   `Tools > PhantomSystem > Delete Prebake Assets` から手動削除することもできます。

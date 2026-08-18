@@ -1,3 +1,26 @@
+# Changelog
+
+## 0.3.0
+
+### Added
+
+- Added a project-local Humanoid pose bake cache under `Library`. Repeated Gesture and Action conversion can reuse compatible adaptive-sampling results while final motions continue to use the current source Clip's non-Humanoid curves.
+- Added Humanoid bake cache statistics and clearing controls to **Tools > PhantomSystem** and the Global Settings window. Invalid or damaged cache entries safely fall back to a normal bake.
+
+### Changed
+
+- Reorganized Humanoid animation conversion into separate binding analysis, pose sampling, adaptive processing, curve output, and VirtualClip output stages. Cache hits now rebuild converted motions directly as VirtualClips to avoid repeating Unity scene sampling and temporary Clip materialization.
+- Unified Core and source parameter planning across the Inspector, NDMF Parameter Provider, menu generation, and avatar build. Source State Behaviour translation is now separated from playable-controller preparation so both pipelines share one consistent result and diagnostic path.
+- Generated Prebake assets are now removed after a successful VRC build, after PhantomSystem Manual Bake, and when leaving Apply on Play. Stale assets are cleared before a later Prebake, and empty `Assets/PhantomSystemGenerated` directories are removed automatically.
+- The PhantomSystem Inspector now refreshes parameter and validation previews through precise NDMF dependency tracking instead of listening to every hierarchy change.
+- Moved the component's Add Component entry from `MPCCT/PhantomSystem` to the top-level `PhantomSystem` entry.
+- Disabled Modular Avatar MMD World Support only on temporary phantom Prebake clones, without changing the source avatar's setting.
+
+### Fixed
+
+- Animator Layer Control targets are now resolved while NDMF Animator Services still retains stable virtual layer identities, then verified after final controller generation. This prevents renamed or removed intermediate layers from invalidating Converted Action weights and cross-playable Layer Controls.
+- Fixed selecting or editing PhantomSystem dependencies repeatedly dirtying the scene. Relevant source Avatar, parameter, menu, controller, component, and Humanoid-rig changes still refresh the Inspector automatically.
+
 ## 0.2.2
 
 ### Changed
