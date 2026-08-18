@@ -38,6 +38,14 @@ namespace MPCCT.PhantomSystem.Editor
             GameObject humanoidRoot,
             PhantomHumanoidClipBakeOptions options)
         {
+            return BakePrepared(PrepareBake(source, humanoidRoot, options));
+        }
+
+        internal static PhantomHumanoidClipBakePreparation PrepareBake(
+            AnimationClip source,
+            GameObject humanoidRoot,
+            PhantomHumanoidClipBakeOptions options)
+        {
             if (source == null)
             {
                 throw new ArgumentNullException(nameof(source));
@@ -85,6 +93,45 @@ namespace MPCCT.PhantomSystem.Editor
                     effectiveMirror)
                 : null;
 
+            PhantomHumanoidPoseBakeData cachedPoseData = null;
+            if (analysis.AffectedBones.Count > 0 && options.CacheSession != null)
+            {
+                options.CacheSession.TryLoad(cacheKey, out cachedPoseData);
+            }
+
+            return new PhantomHumanoidClipBakePreparation(
+                source,
+                humanoidRoot,
+                sourceAnimator,
+                options,
+                sampleRate,
+                positionTolerance,
+                rotationToleranceDegrees,
+                effectiveMirror,
+                analysis,
+                cacheKey,
+                cachedPoseData);
+        }
+
+        internal static PhantomHumanoidClipBakeResult BakePrepared(
+            PhantomHumanoidClipBakePreparation preparation)
+        {
+            if (preparation == null)
+            {
+                throw new ArgumentNullException(nameof(preparation));
+            }
+
+            var source = preparation.Source;
+            var humanoidRoot = preparation.HumanoidRoot;
+            var sourceAnimator = preparation.SourceAnimator;
+            var options = preparation.Options;
+            var sampleRate = preparation.SampleRate;
+            var positionTolerance = preparation.PositionTolerance;
+            var rotationToleranceDegrees = preparation.RotationToleranceDegrees;
+            var effectiveMirror = preparation.EffectiveMirror;
+            var analysis = preparation.Analysis;
+            var cacheKey = preparation.CacheKey;
+
             var output = PhantomHumanoidCurveWriter.CreateOutputClip(source, sampleRate);
             PhantomHumanoidCurveWriter.CopyNonHumanoidCurves(
                 source,
@@ -92,31 +139,30 @@ namespace MPCCT.PhantomSystem.Editor
                 options.LocalizeRootMotionToHips,
                 options.AnimatorParameterNames);
 
-            PhantomHumanoidPoseBakeData poseData = null;
+            var poseData = preparation.CachedPoseData;
             AnimationClip mirroredEvaluationClip = null;
             try
             {
-                var evaluationClip = source;
-                if (options.InheritedMirror)
-                {
-                    mirroredEvaluationClip = Object.Instantiate(source);
-                    mirroredEvaluationClip.name = $"{source.name}_PhantomMirrorEvaluation";
-                    var evaluationSettings = AnimationUtility.GetAnimationClipSettings(
-                        mirroredEvaluationClip);
-                    evaluationSettings.mirror = PhantomHumanoidBindingUtility.ResolveEffectiveMirror(
-                        evaluationSettings.mirror,
-                        true);
-                    AnimationUtility.SetAnimationClipSettings(
-                        mirroredEvaluationClip,
-                        evaluationSettings);
-                    evaluationClip = mirroredEvaluationClip;
-                }
-
                 if (analysis.AffectedBones.Count > 0)
                 {
-                    if (options.CacheSession == null
-                        || !options.CacheSession.TryLoad(cacheKey, out poseData))
+                    if (poseData == null)
                     {
+                        var evaluationClip = source;
+                        if (options.InheritedMirror)
+                        {
+                            mirroredEvaluationClip = Object.Instantiate(source);
+                            mirroredEvaluationClip.name = $"{source.name}_PhantomMirrorEvaluation";
+                            var evaluationSettings = AnimationUtility.GetAnimationClipSettings(
+                                mirroredEvaluationClip);
+                            evaluationSettings.mirror = PhantomHumanoidBindingUtility.ResolveEffectiveMirror(
+                                evaluationSettings.mirror,
+                                true);
+                            AnimationUtility.SetAnimationClipSettings(
+                                mirroredEvaluationClip,
+                                evaluationSettings);
+                            evaluationClip = mirroredEvaluationClip;
+                        }
+
                         poseData = PhantomHumanoidPoseSampler.Sample(
                             evaluationClip,
                             sourceAnimator.avatar,
@@ -150,10 +196,25 @@ namespace MPCCT.PhantomSystem.Editor
             }
 
             output.EnsureQuaternionContinuity();
+            return CreateResult(preparation, output, poseData);
+        }
+
+        internal static PhantomHumanoidClipBakeResult CreateResult(
+            PhantomHumanoidClipBakePreparation preparation,
+            AnimationClip output,
+            PhantomHumanoidPoseBakeData poseData)
+        {
+            if (preparation == null)
+            {
+                throw new ArgumentNullException(nameof(preparation));
+            }
+
+            var analysis = preparation.Analysis;
+            var options = preparation.Options;
             var sampling = poseData?.Sampling;
             return new PhantomHumanoidClipBakeResult(
                 output,
-                sampleRate,
+                preparation.SampleRate,
                 analysis.ResolvedHumanoidBindingCount,
                 poseData == null
                     ? Array.Empty<HumanBodyBones>()
@@ -198,6 +259,48 @@ namespace MPCCT.PhantomSystem.Editor
             return float.IsNaN(value) || float.IsInfinity(value) || value <= 0f
                 ? fallback
                 : value;
+        }
+    }
+
+    internal sealed class PhantomHumanoidClipBakePreparation
+    {
+        internal AnimationClip Source { get; }
+        internal GameObject HumanoidRoot { get; }
+        internal Animator SourceAnimator { get; }
+        internal PhantomHumanoidClipBakeOptions Options { get; }
+        internal float SampleRate { get; }
+        internal float PositionTolerance { get; }
+        internal float RotationToleranceDegrees { get; }
+        internal bool EffectiveMirror { get; }
+        internal PhantomHumanoidClipAnalysis Analysis { get; }
+        internal string CacheKey { get; }
+        internal PhantomHumanoidPoseBakeData CachedPoseData { get; }
+        internal bool IsCacheHit => CachedPoseData != null;
+
+        internal PhantomHumanoidClipBakePreparation(
+            AnimationClip source,
+            GameObject humanoidRoot,
+            Animator sourceAnimator,
+            PhantomHumanoidClipBakeOptions options,
+            float sampleRate,
+            float positionTolerance,
+            float rotationToleranceDegrees,
+            bool effectiveMirror,
+            PhantomHumanoidClipAnalysis analysis,
+            string cacheKey,
+            PhantomHumanoidPoseBakeData cachedPoseData)
+        {
+            Source = source;
+            HumanoidRoot = humanoidRoot;
+            SourceAnimator = sourceAnimator;
+            Options = options;
+            SampleRate = sampleRate;
+            PositionTolerance = positionTolerance;
+            RotationToleranceDegrees = rotationToleranceDegrees;
+            EffectiveMirror = effectiveMirror;
+            Analysis = analysis;
+            CacheKey = cacheKey;
+            CachedPoseData = cachedPoseData;
         }
     }
 

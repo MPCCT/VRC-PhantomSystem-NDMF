@@ -357,53 +357,84 @@ namespace MPCCT.PhantomSystem.Editor
                     pathMapper.ToCloneRelative);
 
                 PhantomHumanoidClipBakeResult result = null;
+                PhantomVirtualClipImport imported;
+                var outputName = $"PhantomSystem_{slot.SlotId}_{playable}_{sourceName}"
+                                 + (inheritedMirror ? "_Mirrored" : string.Empty)
+                                 + (completionEnabled ? "_NeutralCompleted" : string.Empty);
                 if (requiresBake)
                 {
-                    result = PhantomHumanoidClipBaker.Bake(
+                    var options = new PhantomHumanoidClipBakeOptions
+                    {
+                        SamplingMode = PhantomHumanoidSamplingMode.Adaptive,
+                        SampleRate = projectSettings.MaximumAdaptiveSampleRate,
+                        PositionErrorTolerance = projectSettings.PositionErrorTolerance,
+                        RotationErrorToleranceDegrees = projectSettings.RotationErrorToleranceDegrees,
+                        LocalizeRootMotionToHips = true,
+                        InheritedMirror = inheritedMirror,
+                        AnimatorParameterNames = animatorParameterNames,
+                        OutputBonePaths = slot.AnimationDriverBones.ToDictionary(
+                            pair => pair.Key,
+                            pair => TransformPathUtility.GetRelativePath(
+                                pair.Value,
+                                slot.CloneRoot.transform)),
+                        OutputBoneParentPaths = slot.AnimationDriverPoseParentClonePaths,
+                        NeutralRotationCompletionBones = completionEnabled
+                            ? session.CompletionBones
+                            : null,
+                        NeutralBoneRotations = completionEnabled
+                            && session.CompletionBones.Count > 0
+                            ? GetNeutralBoneRotations()
+                            : null,
+                        CacheSession = bakeCache
+                    };
+                    var preparation = PhantomHumanoidClipBaker.PrepareBake(
                         localSource,
                         slot.CloneRoot,
-                        new PhantomHumanoidClipBakeOptions
-                        {
-                            SamplingMode = PhantomHumanoidSamplingMode.Adaptive,
-                            SampleRate = projectSettings.MaximumAdaptiveSampleRate,
-                            PositionErrorTolerance = projectSettings.PositionErrorTolerance,
-                            RotationErrorToleranceDegrees = projectSettings.RotationErrorToleranceDegrees,
-                            LocalizeRootMotionToHips = true,
-                            InheritedMirror = inheritedMirror,
-                            AnimatorParameterNames = animatorParameterNames,
-                            OutputBonePaths = slot.AnimationDriverBones.ToDictionary(
-                                pair => pair.Key,
-                                pair => TransformPathUtility.GetRelativePath(
-                                    pair.Value,
-                                    slot.CloneRoot.transform)),
-                            OutputBoneParentPaths = slot.AnimationDriverPoseParentClonePaths,
-                            NeutralRotationCompletionBones = completionEnabled
-                                ? session.CompletionBones
-                                : null,
-                            NeutralBoneRotations = completionEnabled
-                                && session.CompletionBones.Count > 0
-                                ? GetNeutralBoneRotations()
-                                : null,
-                            CacheSession = bakeCache
-                        });
-                    converted = result.Clip;
+                        options);
+                    if (preparation.IsCacheHit)
+                    {
+                        imported = PhantomHumanoidVirtualClipWriter.WriteCached(
+                            context,
+                            localSource,
+                            source,
+                            preparation,
+                            slot.CloneToAnimationDriverPaths,
+                            pathMapper.ToAvatarRelative,
+                            outputName);
+                        result = PhantomHumanoidClipBaker.CreateResult(
+                            preparation,
+                            null,
+                            preparation.CachedPoseData);
+                        bakeCache?.RecordVirtualClipFastPathHit();
+                    }
+                    else
+                    {
+                        result = PhantomHumanoidClipBaker.BakePrepared(preparation);
+                        converted = result.Clip;
+                        RedirectBoneBindings(converted);
+                        converted.hideFlags = HideFlags.None;
+                        converted.name = outputName;
+                        imported = PhantomVirtualClipAdapter.ImportConverted(
+                            context,
+                            converted,
+                            source,
+                            pathMapper.ToAvatarRelative);
+                    }
                 }
                 else
                 {
                     converted = localSource;
                     localSource = null;
+                    RedirectBoneBindings(converted);
+                    converted.hideFlags = HideFlags.None;
+                    converted.name = outputName;
+                    imported = PhantomVirtualClipAdapter.ImportConverted(
+                        context,
+                        converted,
+                        source,
+                        pathMapper.ToAvatarRelative);
                 }
 
-                RedirectBoneBindings(converted);
-                converted.hideFlags = HideFlags.None;
-                converted.name = $"PhantomSystem_{slot.SlotId}_{playable}_{sourceName}"
-                                 + (inheritedMirror ? "_Mirrored" : string.Empty)
-                                 + (completionEnabled ? "_NeutralCompleted" : string.Empty);
-                var imported = PhantomVirtualClipAdapter.ImportConverted(
-                    context,
-                    converted,
-                    source,
-                    pathMapper.ToAvatarRelative);
                 clipCache[source] = imported.Clip;
                 RegisterConvertedClip(imported, sourceName);
 

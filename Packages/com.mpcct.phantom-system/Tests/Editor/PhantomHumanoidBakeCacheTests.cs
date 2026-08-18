@@ -1,11 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
+using nadena.dev.ndmf;
+using nadena.dev.ndmf.animator;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.TestTools;
+using VRC.SDK3.Avatars.Components;
 
 namespace MPCCT.PhantomSystem.Editor.Tests
 {
@@ -154,6 +158,131 @@ namespace MPCCT.PhantomSystem.Editor.Tests
             }
         }
 
+        [Test]
+        public void CachedVirtualClipWriter_WritesPoseAndPreservesCurrentNonHumanoidCurves()
+        {
+            var avatarRoot = new GameObject("Avatar");
+            var animator = avatarRoot.AddComponent<Animator>();
+            var descriptor = avatarRoot.AddComponent<VRCAvatarDescriptor>();
+            descriptor.customizeAnimationLayers = true;
+            descriptor.baseAnimationLayers = Array.Empty<VRCAvatarDescriptor.CustomAnimLayer>();
+            descriptor.specialAnimationLayers = Array.Empty<VRCAvatarDescriptor.CustomAnimLayer>();
+            var source = new AnimationClip { name = "Source", frameRate = 60f };
+            var parameterBinding = EditorCurveBinding.FloatCurve(
+                string.Empty,
+                typeof(Animator),
+                "FaceParameter");
+            var muscleBinding = EditorCurveBinding.FloatCurve(
+                string.Empty,
+                typeof(Animator),
+                HumanTrait.MuscleName.First());
+            var genericBoneBinding = EditorCurveBinding.FloatCurve(
+                "Bone",
+                typeof(Transform),
+                "m_LocalPosition.x");
+            var rootBinding = EditorCurveBinding.FloatCurve(
+                string.Empty,
+                typeof(Transform),
+                "m_LocalPosition.x");
+            var blendShapeBinding = EditorCurveBinding.FloatCurve(
+                "Face",
+                typeof(SkinnedMeshRenderer),
+                "blendShape.Smile");
+            AnimationUtility.SetEditorCurve(source, parameterBinding, AnimationCurve.Constant(0f, 1f, 1f));
+            AnimationUtility.SetEditorCurve(source, muscleBinding, AnimationCurve.Constant(0f, 1f, 0.5f));
+            AnimationUtility.SetEditorCurve(source, genericBoneBinding, AnimationCurve.Linear(0f, 0f, 1f, 1f));
+            AnimationUtility.SetEditorCurve(source, rootBinding, AnimationCurve.Linear(0f, 0f, 1f, 2f));
+            AnimationUtility.SetEditorCurve(source, blendShapeBinding, AnimationCurve.Constant(0f, 1f, 75f));
+
+            var options = new PhantomHumanoidClipBakeOptions
+            {
+                SamplingMode = PhantomHumanoidSamplingMode.Adaptive,
+                SampleRate = 30f,
+                LocalizeRootMotionToHips = true,
+                AnimatorParameterNames = new HashSet<string> { "FaceParameter" },
+                OutputBonePaths = new Dictionary<HumanBodyBones, string>
+                {
+                    [HumanBodyBones.Hips] = "Armature/PhantomAnimationDriver/Hips"
+                }
+            };
+            var analysis = PhantomHumanoidClipAnalyzer.Analyze(source, options, false);
+            var poseData = CreatePoseData();
+            var expectedPose = new AnimationClip();
+            PhantomHumanoidCurveWriter.WritePoseCurves(expectedPose, poseData);
+            expectedPose.EnsureQuaternionContinuity();
+            var preparation = new PhantomHumanoidClipBakePreparation(
+                source,
+                avatarRoot,
+                animator,
+                options,
+                30f,
+                0.0005f,
+                0.25f,
+                false,
+                analysis,
+                "cache-key",
+                poseData);
+            var context = new BuildContext(avatarRoot, null);
+
+            try
+            {
+                context.ActivateExtensionContextRecursive<AnimatorServicesContext>();
+                PhantomVirtualClipImport imported;
+                using (new ObjectRegistryScope(context.ObjectRegistry))
+                {
+                    imported = PhantomHumanoidVirtualClipWriter.WriteCached(
+                        context,
+                        source,
+                        VirtualClip.Create("SourceVirtual"),
+                        preparation,
+                        new Dictionary<string, string>
+                        {
+                            ["Bone"] = "Armature/PhantomAnimationDriver/Bone"
+                        },
+                        path => string.IsNullOrEmpty(path) ? "Slot" : "Slot/" + path,
+                        "Converted");
+                }
+
+                var output = imported.Clip;
+                Assert.AreEqual("Converted", output.Name);
+                Assert.AreEqual(30f, output.FrameRate);
+                Assert.IsNotNull(imported.Reference);
+                Assert.IsNotNull(output.GetFloatCurve(parameterBinding));
+                Assert.IsNull(output.GetFloatCurve(muscleBinding));
+                Assert.IsNull(output.GetFloatCurve(EditorCurveBinding.FloatCurve(
+                    "Slot",
+                    typeof(Transform),
+                    "m_LocalPosition.x")));
+                Assert.IsNotNull(output.GetFloatCurve(EditorCurveBinding.FloatCurve(
+                    "Slot/Armature/PhantomAnimationDriver/Bone",
+                    typeof(Transform),
+                    "m_LocalPosition.x")));
+                Assert.IsNotNull(output.GetFloatCurve(EditorCurveBinding.FloatCurve(
+                    "Slot/Face",
+                    typeof(SkinnedMeshRenderer),
+                    "blendShape.Smile")));
+                Assert.IsNotNull(output.GetFloatCurve(EditorCurveBinding.FloatCurve(
+                    "Slot/Armature/PhantomAnimationDriver/Hips",
+                    typeof(Transform),
+                    "m_LocalRotation.w")));
+                foreach (var expectedBinding in AnimationUtility.GetCurveBindings(expectedPose))
+                {
+                    var actualBinding = expectedBinding;
+                    actualBinding.path = "Slot/" + expectedBinding.path;
+                    AssertCurveEqual(
+                        AnimationUtility.GetEditorCurve(expectedPose, expectedBinding),
+                        output.GetFloatCurve(actualBinding));
+                }
+            }
+            finally
+            {
+                context.DeactivateAllExtensionContexts();
+                UnityEngine.Object.DestroyImmediate(expectedPose);
+                UnityEngine.Object.DestroyImmediate(source);
+                UnityEngine.Object.DestroyImmediate(avatarRoot);
+            }
+        }
+
         private static PhantomHumanoidPoseBakeData CreatePoseData()
         {
             var intervals = new[] { new PhantomTimeInterval(0.5f, 1f) };
@@ -266,6 +395,24 @@ namespace MPCCT.PhantomSystem.Editor.Tests
             Assert.AreEqual(
                 expected.Sampling.HitSampleRateLimit,
                 actual.Sampling.HitSampleRateLimit);
+        }
+
+        private static void AssertCurveEqual(AnimationCurve expected, AnimationCurve actual)
+        {
+            Assert.IsNotNull(actual);
+            Assert.AreEqual(expected.length, actual.length);
+            Assert.AreEqual(expected.preWrapMode, actual.preWrapMode);
+            Assert.AreEqual(expected.postWrapMode, actual.postWrapMode);
+            for (var index = 0; index < expected.length; index++)
+            {
+                var expectedKey = expected[index];
+                var actualKey = actual[index];
+                Assert.AreEqual(expectedKey.time, actualKey.time, 0.000001f);
+                Assert.AreEqual(expectedKey.value, actualKey.value, 0.000001f);
+                Assert.AreEqual(expectedKey.inTangent, actualKey.inTangent, 0.000001f);
+                Assert.AreEqual(expectedKey.outTangent, actualKey.outTangent, 0.000001f);
+                Assert.AreEqual(expectedKey.weightedMode, actualKey.weightedMode);
+            }
         }
     }
 }

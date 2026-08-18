@@ -23,6 +23,7 @@ namespace MPCCT.PhantomSystem.Editor
         internal int MissCount { get; private set; }
         internal int WriteFailureCount { get; private set; }
         internal int BypassCount { get; private set; }
+        internal int VirtualClipFastPathHitCount { get; private set; }
         internal int RequestCount => HitCount + MissCount + BypassCount;
 
         private static string SchemaDirectoryName =>
@@ -174,6 +175,11 @@ namespace MPCCT.PhantomSystem.Editor
             }
         }
 
+        internal void RecordVirtualClipFastPathHit()
+        {
+            VirtualClipFastPathHitCount++;
+        }
+
         internal void ReportSummary(PhantomBuildReport report, UnityEngine.Object context)
         {
             if (report == null || RequestCount == 0)
@@ -189,6 +195,10 @@ namespace MPCCT.PhantomSystem.Editor
             if (WriteFailureCount > 0)
             {
                 message += $", {WriteFailureCount} write failure(s)";
+            }
+            if (VirtualClipFastPathHitCount > 0)
+            {
+                message += $", {VirtualClipFastPathHitCount} VirtualClip fast-path hit(s)";
             }
             report.Info(message + ".", context);
         }
