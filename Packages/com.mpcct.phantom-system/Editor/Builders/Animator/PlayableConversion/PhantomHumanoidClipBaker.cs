@@ -71,6 +71,19 @@ namespace MPCCT.PhantomSystem.Editor
                 source,
                 options,
                 effectiveMirror);
+            var cacheKey = options.SamplingMode == PhantomHumanoidSamplingMode.Adaptive
+                           && options.CacheSession != null
+                ? options.CacheSession.TryCreateKey(
+                    source,
+                    sourceAnimator.avatar,
+                    humanoidRoot.transform,
+                    sampleRate,
+                    positionTolerance,
+                    rotationToleranceDegrees,
+                    analysis,
+                    options,
+                    effectiveMirror)
+                : null;
 
             var output = PhantomHumanoidCurveWriter.CreateOutputClip(source, sampleRate);
             PhantomHumanoidCurveWriter.CopyNonHumanoidCurves(
@@ -101,19 +114,24 @@ namespace MPCCT.PhantomSystem.Editor
 
                 if (analysis.AffectedBones.Count > 0)
                 {
-                    poseData = PhantomHumanoidPoseSampler.Sample(
-                        evaluationClip,
-                        sourceAnimator.avatar,
-                        humanoidRoot.transform,
-                        sampleRate,
-                        analysis.AffectedBones,
-                        analysis.ForcePositionBones,
-                        options.LocalizeRootMotionToHips && analysis.HasRootMotion,
-                        options,
-                        positionTolerance,
-                        rotationToleranceDegrees,
-                        analysis.RelevantBindings,
-                        effectiveMirror);
+                    if (options.CacheSession == null
+                        || !options.CacheSession.TryLoad(cacheKey, out poseData))
+                    {
+                        poseData = PhantomHumanoidPoseSampler.Sample(
+                            evaluationClip,
+                            sourceAnimator.avatar,
+                            humanoidRoot.transform,
+                            sampleRate,
+                            analysis.AffectedBones,
+                            analysis.ForcePositionBones,
+                            options.LocalizeRootMotionToHips && analysis.HasRootMotion,
+                            options,
+                            positionTolerance,
+                            rotationToleranceDegrees,
+                            analysis.RelevantBindings,
+                            effectiveMirror);
+                        options.CacheSession?.Store(cacheKey, poseData);
+                    }
                     PhantomHumanoidCurveWriter.WritePoseCurves(output, poseData);
                     PhantomHumanoidCurveWriter.WriteMissingNeutralRotationCurves(
                         output,
@@ -253,5 +271,6 @@ namespace MPCCT.PhantomSystem.Editor
         public IReadOnlyDictionary<HumanBodyBones, string> OutputBoneParentPaths { get; set; }
         public ISet<HumanBodyBones> NeutralRotationCompletionBones { get; set; }
         public IReadOnlyDictionary<HumanBodyBones, Quaternion> NeutralBoneRotations { get; set; }
+        internal PhantomHumanoidBakeCacheSession CacheSession { get; set; }
     }
 }

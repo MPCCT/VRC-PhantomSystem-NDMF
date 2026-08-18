@@ -36,7 +36,7 @@ namespace MPCCT.PhantomSystem.Editor
                 return;
             }
 
-            if (!PhantomPrebakeService.Prepare(avatar.gameObject))
+            if (!PhantomPrebakeService.Prepare(avatar.gameObject, false))
             {
                 return;
             }

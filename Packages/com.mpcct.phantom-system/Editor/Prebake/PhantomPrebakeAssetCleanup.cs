@@ -1,27 +1,45 @@
 using System;
+using System.IO;
 using System.Linq;
 using UnityEditor;
 
 namespace MPCCT.PhantomSystem.Editor
 {
-    /// <summary>Deletes package-owned prebake asset directories after explicit user confirmation.</summary>
+    /// <summary>Deletes only package-owned prebake asset directories.</summary>
     internal static class PhantomPrebakeAssetCleanup
     {
         private const string PrebakeDirectoryPrefix = "PhantomPrebake_";
 
         public static PhantomPrebakeAssetCleanupResult DeleteGeneratedAssets()
         {
-            if (!AssetDatabase.IsValidFolder(PhantomPrebakeService.GeneratedAssetRoot))
+            return DeleteGeneratedAssets(
+                PhantomPrebakeService.GeneratedAssetRoot,
+                PhantomPrebakeService.GeneratedAssetContainer);
+        }
+
+        internal static PhantomPrebakeAssetCleanupResult DeleteGeneratedAssets(string generatedAssetRoot)
+        {
+            return DeleteGeneratedAssets(generatedAssetRoot, null);
+        }
+
+        internal static PhantomPrebakeAssetCleanupResult DeleteGeneratedAssets(
+            string generatedAssetRoot,
+            string generatedAssetContainer)
+        {
+            if (!AssetDatabase.IsValidFolder(generatedAssetRoot))
             {
+                DeleteFolderIfEmpty(generatedAssetContainer);
                 return new PhantomPrebakeAssetCleanupResult(0, 0, 0);
             }
 
-            var candidates = AssetDatabase.GetSubFolders(PhantomPrebakeService.GeneratedAssetRoot)
-                .Where(IsOwnedPrebakeDirectory)
+            var candidates = AssetDatabase.GetSubFolders(generatedAssetRoot)
+                .Where(path => IsOwnedPrebakeDirectory(path, generatedAssetRoot))
                 .OrderBy(path => path, StringComparer.Ordinal)
                 .ToArray();
             if (candidates.Length == 0)
             {
+                DeleteFolderIfEmpty(generatedAssetRoot);
+                DeleteFolderIfEmpty(generatedAssetContainer);
                 return new PhantomPrebakeAssetCleanupResult(0, 0, 0);
             }
 
@@ -39,21 +57,35 @@ namespace MPCCT.PhantomSystem.Editor
                 }
             }
 
+            DeleteFolderIfEmpty(generatedAssetRoot);
+            DeleteFolderIfEmpty(generatedAssetContainer);
             AssetDatabase.Refresh();
             return new PhantomPrebakeAssetCleanupResult(candidates.Length, removed, failed);
         }
 
-        private static bool IsOwnedPrebakeDirectory(string path)
+        private static void DeleteFolderIfEmpty(string assetPath)
+        {
+            if (string.IsNullOrEmpty(assetPath)
+                || !AssetDatabase.IsValidFolder(assetPath)
+                || Directory.EnumerateFileSystemEntries(assetPath).Any())
+            {
+                return;
+            }
+
+            AssetDatabase.DeleteAsset(assetPath);
+        }
+
+        private static bool IsOwnedPrebakeDirectory(string path, string generatedAssetRoot)
         {
             if (string.IsNullOrEmpty(path)
                 || !path.StartsWith(
-                    PhantomPrebakeService.GeneratedAssetRoot + "/",
+                    generatedAssetRoot + "/",
                     StringComparison.Ordinal))
             {
                 return false;
             }
 
-            var relativePath = path.Substring(PhantomPrebakeService.GeneratedAssetRoot.Length + 1);
+            var relativePath = path.Substring(generatedAssetRoot.Length + 1);
             return relativePath.IndexOf('/') < 0
                    && relativePath.StartsWith(PrebakeDirectoryPrefix, StringComparison.Ordinal);
         }

@@ -20,6 +20,16 @@ namespace MPCCT.PhantomSystem.Editor
             PhantomSystemProjectSettingsSnapshot projectSettings,
             PhantomBuildReport report)
         {
+            ProcessVirtual(context, slot, projectSettings, null, report);
+        }
+
+        public static void ProcessVirtual(
+            BuildContext context,
+            PhantomSlotBuildState slot,
+            PhantomSystemProjectSettingsSnapshot projectSettings,
+            PhantomHumanoidBakeCacheSession bakeCache,
+            PhantomBuildReport report)
+        {
             if (slot?.Slot == null || slot.Slot.removeSourceControls)
             {
                 return;
@@ -77,6 +87,7 @@ namespace MPCCT.PhantomSystem.Editor
                     context,
                     slot,
                     projectSettings,
+                    bakeCache,
                     report,
                     pair.Key,
                     pair.Value.Controller,

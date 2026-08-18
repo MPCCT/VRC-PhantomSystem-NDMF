@@ -112,6 +112,8 @@ PhysBone Immobile Type 覆盖。
 
 - **Phantom View Texture Size**：设置所有分身视角使用的渲染分辨率。
 - **Humanoid Animation Conversion**：设置动画转换的最高采样率和位置、旋转误差容限。
+- **Humanoid Bake Cache**：显示项目本地骨骼烘焙缓存的大小，并可随时清理。缓存位于
+  `Library`，不会进入版本控制或 Avatar 上传内容。
 
 默认值适合一般项目。只有在动画细节不足、Clip 体积过大或 Phantom View 性能不足时，才建议调整。
 
@@ -136,7 +138,9 @@ PhysBone Immobile Type 覆盖。
   支持的行为，并对被移除或部分转换的内容给出构建警告。
 - 参数驱动的 Animator State Mirror 暂不支持运行时变化；构建时会使用该 State 的默认 Mirror
   值并给出警告。
-- 可通过 `Tools > PhantomSystem > Delete Prebake Assets` 清理生成的 Prebake 资产。
+- 成功完成 VRC 构建后会自动清理生成的 Prebake 资产；也可通过
+  `Tools > PhantomSystem > Delete Prebake Assets` 手动清理。后续构建或清理可能使旧的
+  Manual Bake 结果需要重新生成。
 
 ## License
 

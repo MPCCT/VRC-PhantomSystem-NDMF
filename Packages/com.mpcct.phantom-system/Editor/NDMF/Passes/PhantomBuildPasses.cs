@@ -30,6 +30,7 @@ namespace MPCCT.PhantomSystem.Editor
         {
             var state = ctx.GetState<PhantomBuildState>();
             state.System = null;
+            state.HumanoidBakeCache = null;
             state.ProjectSettings = PhantomSystemProjectSettings.instance.CreateSnapshot();
             state.BaseParameters.Clear();
             foreach (var pair in PhantomParameterAnalysis.ReadBaseParameters(ctx.AvatarRootObject, ctx))
@@ -60,6 +61,7 @@ namespace MPCCT.PhantomSystem.Editor
                 AvatarRoot = ctx.AvatarRootTransform,
                 ProjectSettings = state.ProjectSettings
             };
+            state.HumanoidBakeCache = new PhantomHumanoidBakeCacheSession();
 
             var slots = authoring.slots ?? new System.Collections.Generic.List<PhantomSlot>();
             for (var slotIndex = 0; slotIndex < slots.Count; slotIndex++)
@@ -282,6 +284,7 @@ namespace MPCCT.PhantomSystem.Editor
                     ctx,
                     slot,
                     state.System.ProjectSettings,
+                    state.HumanoidBakeCache,
                     state.Report);
             }
 
@@ -289,6 +292,10 @@ namespace MPCCT.PhantomSystem.Editor
             {
                 PhantomSourceParameterMapping.ReportUnresolved(slot, state.Report);
             }
+
+            state.HumanoidBakeCache?.ReportSummary(
+                state.Report,
+                state.System.AuthoringComponent);
         }
     }
 

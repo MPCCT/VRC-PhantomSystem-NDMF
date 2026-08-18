@@ -124,6 +124,9 @@ Prebake は実行されません。
 - **Phantom View Texture Size**：分身ビューで共有する描画解像度を設定します。
 - **Humanoid Animation Conversion**：最大サンプリングレートと位置・回転の誤差許容値を
   設定します。
+- **Humanoid Bake Cache**：プロジェクトローカルの Bake 済みポーズデータの容量を表示し、
+  必要に応じて削除します。キャッシュは `Library` に保存され、バージョン管理や Avatar の
+  アップロードには含まれません。
 
 既定値は一般的なプロジェクト向けです。アニメーションの精度、Clip サイズ、または Phantom
 View のパフォーマンスを調整したい場合だけ変更してください。
@@ -154,8 +157,9 @@ View のパフォーマンスを調整したい場合だけ変更してくださ
   対応する Behaviour は変換され、削除または一部変換された内容はビルド時に報告されます。
 - パラメーター駆動の Animator State Mirror は、実行時の変化に対応していません。State の
   既定 Mirror 値を Bake し、ビルド時に Warning を表示します。
-- 生成された Prebake アセットは
-  `Tools > PhantomSystem > Delete Prebake Assets` から削除できます。
+- 生成された Prebake アセットは VRC Build の成功後に自動削除されます。また、
+  `Tools > PhantomSystem > Delete Prebake Assets` から手動削除できます。後続の Build や
+  Cleanup 後は、以前の Manual Bake 結果を再生成する必要がある場合があります。
 
 ## License
 

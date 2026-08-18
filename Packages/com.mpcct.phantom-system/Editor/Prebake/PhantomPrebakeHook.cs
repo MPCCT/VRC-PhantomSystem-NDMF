@@ -27,7 +27,24 @@ namespace MPCCT.PhantomSystem.Editor
                 return true;
             }
 
-            return PhantomPrebakeService.Prepare(avatarGameObject);
+            return PhantomPrebakeService.Prepare(avatarGameObject, true);
+        }
+    }
+
+    internal sealed class PhantomPrebakePostprocessCleanup : IVRCSDKPostprocessAvatarCallback
+    {
+        // The bundle has already consumed its dependencies. Run after other postprocess callbacks
+        // so none of them observe deleted prebake assets.
+        public int callbackOrder => int.MaxValue;
+
+        public void OnPostprocessAvatar()
+        {
+            if (!PhantomPrebakeSession.ConsumeAutomaticCleanupPending())
+            {
+                return;
+            }
+
+            PhantomPrebakeService.CleanupGeneratedAssets("VRC avatar postprocess");
         }
     }
 
@@ -48,16 +65,25 @@ namespace MPCCT.PhantomSystem.Editor
                 "[PhantomSystem] The phantom sources were prebaked, but the main NDMF build did not consume them. "
                 + "Enable NDMF Apply on Build/Play and retry.");
             PhantomPrebakeSession.CleanupBindings(avatarGameObject);
+            PhantomPrebakeSession.ClearAutomaticCleanupPending();
+            PhantomPrebakeService.CleanupGeneratedAssets("unconsumed prebake");
             return false;
         }
     }
 
     internal static class PhantomPrebakeService
     {
-        internal const string GeneratedAssetRoot = "Assets/PhantomSystemGenerated/Prebake";
+        internal const string GeneratedAssetContainer = "Assets/PhantomSystemGenerated";
+        internal const string GeneratedAssetRoot = GeneratedAssetContainer + "/Prebake";
 
         public static bool Prepare(GameObject avatarRoot)
         {
+            return Prepare(avatarRoot, false);
+        }
+
+        internal static bool Prepare(GameObject avatarRoot, bool automaticCleanup)
+        {
+            CleanupGeneratedAssets("before prebake");
             PhantomPrebakeSession.Begin(avatarRoot);
             PhantomPrebakeSession.IsPrebaking = true;
 
@@ -94,6 +120,10 @@ namespace MPCCT.PhantomSystem.Editor
                         prebakedRoot = Prebake(slot.phantomAvatar);
                         prebakedBySource.Add(slot.phantomAvatar, prebakedRoot);
                         PhantomPrebakeSession.BindSource(slot.phantomAvatar, prebakedRoot);
+                        if (automaticCleanup)
+                        {
+                            PhantomPrebakeSession.MarkAutomaticCleanupPending();
+                        }
                     }
 
                     PhantomPrebakeSession.Bind(authoring, slotIndex, prebakedRoot);
@@ -107,11 +137,34 @@ namespace MPCCT.PhantomSystem.Editor
                 Debug.LogException(exception);
                 PhantomPrebakeSession.CleanupBindings(avatarRoot);
                 PhantomPrebakeSession.CleanupAll();
+                CleanupGeneratedAssets("failed prebake");
+                PhantomPrebakeSession.ClearAutomaticCleanupPending();
                 return false;
             }
             finally
             {
                 PhantomPrebakeSession.IsPrebaking = false;
+            }
+        }
+
+        internal static void CleanupGeneratedAssets(string reason)
+        {
+            try
+            {
+                var result = PhantomPrebakeAssetCleanup.DeleteGeneratedAssets();
+                if (result.Failed > 0)
+                {
+                    Debug.LogWarning(
+                        $"[PhantomSystem] Failed to remove {result.Failed} of {result.Candidates} "
+                        + $"generated prebake directories during {reason}. Use Tools > PhantomSystem > "
+                        + "Delete Prebake Assets to retry.");
+                }
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning(
+                    $"[PhantomSystem] Could not clean generated prebake assets during {reason}. "
+                    + $"The avatar build can continue. {exception.Message}");
             }
         }
 

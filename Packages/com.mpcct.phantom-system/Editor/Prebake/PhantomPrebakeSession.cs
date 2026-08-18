@@ -17,6 +17,7 @@ namespace MPCCT.PhantomSystem.Editor
             new Dictionary<VRCAvatarDescriptor, GameObject>();
 
         public static bool IsPrebaking { get; set; }
+        private static bool AutomaticCleanupPending { get; set; }
 
         static PhantomPrebakeSession()
         {
@@ -27,6 +28,10 @@ namespace MPCCT.PhantomSystem.Editor
                 if (state == PlayModeStateChange.EnteredEditMode)
                 {
                     CleanupAll();
+                    if (ConsumeAutomaticCleanupPending())
+                    {
+                        PhantomPrebakeService.CleanupGeneratedAssets("leaving Play Mode");
+                    }
                 }
             };
         }
@@ -35,6 +40,24 @@ namespace MPCCT.PhantomSystem.Editor
         {
             CleanupBindings(avatarRoot);
             CleanupAll();
+            AutomaticCleanupPending = false;
+        }
+
+        internal static void MarkAutomaticCleanupPending()
+        {
+            AutomaticCleanupPending = true;
+        }
+
+        internal static bool ConsumeAutomaticCleanupPending()
+        {
+            var pending = AutomaticCleanupPending;
+            AutomaticCleanupPending = false;
+            return pending;
+        }
+
+        internal static void ClearAutomaticCleanupPending()
+        {
+            AutomaticCleanupPending = false;
         }
 
         public static void Register(GameObject stagingRoot)

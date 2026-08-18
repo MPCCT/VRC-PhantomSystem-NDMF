@@ -15,6 +15,7 @@ namespace MPCCT.PhantomSystem.Editor
         public PhantomSystemBuildState System { get; set; }
         public PhantomBuildReport Report { get; } = new PhantomBuildReport();
         internal PhantomSystemProjectSettingsSnapshot ProjectSettings { get; set; }
+        internal PhantomHumanoidBakeCacheSession HumanoidBakeCache { get; set; }
         internal Dictionary<string, PhantomParameterDefinition> BaseParameters { get; } =
             new Dictionary<string, PhantomParameterDefinition>(global::System.StringComparer.Ordinal);
 

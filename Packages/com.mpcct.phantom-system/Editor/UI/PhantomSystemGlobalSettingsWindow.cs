@@ -15,7 +15,7 @@ namespace MPCCT.PhantomSystem.Editor
         {
             var window = GetWindow<PhantomSystemGlobalSettingsWindow>();
             window.titleContent = new GUIContent("PhantomSystem Settings");
-            window.minSize = new Vector2(470f, 330f);
+            window.minSize = new Vector2(470f, 420f);
             window.Show();
         }
 
@@ -96,6 +96,25 @@ namespace MPCCT.PhantomSystem.Editor
                 + "If the sample-rate limit is reached before tolerance is met, the build reports a warning.",
                 MessageType.None);
 
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Humanoid Bake Cache", EditorStyles.boldLabel);
+            var cacheStatistics = PhantomHumanoidBakeCacheSession.GetStatistics();
+            EditorGUILayout.LabelField(
+                "Cached Pose Data",
+                $"{cacheStatistics.EntryCount} entr"
+                + $"{(cacheStatistics.EntryCount == 1 ? "y" : "ies")}, "
+                + PhantomSystemToolsMenu.FormatBytes(cacheStatistics.Bytes));
+            EditorGUILayout.HelpBox(
+                "The cache is project-local derived data stored under Library. It is not referenced by "
+                + "the built avatar and can be cleared at any time.",
+                MessageType.None);
+            if (GUILayout.Button("Clear Humanoid Bake Cache"))
+            {
+                PhantomSystemToolsMenu.ClearHumanoidBakeCacheWithConfirmation();
+                Repaint();
+            }
+
+            EditorGUILayout.Space();
             if (GUILayout.Button("Reset to Defaults"))
             {
                 settings.ResetToDefaults();

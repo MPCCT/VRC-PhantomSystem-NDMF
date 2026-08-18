@@ -18,6 +18,7 @@ namespace MPCCT.PhantomSystem.Editor
         private readonly BuildContext context;
         private readonly PhantomSlotBuildState slot;
         private readonly PhantomSystemProjectSettingsSnapshot projectSettings;
+        private readonly PhantomHumanoidBakeCacheSession bakeCache;
         private readonly PhantomBuildReport report;
         private readonly VRCAvatarDescriptor.AnimLayerType playable;
         private readonly PhantomVirtualPathMapper pathMapper;
@@ -32,6 +33,7 @@ namespace MPCCT.PhantomSystem.Editor
             BuildContext context,
             PhantomSlotBuildState slot,
             PhantomSystemProjectSettingsSnapshot projectSettings,
+            PhantomHumanoidBakeCacheSession bakeCache,
             PhantomBuildReport report,
             VRCAvatarDescriptor.AnimLayerType playable,
             IEnumerable<string> animatorParameterNames)
@@ -39,6 +41,7 @@ namespace MPCCT.PhantomSystem.Editor
             this.context = context;
             this.slot = slot;
             this.projectSettings = projectSettings;
+            this.bakeCache = bakeCache;
             this.report = report;
             this.playable = playable;
             this.animatorParameterNames = new HashSet<string>(
@@ -56,6 +59,7 @@ namespace MPCCT.PhantomSystem.Editor
             BuildContext context,
             PhantomSlotBuildState slot,
             PhantomSystemProjectSettingsSnapshot projectSettings,
+            PhantomHumanoidBakeCacheSession bakeCache,
             PhantomBuildReport report,
             VRCAvatarDescriptor.AnimLayerType playable,
             VirtualAnimatorController controller,
@@ -66,6 +70,7 @@ namespace MPCCT.PhantomSystem.Editor
                 context,
                 slot,
                 projectSettings,
+                bakeCache,
                 report,
                 playable,
                 controller.Parameters
@@ -378,7 +383,8 @@ namespace MPCCT.PhantomSystem.Editor
                             NeutralBoneRotations = completionEnabled
                                 && session.CompletionBones.Count > 0
                                 ? GetNeutralBoneRotations()
-                                : null
+                                : null,
+                            CacheSession = bakeCache
                         });
                     converted = result.Clip;
                 }

@@ -144,6 +144,9 @@ Open project-wide settings with **Open Global Settings** on the component or
   views.
 - **Humanoid Animation Conversion** sets the maximum sampling rate and position
   and rotation error tolerances.
+- **Humanoid Bake Cache** shows and clears project-local baked pose data. The
+  cache stays under `Library` and is not included in version control or avatar
+  uploads.
 
 The defaults suit most projects. Adjust them only when animation detail, Clip
 size, or Phantom View performance needs tuning.
@@ -178,8 +181,10 @@ size, or Phantom View performance needs tuning.
   removed or partially converted content during the build.
 - Parameter-driven Animator State Mirror changes are not supported at runtime.
   The State's default Mirror value is baked and a build warning is reported.
-- Use `Tools > PhantomSystem > Delete Prebake Assets` to remove generated
-  prebake assets.
+- Generated Prebake assets are removed automatically after a successful VRC
+  build. They can also be removed with
+  `Tools > PhantomSystem > Delete Prebake Assets`; later builds or cleanup may
+  require an older Manual Bake result to be generated again.
 
 ## License
 
