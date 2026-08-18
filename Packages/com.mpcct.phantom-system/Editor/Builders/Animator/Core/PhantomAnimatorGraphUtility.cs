@@ -99,6 +99,30 @@ namespace MPCCT.PhantomSystem.Editor
             });
         }
 
+        public static void AddCoreParameter(
+            AnimatorController controller,
+            PhantomSlot slot,
+            string name)
+        {
+            var entry = PhantomCoreParameterCatalog.Require(slot, name);
+            var defaultValue = entry.Parameter.DefaultValue ?? 0f;
+            switch (entry.ControllerParameterType)
+            {
+                case AnimatorControllerParameterType.Bool:
+                    AddBoolParameter(controller, name, !Mathf.Approximately(defaultValue, 0f));
+                    break;
+                case AnimatorControllerParameterType.Int:
+                    AddIntParameter(controller, name, Mathf.RoundToInt(defaultValue));
+                    break;
+                case AnimatorControllerParameterType.Float:
+                    AddFloatParameter(controller, name, defaultValue);
+                    break;
+                default:
+                    throw new System.InvalidOperationException(
+                        $"Unsupported core Animator parameter type '{entry.ControllerParameterType}' for '{name}'.");
+            }
+        }
+
         public static void AddTransition(
             AnimatorState from,
             AnimatorState to,

@@ -15,14 +15,14 @@ namespace MPCCT.PhantomSystem.Editor
         public static void Build(PhantomAnimatorBuildContext context)
         {
             var slot = context.Slot.Slot;
-            AddBoolParameter(
+            AddCoreParameter(
                 context.Controller,
-                PhantomParameterNames.PhantomGrabbingContactLeft(slot),
-                false);
-            AddBoolParameter(
+                slot,
+                PhantomParameterNames.PhantomGrabbingContactLeft(slot));
+            AddCoreParameter(
                 context.Controller,
-                PhantomParameterNames.PhantomGrabbingContactRight(slot),
-                false);
+                slot,
+                PhantomParameterNames.PhantomGrabbingContactRight(slot));
             AddIntParameter(context.Controller, GestureLeft, 0);
             AddIntParameter(context.Controller, GestureRight, 0);
 

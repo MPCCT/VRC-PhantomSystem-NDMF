@@ -29,8 +29,8 @@ namespace MPCCT.PhantomSystem.Editor
                 return false;
             }
 
-            var slotAnalysis = parameterAnalysis != null && slotIndex < parameterAnalysis.Slots.Count
-                ? parameterAnalysis.Slots[slotIndex]
+            var slotAnalysis = parameterPlan != null && slotIndex < parameterPlan.Slots.Count
+                ? parameterPlan.Slots[slotIndex]
                 : null;
             if (slotAnalysis == null)
             {

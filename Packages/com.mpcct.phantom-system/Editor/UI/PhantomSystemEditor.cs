@@ -13,7 +13,7 @@ namespace MPCCT.PhantomSystem.Editor
 
         private SerializedProperty slots;
         private SerializedProperty options;
-        private PhantomSystemParameterAnalysis parameterAnalysis;
+        private PhantomParameterPlan parameterPlan;
         private PhantomSourceValidationReport validationReport;
         private string slotFoldoutStateKey;
         private bool refreshPending;
@@ -67,7 +67,7 @@ namespace MPCCT.PhantomSystem.Editor
                 }
             }
 
-            var totalCost = parameterAnalysis?.Slots.Sum(slot => slot.FinalContributionCost);
+            var totalCost = parameterPlan?.Slots.Sum(slot => slot.FinalContributionCost);
             EditorGUILayout.LabelField(
                 totalCost.HasValue
                     ? $"{slots.arraySize} slot(s) · estimated PhantomSystem contribution {totalCost.Value} bits"
@@ -104,8 +104,8 @@ namespace MPCCT.PhantomSystem.Editor
             refreshPending = false;
             if (target is PhantomAuthoring authoring && authoring != null)
             {
-                parameterAnalysis = PhantomParameterAnalysis.Analyze(authoring);
-                validationReport = PhantomSourceValidator.Validate(authoring);
+                parameterPlan = PhantomParameterPlanner.Analyze(authoring);
+                validationReport = PhantomSourceValidator.Validate(authoring, parameterPlan);
                 Repaint();
             }
         }

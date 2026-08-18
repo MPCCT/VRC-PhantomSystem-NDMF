@@ -289,8 +289,9 @@ namespace MPCCT.PhantomSystem.Editor
                     continue;
                 }
 
-                foreach (var core in EnumerateCoreParameters(input.Slot))
+                foreach (var entry in PhantomCoreParameterCatalog.ForSlot(input.Slot))
                 {
+                    var core = entry.Parameter;
                     if (occupied.TryGetValue(core.Name, out var existing))
                     {
                         if (!PhantomParameterCompatibility.AreCompatible(existing, core, out var reason))
@@ -363,63 +364,6 @@ namespace MPCCT.PhantomSystem.Editor
             }
         }
 
-        private static IEnumerable<PhantomParameterDefinition> EnumerateCoreParameters(PhantomSlot slot)
-        {
-            yield return Definition(PhantomParameterNames.Activate(slot), AnimatorControllerParameterType.Bool, true, false, 0f);
-            yield return Definition(PhantomParameterNames.Freeze(slot), AnimatorControllerParameterType.Bool, true, false, 0f);
-            yield return Definition(PhantomParameterNames.PositionLock(slot), AnimatorControllerParameterType.Bool, true, false, 1f);
-
-            if (slot.enableScaleControl)
-            {
-                yield return Definition(PhantomParameterNames.Scale(slot), AnimatorControllerParameterType.Float, true, false, ScaleControlAnimatorModule.DefaultScaleParameter);
-                yield return Definition(PhantomParameterNames.Mirror(slot), AnimatorControllerParameterType.Bool, true, false, 0f);
-                yield return Definition(PhantomParameterNames.ScaleDirectWeight(slot), AnimatorControllerParameterType.Float, false, true, 1f);
-                yield return Definition(PhantomParameterNames.ScaleReset(slot), AnimatorControllerParameterType.Bool, false, false, 0f);
-            }
-
-            if (slot.enablePhantomGrabbing)
-            {
-                yield return Definition(PhantomParameterNames.PhantomGrabbingShowBones(slot), AnimatorControllerParameterType.Bool, true, false, 0f);
-                yield return Definition(PhantomParameterNames.PhantomGrabbingContactLeft(slot), AnimatorControllerParameterType.Bool, false, true, 0f);
-                yield return Definition(PhantomParameterNames.PhantomGrabbingContactRight(slot), AnimatorControllerParameterType.Bool, false, true, 0f);
-            }
-
-            if (slot.enablePhantomView)
-            {
-                yield return Definition(PhantomParameterNames.PhantomViewEnabled(slot), AnimatorControllerParameterType.Bool, false, false, 0f);
-                yield return Definition(PhantomParameterNames.PhantomViewStereoStrength(slot), AnimatorControllerParameterType.Float, false, false, PhantomViewAnimatorModule.DefaultStereoStrengthParameter);
-                yield return Definition(PhantomParameterNames.PhantomViewMaskSize(slot), AnimatorControllerParameterType.Float, false, false, PhantomViewAnimatorModule.DefaultMaskSizeParameter);
-                yield return Definition(PhantomParameterNames.PhantomViewDirectWeight(slot), AnimatorControllerParameterType.Float, false, true, 1f);
-            }
-
-            if (slot.tryConvertAnimatorTrackingControl && !slot.removeSourceControls)
-            {
-                foreach (var name in PhantomTrackingControlGroups.Parameters(slot))
-                {
-                    yield return Definition(name, AnimatorControllerParameterType.Float, false, true, 1f);
-                }
-                yield return Definition(PhantomParameterNames.TrackingDirectWeight(slot), AnimatorControllerParameterType.Float, false, true, 1f);
-            }
-        }
-
-        private static PhantomParameterDefinition Definition(
-            string name,
-            AnimatorControllerParameterType type,
-            bool synced,
-            bool animatorOnly,
-            float defaultValue)
-        {
-            return new PhantomParameterDefinition
-            {
-                Name = name,
-                ParameterType = type,
-                WantSynced = synced,
-                IsAnimatorOnly = animatorOnly,
-                IsHidden = false,
-                DefaultValue = defaultValue,
-                Saved = animatorOnly ? (bool?)null : false
-            };
-        }
     }
 
     internal static class PhantomParameterCompatibility

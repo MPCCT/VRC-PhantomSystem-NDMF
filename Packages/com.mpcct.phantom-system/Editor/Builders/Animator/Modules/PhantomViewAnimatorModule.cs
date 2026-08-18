@@ -25,7 +25,7 @@ namespace MPCCT.PhantomSystem.Editor
 
             var slot = context.Slot.Slot;
             var enabledParameter = PhantomParameterNames.PhantomViewEnabled(slot);
-            AddBoolParameter(context.Controller, enabledParameter, false);
+            AddCoreParameter(context.Controller, slot, enabledParameter);
             AddBoolParameter(context.Controller, IsLocalParameter, true);
 
             BuildVisibilityLayer(context, enabledParameter);
@@ -42,24 +42,18 @@ namespace MPCCT.PhantomSystem.Editor
             var stereoStrengthParameter = PhantomParameterNames.PhantomViewStereoStrength(slot);
             var maskSizeParameter = PhantomParameterNames.PhantomViewMaskSize(slot);
             var directWeightParameter = PhantomParameterNames.PhantomViewDirectWeight(slot);
-            AddFloatParameter(
-                context.Controller,
-                stereoStrengthParameter,
-                DefaultStereoStrengthParameter);
-            AddFloatParameter(
-                context.Controller,
-                maskSizeParameter,
-                DefaultMaskSizeParameter);
-            AddFloatParameter(context.Controller, directWeightParameter, 1f);
+            AddCoreParameter(context.Controller, slot, stereoStrengthParameter);
+            AddCoreParameter(context.Controller, slot, maskSizeParameter);
+            AddCoreParameter(context.Controller, slot, directWeightParameter);
             if (slot.enableScaleControl)
             {
                 // Phantom View controls are merged through a standalone controller.
                 // Declare the Core scale parameter here too so pre-merge controller
                 // inspection does not report an unresolved BlendTree parameter.
-                AddFloatParameter(
+                AddCoreParameter(
                     context.Controller,
-                    PhantomParameterNames.Scale(slot),
-                    ScaleControlAnimatorModule.DefaultScaleParameter);
+                    slot,
+                    PhantomParameterNames.Scale(slot));
             }
 
             var directTree = CreateDirectTree(context, "PhantomViewControlsDirect");

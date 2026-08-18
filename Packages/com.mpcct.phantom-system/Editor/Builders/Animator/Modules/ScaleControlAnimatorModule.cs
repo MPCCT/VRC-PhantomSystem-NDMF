@@ -19,10 +19,10 @@ namespace MPCCT.PhantomSystem.Editor
             var mirrorParameter = PhantomParameterNames.Mirror(slot);
             var directWeightParameter = PhantomParameterNames.ScaleDirectWeight(slot);
             var resetParameter = PhantomParameterNames.ScaleReset(slot);
-            AddFloatParameter(context.Controller, scaleParameter, DefaultScaleParameter);
-            AddFloatParameter(context.Controller, mirrorParameter, 0f);
-            AddFloatParameter(context.Controller, directWeightParameter, 1f);
-            AddBoolParameter(context.Controller, resetParameter, false);
+            AddCoreParameter(context.Controller, slot, scaleParameter);
+            AddCoreParameter(context.Controller, slot, mirrorParameter);
+            AddCoreParameter(context.Controller, slot, directWeightParameter);
+            AddCoreParameter(context.Controller, slot, resetParameter);
 
             if (context.SlotPath == null
                 || context.MirrorPath == null

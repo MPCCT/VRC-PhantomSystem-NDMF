@@ -21,7 +21,7 @@ namespace MPCCT.PhantomSystem.Editor
             var activate = PhantomParameterNames.Activate(slot);
             var freeze = PhantomParameterNames.Freeze(slot);
             var showBones = PhantomParameterNames.PhantomGrabbingShowBones(slot);
-            AddBoolParameter(context.Controller, showBones, false);
+            AddCoreParameter(context.Controller, slot, showBones);
 
             var hiddenClip = context.CreateClip("PhantomGrabbingBonesHidden");
             var visibleClip = context.CreateClip("PhantomGrabbingBonesVisible");

@@ -32,11 +32,7 @@ namespace MPCCT.PhantomSystem.Editor
             state.System = null;
             state.HumanoidBakeCache = null;
             state.ProjectSettings = PhantomSystemProjectSettings.instance.CreateSnapshot();
-            state.BaseParameters.Clear();
-            foreach (var pair in PhantomParameterAnalysis.ReadBaseParameters(ctx.AvatarRootObject, ctx))
-            {
-                state.BaseParameters[pair.Key] = pair.Value;
-            }
+            state.ParameterPlan = null;
 
             var authoringComponents = ctx.AvatarRootObject.GetComponentsInChildren<PhantomAuthoring>(true);
             if (authoringComponents.Length > 1)
@@ -113,33 +109,32 @@ namespace MPCCT.PhantomSystem.Editor
 
         private static void ResolveParameters(BuildContext context, PhantomBuildState state)
         {
+            var baseParameters = PhantomSourceParameterCollector.ReadBaseParameters(
+                context.AvatarRootObject,
+                context);
             var inputs = new System.Collections.Generic.List<PhantomParameterSlotInput>();
             foreach (var slot in state.System.Slots)
             {
-                var collection = PhantomParameterAnalysis.CollectSourceParameters(
+                var collection = PhantomSourceParameterCollector.Collect(
                     slot.PrebakedRoot,
                     context);
-                inputs.Add(new PhantomParameterSlotInput
-                {
-                    Slot = slot.Slot,
-                    Identity = slot.Identity,
-                    SourceParameters = slot.Slot != null && slot.Slot.removeSourceControls
-                        ? collection.RetainedDefinitions
-                        : collection.Definitions,
-                    RetainedSourceParameterNames = collection.RetainedSourceParameterNames
-                });
+                inputs.Add(PhantomParameterPlanner.CreateInput(
+                    slot.Slot,
+                    slot.Identity,
+                    collection));
             }
 
-            var resolution = PhantomParameterResolver.Resolve(state.BaseParameters, inputs);
-            foreach (var error in resolution.Errors)
+            var plan = PhantomParameterPlanner.Create(baseParameters, inputs);
+            state.ParameterPlan = plan;
+            foreach (var error in plan.Errors)
             {
                 state.Report.Error(error, state.System.AuthoringComponent);
             }
 
-            for (var index = 0; index < state.System.Slots.Count && index < resolution.Slots.Count; index++)
+            for (var index = 0; index < state.System.Slots.Count && index < plan.Slots.Count; index++)
             {
                 var slot = state.System.Slots[index];
-                slot.ParameterResolution = resolution.Slots[index];
+                slot.ParameterPlan = plan.Slots[index];
             }
         }
 

@@ -1,16 +1,3 @@
-# Changelog
-
-## Unreleased
-
-### Added
-
-- Added a project-local Humanoid pose bake cache under `Library`. Repeated Gesture and Action conversion reuses adaptive sampling results while rebuilding final clips from the current non-Humanoid curves.
-- Added cache size and clearing controls to **Tools > PhantomSystem** and the Global Settings window.
-
-### Changed
-
-- Generated Phantom Prebake assets are now removed after successful VRC avatar postprocessing and after leaving Apply on Play. Stale assets are also cleared before the next Prebake, while Manual Bake results remain available only until a later cleanup or build.
-
 ## 0.2.2
 
 ### Changed

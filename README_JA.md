@@ -157,9 +157,10 @@ View のパフォーマンスを調整したい場合だけ変更してくださ
   対応する Behaviour は変換され、削除または一部変換された内容はビルド時に報告されます。
 - パラメーター駆動の Animator State Mirror は、実行時の変化に対応していません。State の
   既定 Mirror 値を Bake し、ビルド時に Warning を表示します。
-- 生成された Prebake アセットは VRC Build の成功後に自動削除されます。また、
-  `Tools > PhantomSystem > Delete Prebake Assets` から手動削除できます。後続の Build や
-  Cleanup 後は、以前の Manual Bake 結果を再生成する必要がある場合があります。
+- 生成された Prebake アセットは、VRC Build の成功後、PhantomSystem の Manual Bake 後、
+  または Apply on Play の終了後に自動削除されます。
+  `Tools > PhantomSystem > Delete Prebake Assets` から手動削除することもできます。
+  完了済みの Build 結果は、これらの中間アセットには依存しません。
 
 ## License
 

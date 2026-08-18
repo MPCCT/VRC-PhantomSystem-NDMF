@@ -20,8 +20,8 @@ namespace MPCCT.PhantomSystem.Editor
                 return false;
             }
 
-            if (slot.ParameterResolution != null
-                && slot.ParameterResolution.TryGetFinalName(originalName, out finalName))
+            if (slot.ParameterPlan != null
+                && slot.ParameterPlan.TryGetFinalName(originalName, out finalName))
             {
                 return true;
             }

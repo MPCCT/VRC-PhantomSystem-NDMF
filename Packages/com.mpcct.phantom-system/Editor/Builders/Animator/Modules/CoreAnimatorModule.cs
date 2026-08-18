@@ -12,9 +12,9 @@ namespace MPCCT.PhantomSystem.Editor
         public static void Build(PhantomAnimatorBuildContext context)
         {
             var slot = context.Slot.Slot;
-            AddBoolParameter(context.Controller, PhantomParameterNames.Activate(slot), false);
-            AddBoolParameter(context.Controller, PhantomParameterNames.Freeze(slot), false);
-            AddBoolParameter(context.Controller, PhantomParameterNames.PositionLock(slot), true);
+            AddCoreParameter(context.Controller, slot, PhantomParameterNames.Activate(slot));
+            AddCoreParameter(context.Controller, slot, PhantomParameterNames.Freeze(slot));
+            AddCoreParameter(context.Controller, slot, PhantomParameterNames.PositionLock(slot));
 
             BuildActivateLayer(context);
             BuildPositionLockLayer(context);

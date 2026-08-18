@@ -264,6 +264,31 @@ namespace MPCCT.PhantomSystem.Editor.Tests
         }
 
         [Test]
+        public void CoreParameterCatalog_PreservesExposedAndControllerTypes()
+        {
+            var slot = new PhantomSlot
+            {
+                id = "Slot1",
+                enableScaleControl = true,
+                enablePhantomGrabbing = true,
+                enablePhantomView = true,
+                tryConvertAnimatorTrackingControl = true
+            };
+            var entries = PhantomCoreParameterCatalog.ForSlot(slot);
+            var mirror = entries.Single(entry =>
+                entry.Parameter.Name == PhantomParameterNames.Mirror(slot));
+            var viewEnabled = entries.Single(entry =>
+                entry.Parameter.Name == PhantomParameterNames.PhantomViewEnabled(slot));
+
+            Assert.AreEqual(AnimatorControllerParameterType.Bool, mirror.Parameter.ParameterType);
+            Assert.AreEqual(AnimatorControllerParameterType.Float, mirror.ControllerParameterType);
+            Assert.IsTrue(mirror.Parameter.WantSynced);
+            Assert.IsFalse(mirror.Parameter.IsAnimatorOnly);
+            Assert.IsFalse(viewEnabled.Parameter.WantSynced);
+            Assert.IsFalse(viewEnabled.Parameter.IsAnimatorOnly);
+        }
+
+        [Test]
         public void ScaleControl_UsesPositiveScaleAndSeparateMirrorTreesInsideDirectBlendTree()
         {
             var avatar = new GameObject("Avatar");
@@ -499,6 +524,46 @@ namespace MPCCT.PhantomSystem.Editor.Tests
         }
 
         [Test]
+        public void ParameterConfigBuilder_ConsumesResolvedSlotPlan()
+        {
+            var slot = new PhantomSlot { id = "Slot1", renamePhantomParameters = true };
+            var source = Definition(
+                "SourceToggle",
+                AnimatorControllerParameterType.Bool,
+                true,
+                1f,
+                true);
+            var plan = PhantomParameterPlanner.Create(
+                new Dictionary<string, PhantomParameterDefinition>(),
+                new[]
+                {
+                    new PhantomParameterSlotInput
+                    {
+                        Slot = slot,
+                        Identity = PhantomSlotIdentity.Create(slot),
+                        SourceParameters = new[] { source }
+                    }
+                });
+            var state = new PhantomSlotBuildState
+            {
+                Slot = slot,
+                SlotId = "Slot1",
+                Identity = PhantomSlotIdentity.Create(slot),
+                ParameterPlan = plan.Slots[0]
+            };
+
+            var config = PhantomParameterConfigBuilder.Build(state).Single();
+
+            Assert.AreEqual("SourceToggle", config.nameOrPrefix);
+            Assert.AreEqual(
+                "PhantomSystem/Slot1/Original/SourceToggle",
+                config.remapTo);
+            Assert.AreEqual(1f, config.defaultValue);
+            Assert.IsTrue(config.saved);
+            Assert.IsFalse(config.localOnly);
+        }
+
+        [Test]
         public void ParameterResolver_KeepsNamesAlreadyInTheSlotNamespace()
         {
             var slot = new PhantomSlot { id = "Slot1", renamePhantomParameters = true };
@@ -729,11 +794,9 @@ namespace MPCCT.PhantomSystem.Editor.Tests
                     Slot = slot,
                     SlotId = "Slot1",
                     Identity = PhantomSlotIdentity.Create(slot),
-                    CloneRoot = cloneRoot,
-                    ParameterResolution = new PhantomSlotParameterResolution()
+                    CloneRoot = cloneRoot
                 };
-                state.ParameterResolution.FinalNames["ContactValue"] =
-                    "PhantomSystem/Slot1/Original/ContactValue";
+                state.ParameterPlan = CreateParameterPlan(slot, "ContactValue");
 
                 PhantomSourceComponentParameterMapper.Capture(state);
                 var generatedContact = cloneRoot.AddComponent<VRCContactReceiver>();
@@ -762,11 +825,9 @@ namespace MPCCT.PhantomSystem.Editor.Tests
             {
                 Slot = slot,
                 SlotId = "Slot1",
-                Identity = PhantomSlotIdentity.Create(slot),
-                ParameterResolution = new PhantomSlotParameterResolution()
+                Identity = PhantomSlotIdentity.Create(slot)
             };
-            state.ParameterResolution.FinalNames["Known"] =
-                "PhantomSystem/Slot1/Original/Known";
+            state.ParameterPlan = CreateParameterPlan(slot, "Known");
 
             Assert.IsTrue(PhantomSourceParameterMapping.TryResolve(
                 state,
@@ -809,8 +870,7 @@ namespace MPCCT.PhantomSystem.Editor.Tests
             {
                 Slot = slot,
                 SlotId = "Slot1",
-                Identity = PhantomSlotIdentity.Create(slot),
-                ParameterResolution = new PhantomSlotParameterResolution()
+                Identity = PhantomSlotIdentity.Create(slot)
             };
             PhantomSourceParameterMapping.TryResolve(
                 state,
@@ -1186,6 +1246,29 @@ namespace MPCCT.PhantomSystem.Editor.Tests
                         Slot = slot,
                         Identity = PhantomSlotIdentity.Create(slot),
                         SourceParameters = source
+                    }
+                }).Slots[0];
+        }
+
+        private static PhantomSlotParameterPlan CreateParameterPlan(
+            PhantomSlot slot,
+            params string[] names)
+        {
+            return PhantomParameterPlanner.Create(
+                new Dictionary<string, PhantomParameterDefinition>(),
+                new[]
+                {
+                    new PhantomParameterSlotInput
+                    {
+                        Slot = slot,
+                        Identity = PhantomSlotIdentity.Create(slot),
+                        SourceParameters = names.Select(name => new PhantomParameterDefinition
+                        {
+                            Name = name,
+                            ParameterType = AnimatorControllerParameterType.Bool,
+                            IsAnimatorOnly = true
+                        }).ToArray(),
+                        RetainedSourceParameterNames = new HashSet<string>(names)
                     }
                 }).Slots[0];
         }

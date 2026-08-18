@@ -86,10 +86,24 @@ namespace MPCCT.PhantomSystem.Editor
 
         public static PhantomSourceValidationReport Validate(PhantomAuthoring authoring)
         {
-            return ValidateAuthoring(authoring);
+            return Validate(authoring, PhantomParameterPlanner.Analyze(authoring));
+        }
+
+        internal static PhantomSourceValidationReport Validate(
+            PhantomAuthoring authoring,
+            PhantomParameterPlan parameterPlan)
+        {
+            return ValidateAuthoring(authoring, parameterPlan);
         }
 
         public static PhantomSourceValidationReport ValidateAuthoring(PhantomAuthoring authoring)
+        {
+            return ValidateAuthoring(authoring, PhantomParameterPlanner.Analyze(authoring));
+        }
+
+        private static PhantomSourceValidationReport ValidateAuthoring(
+            PhantomAuthoring authoring,
+            PhantomParameterPlan parameterPlan)
         {
             var report = new PhantomSourceValidationReport();
             if (authoring == null)
@@ -114,16 +128,16 @@ namespace MPCCT.PhantomSystem.Editor
                 ValidateSlot(slots[index], report.Slots[index], baseDescriptor, authoring);
             }
 
-            var parameterAnalysis = PhantomParameterAnalysis.Analyze(authoring);
-            foreach (var error in parameterAnalysis.ResolutionErrors.Where(error =>
+            parameterPlan ??= PhantomParameterPlan.Empty;
+            foreach (var error in parameterPlan.Errors.Where(error =>
                          error == null
                          || error.IndexOf("use the same core parameter prefix", StringComparison.Ordinal) < 0))
             {
                 AddGlobal(report, PhantomValidationSeverity.ConfigurationError, "PHS200", error, authoring);
             }
-            for (var index = 0; index < report.Slots.Count && index < parameterAnalysis.Slots.Count; index++)
+            for (var index = 0; index < report.Slots.Count && index < parameterPlan.Slots.Count; index++)
             {
-                foreach (var rename in parameterAnalysis.Slots[index].AutomaticRenames)
+                foreach (var rename in parameterPlan.Slots[index].AutomaticRenames)
                 {
                     Add(
                         report.Slots[index],

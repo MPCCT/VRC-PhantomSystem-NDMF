@@ -49,42 +49,13 @@ namespace MPCCT.PhantomSystem.Editor
             }
 
             var parameters = host.AddComponent<ModularAvatarParameters>();
-            parameters.parameters = new List<ParameterConfig>
+            parameters.parameters = new List<ParameterConfig>();
+            foreach (var entry in PhantomCoreParameterCatalog.ForSlot(slot.Slot))
             {
-                BoolParameter(PhantomParameterNames.Activate(slot.Slot), false, false),
-                BoolParameter(PhantomParameterNames.Freeze(slot.Slot), false, false),
-                BoolParameter(PhantomParameterNames.PositionLock(slot.Slot), true, false)
-            };
-            if (slot.Slot.enableScaleControl)
-            {
-                parameters.parameters.Add(FloatParameter(
-                    PhantomParameterNames.Scale(slot.Slot),
-                    ScaleControlAnimatorModule.DefaultScaleParameter,
-                    false));
-                parameters.parameters.Add(BoolParameter(
-                    PhantomParameterNames.Mirror(slot.Slot),
-                    false,
-                    false));
-                parameters.parameters.Add(LocalBoolParameter(
-                    PhantomParameterNames.ScaleReset(slot.Slot)));
-            }
-            if (slot.Slot.enablePhantomGrabbing)
-            {
-                parameters.parameters.Add(BoolParameter(
-                    PhantomParameterNames.PhantomGrabbingShowBones(slot.Slot),
-                    false,
-                    false));
-            }
-            if (slot.Slot.enablePhantomView)
-            {
-                parameters.parameters.Add(LocalBoolParameter(
-                    PhantomParameterNames.PhantomViewEnabled(slot.Slot)));
-                parameters.parameters.Add(LocalFloatParameter(
-                    PhantomParameterNames.PhantomViewStereoStrength(slot.Slot),
-                    PhantomViewAnimatorModule.DefaultStereoStrengthParameter));
-                parameters.parameters.Add(LocalFloatParameter(
-                    PhantomParameterNames.PhantomViewMaskSize(slot.Slot),
-                    PhantomViewAnimatorModule.DefaultMaskSizeParameter));
+                if (!entry.Parameter.IsAnimatorOnly)
+                {
+                    parameters.parameters.Add(CoreParameter(entry.Parameter));
+                }
             }
         }
 
@@ -345,57 +316,35 @@ namespace MPCCT.PhantomSystem.Editor
                 : slot.SlotId;
         }
 
-        private static ParameterConfig BoolParameter(string name, bool defaultValue, bool saved)
+        private static ParameterConfig CoreParameter(PhantomParameterDefinition definition)
         {
             return new ParameterConfig
             {
-                nameOrPrefix = name,
-                defaultValue = defaultValue ? 1f : 0f,
-                saved = saved,
-                localOnly = false,
-                syncType = ParameterSyncType.Bool
+                nameOrPrefix = definition.Name,
+                defaultValue = definition.DefaultValue ?? 0f,
+                hasExplicitDefaultValue = !definition.WantSynced
+                                          || definition.ParameterType
+                                          != AnimatorControllerParameterType.Bool,
+                saved = definition.Saved ?? false,
+                localOnly = !definition.WantSynced,
+                syncType = ConvertSyncType(definition.ParameterType)
             };
         }
 
-        private static ParameterConfig FloatParameter(string name, float defaultValue, bool saved)
+        private static ParameterSyncType ConvertSyncType(
+            AnimatorControllerParameterType? type)
         {
-            return new ParameterConfig
+            switch (type)
             {
-                nameOrPrefix = name,
-                defaultValue = defaultValue,
-                hasExplicitDefaultValue = true,
-                saved = saved,
-                localOnly = false,
-                syncType = ParameterSyncType.Float
-            };
-        }
-
-        private static ParameterConfig LocalBoolParameter(string name)
-        {
-            return new ParameterConfig
-            {
-                nameOrPrefix = name,
-                defaultValue = 0f,
-                hasExplicitDefaultValue = true,
-                saved = false,
-                localOnly = true,
-                syncType = ParameterSyncType.Bool
-            };
-        }
-
-        private static ParameterConfig LocalFloatParameter(
-            string name,
-            float defaultValue)
-        {
-            return new ParameterConfig
-            {
-                nameOrPrefix = name,
-                defaultValue = defaultValue,
-                hasExplicitDefaultValue = true,
-                saved = false,
-                localOnly = true,
-                syncType = ParameterSyncType.Float
-            };
+                case AnimatorControllerParameterType.Bool:
+                    return ParameterSyncType.Bool;
+                case AnimatorControllerParameterType.Int:
+                    return ParameterSyncType.Int;
+                case AnimatorControllerParameterType.Float:
+                    return ParameterSyncType.Float;
+                default:
+                    return ParameterSyncType.NotSynced;
+            }
         }
 
         private static VRCExpressionsMenu.Control Toggle(

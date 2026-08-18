@@ -162,8 +162,8 @@ namespace MPCCT.PhantomSystem.Editor
             var result = validationReport != null && slotIndex < validationReport.Slots.Count
                 ? validationReport.Slots[slotIndex]
                 : null;
-            var bitCost = parameterAnalysis != null && slotIndex < parameterAnalysis.Slots.Count
-                ? (int?)parameterAnalysis.Slots[slotIndex].FinalContributionCost
+            var bitCost = parameterPlan != null && slotIndex < parameterPlan.Slots.Count
+                ? (int?)parameterPlan.Slots[slotIndex].FinalContributionCost
                 : null;
             return FormatSlotStatus(result, bitCost);
         }

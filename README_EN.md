@@ -182,9 +182,9 @@ size, or Phantom View performance needs tuning.
 - Parameter-driven Animator State Mirror changes are not supported at runtime.
   The State's default Mirror value is baked and a build warning is reported.
 - Generated Prebake assets are removed automatically after a successful VRC
-  build. They can also be removed with
-  `Tools > PhantomSystem > Delete Prebake Assets`; later builds or cleanup may
-  require an older Manual Bake result to be generated again.
+  build, a PhantomSystem Manual Bake, or leaving Apply on Play. They can also be
+  removed with `Tools > PhantomSystem > Delete Prebake Assets`. Completed build
+  results do not depend on these intermediate assets.
 
 ## License
 

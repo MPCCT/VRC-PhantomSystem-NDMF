@@ -10,136 +10,16 @@ using VRC.SDK3.Avatars.ScriptableObjects;
 using VRC.SDK3.Dynamics.Contact.Components;
 using VRC.SDK3.Dynamics.PhysBone.Components;
 using VRC.SDKBase;
-using PhantomAuthoring = MPCCT.PhantomSystem.PhantomSystem;
 
 namespace MPCCT.PhantomSystem.Editor
 {
-    internal sealed class PhantomParameterDefinition
-    {
-        public string Name;
-        public AnimatorControllerParameterType? ParameterType;
-        public bool IsAnimatorOnly;
-        public bool IsHidden;
-        public bool IsPhysBonePrefix;
-        public bool IsRaycastPrefix;
-        public bool IsParameterPrefix => IsPhysBonePrefix || IsRaycastPrefix;
-        public bool WantSynced;
-        public float? DefaultValue;
-        public bool? Saved;
-        public Component SourceComponent;
-        public PluginBase SourcePlugin;
-
-        public int BitUsage
-        {
-            get
-            {
-                if (IsAnimatorOnly || !WantSynced || ParameterType == null)
-                {
-                    return 0;
-                }
-
-                return ParameterType == AnimatorControllerParameterType.Bool ? 1 : 8;
-            }
-        }
-    }
-
-    internal sealed class PhantomSharedParameterCandidate
-    {
-        public string Name;
-        public PhantomParameterDefinition SourceParameter;
-        public bool IsCompatible;
-        public string IncompatibilityReason;
-        public bool IsSelected;
-    }
-
-    internal sealed class PhantomSlotParameterAnalysis
-    {
-        public PhantomSlot Slot;
-        public List<PhantomParameterDefinition> SourceParameters = new List<PhantomParameterDefinition>();
-        public HashSet<string> RetainedSourceParameterNames =
-            new HashSet<string>(StringComparer.Ordinal);
-        public List<PhantomSharedParameterCandidate> Candidates = new List<PhantomSharedParameterCandidate>();
-        public HashSet<string> NamesSharedWithBase = new HashSet<string>(StringComparer.Ordinal);
-        public int SourceParameterCost;
-        public int SharedParameterSavings;
-        public int GeneratedParameterCost;
-        public int FinalContributionCost;
-        public Dictionary<string, string> FinalParameterNames =
-            new Dictionary<string, string>(StringComparer.Ordinal);
-        public List<PhantomParameterRename> AutomaticRenames = new List<PhantomParameterRename>();
-    }
-
-    internal sealed class PhantomSystemParameterAnalysis
-    {
-        public Dictionary<string, PhantomParameterDefinition> BaseParameters =
-            new Dictionary<string, PhantomParameterDefinition>(StringComparer.Ordinal);
-
-        public List<PhantomSlotParameterAnalysis> Slots = new List<PhantomSlotParameterAnalysis>();
-        public List<string> ResolutionErrors = new List<string>();
-    }
-
-    internal sealed class PhantomSourceParameterCollection
-    {
-        public List<PhantomParameterDefinition> Definitions =
-            new List<PhantomParameterDefinition>();
-        public List<PhantomParameterDefinition> RetainedDefinitions =
-            new List<PhantomParameterDefinition>();
-        public HashSet<string> RetainedSourceParameterNames =
-            new HashSet<string>(StringComparer.Ordinal);
-    }
-
-    internal static class PhantomParameterAnalysis
+    /// <summary>Collects parameter declarations and references from one avatar hierarchy.</summary>
+    internal static class PhantomSourceParameterCollector
     {
         [ThreadStatic]
         private static int providerSuppressionDepth;
 
         public static bool IsProviderSuppressed => providerSuppressionDepth > 0;
-
-        public static PhantomSystemParameterAnalysis Analyze(PhantomAuthoring authoring)
-        {
-            var analysis = new PhantomSystemParameterAnalysis();
-            if (authoring == null)
-            {
-                return analysis;
-            }
-
-            var avatarRoot = FindAvatarRoot(authoring.transform);
-            if (avatarRoot != null)
-            {
-                analysis.BaseParameters = ReadParameters(avatarRoot.gameObject, null, true);
-            }
-
-            var slots = authoring.slots ?? new List<PhantomSlot>();
-            foreach (var slot in slots)
-            {
-                analysis.Slots.Add(AnalyzeSlot(slot, analysis.BaseParameters));
-            }
-
-            var parameterResolution = PhantomParameterResolver.Resolve(
-                analysis.BaseParameters,
-                analysis.Slots.Select(slotAnalysis => new PhantomParameterSlotInput
-                {
-                    Slot = slotAnalysis.Slot,
-                    Identity = PhantomSlotIdentity.Create(slotAnalysis.Slot),
-                    SourceParameters = slotAnalysis.SourceParameters,
-                    RetainedSourceParameterNames = slotAnalysis.RetainedSourceParameterNames
-                }).ToList());
-            analysis.ResolutionErrors.AddRange(parameterResolution.Errors);
-            for (var index = 0; index < analysis.Slots.Count && index < parameterResolution.Slots.Count; index++)
-            {
-                var slotAnalysis = analysis.Slots[index];
-                var resolved = parameterResolution.Slots[index];
-                slotAnalysis.GeneratedParameterCost = resolved.GeneratedParameterCost;
-                slotAnalysis.SourceParameterCost = resolved.SourceParameterCost;
-                slotAnalysis.SharedParameterSavings = resolved.SharedParameterSavings;
-                slotAnalysis.FinalContributionCost = resolved.FinalContributionCost;
-                slotAnalysis.NamesSharedWithBase = resolved.SharedOriginalNames;
-                slotAnalysis.FinalParameterNames = resolved.FinalNames;
-                slotAnalysis.AutomaticRenames = resolved.AutomaticRenames;
-            }
-
-            return analysis;
-        }
 
         public static Dictionary<string, PhantomParameterDefinition> ReadBaseParameters(
             GameObject avatarRoot,
@@ -198,7 +78,7 @@ namespace MPCCT.PhantomSystem.Editor
                 .ToList();
         }
 
-        public static PhantomSourceParameterCollection CollectSourceParameters(
+        public static PhantomSourceParameterCollection Collect(
             GameObject root,
             BuildContext context)
         {
@@ -319,63 +199,6 @@ namespace MPCCT.PhantomSystem.Editor
             }
 
             return result;
-        }
-
-        private static PhantomSlotParameterAnalysis AnalyzeSlot(
-            PhantomSlot slot,
-            IReadOnlyDictionary<string, PhantomParameterDefinition> baseParameters)
-        {
-            var analysis = new PhantomSlotParameterAnalysis { Slot = slot };
-            analysis.GeneratedParameterCost = GeneratedParameterCost(slot);
-            if (slot?.phantomAvatar == null)
-            {
-                analysis.FinalContributionCost = analysis.GeneratedParameterCost;
-                return analysis;
-            }
-
-            var sourceCollection = CollectSourceParameters(slot.phantomAvatar.gameObject, null);
-            var sourceParameters = slot.removeSourceControls
-                ? sourceCollection.RetainedDefinitions
-                : sourceCollection.Definitions;
-            analysis.SourceParameters = sourceParameters;
-            analysis.RetainedSourceParameterNames = sourceCollection.RetainedSourceParameterNames;
-            analysis.SourceParameterCost = sourceParameters.Sum(parameter => parameter.BitUsage);
-
-            foreach (var source in sourceParameters.Where(parameter => !parameter.IsAnimatorOnly && !parameter.IsHidden))
-            {
-                if (baseParameters == null || !baseParameters.TryGetValue(source.Name, out var baseParameter))
-                {
-                    continue;
-                }
-
-                var candidate = new PhantomSharedParameterCandidate
-                {
-                    Name = source.Name,
-                    SourceParameter = source,
-                    IsSelected = PhantomParameterPolicy.IsConfiguredShared(slot, source.Name)
-                };
-                candidate.IsCompatible = AreShareCompatible(baseParameter, source, out var reason);
-                candidate.IncompatibilityReason = reason;
-                analysis.Candidates.Add(candidate);
-
-                if (candidate.IsCompatible && (!slot.renamePhantomParameters || candidate.IsSelected))
-                {
-                    analysis.NamesSharedWithBase.Add(source.Name);
-                    analysis.SharedParameterSavings += source.BitUsage;
-                }
-            }
-
-            analysis.FinalContributionCost = analysis.GeneratedParameterCost + sourceParameters
-                .Where(parameter => !analysis.NamesSharedWithBase.Contains(parameter.Name))
-                .Sum(parameter => parameter.BitUsage);
-            return analysis;
-        }
-
-        private static int GeneratedParameterCost(PhantomSlot slot)
-        {
-            return 3
-                   + (slot != null && slot.enablePhantomGrabbing ? 1 : 0)
-                   + (slot != null && slot.enableScaleControl ? 9 : 0);
         }
 
         private static Dictionary<string, PhantomParameterDefinition> ReadParameters(
@@ -789,30 +612,6 @@ namespace MPCCT.PhantomSystem.Editor
                 default:
                     return parameter.defaultFloat;
             }
-        }
-
-        private static Transform FindAvatarRoot(Transform start)
-        {
-            for (var current = start; current != null; current = current.parent)
-            {
-                if (current.GetComponent<VRCAvatarDescriptor>() != null)
-                {
-                    return current;
-                }
-            }
-
-            return null;
-        }
-
-        private static bool AreShareCompatible(
-            PhantomParameterDefinition baseParameter,
-            PhantomParameterDefinition sourceParameter,
-            out string reason)
-        {
-            return PhantomParameterCompatibility.AreCompatible(
-                baseParameter,
-                sourceParameter,
-                out reason);
         }
 
         private static AnimatorControllerParameterType ConvertType(VRCExpressionParameters.ValueType type)

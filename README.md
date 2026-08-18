@@ -138,9 +138,9 @@ PhysBone Immobile Type 覆盖。
   支持的行为，并对被移除或部分转换的内容给出构建警告。
 - 参数驱动的 Animator State Mirror 暂不支持运行时变化；构建时会使用该 State 的默认 Mirror
   值并给出警告。
-- 成功完成 VRC 构建后会自动清理生成的 Prebake 资产；也可通过
-  `Tools > PhantomSystem > Delete Prebake Assets` 手动清理。后续构建或清理可能使旧的
-  Manual Bake 结果需要重新生成。
+- 成功完成 VRC 构建、PhantomSystem 手动 Bake 或退出 Apply on Play 后，会自动清理生成的
+  Prebake 资产；也可通过 `Tools > PhantomSystem > Delete Prebake Assets` 手动清理。
+  已完成的构建结果不依赖这些中间资产。
 
 ## License
 

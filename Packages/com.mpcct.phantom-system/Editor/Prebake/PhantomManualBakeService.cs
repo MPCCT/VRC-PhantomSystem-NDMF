@@ -62,6 +62,7 @@ namespace MPCCT.PhantomSystem.Editor
             finally
             {
                 PhantomPrebakeSession.CleanupAll();
+                PhantomPrebakeService.CleanupGeneratedAssets("manual avatar bake");
             }
         }
     }

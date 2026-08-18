@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using nadena.dev.modular_avatar.core;
 using nadena.dev.ndmf;
 using UnityEngine;
@@ -92,14 +91,7 @@ namespace MPCCT.PhantomSystem.Editor
                 host,
                 report);
 
-            var sourceControllers = slot.SourcePlayableRegistrations.Values
-                .Select(registration => registration.Source.Controller)
-                .Where(controller => controller != null)
-                .ToArray();
-
-            var parameterConfigs = PhantomParameterConfigBuilder.Build(
-                slot,
-                sourceControllers);
+            var parameterConfigs = PhantomParameterConfigBuilder.Build(slot);
             if (parameterConfigs.Count > 0)
             {
                 var parameters = host.AddComponent<ModularAvatarParameters>();

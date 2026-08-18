@@ -17,8 +17,8 @@ namespace MPCCT.PhantomSystem.Editor
                     "Delete all generated Phantom prebake assets?",
                     "Successful VRC builds normally remove these assets automatically. Every remaining "
                     + "PhantomSystem-managed PhantomPrebake_<Hash> directory will be deleted without "
-                    + "checking references. Existing manual-bake results may lose generated asset "
-                    + "references and must be baked again. This cannot be undone.",
+                    + "checking references. Completed VRC and manual-bake results do not depend on these "
+                    + "intermediate assets. This cannot be undone.",
                     "Delete All",
                     "Cancel"))
             {

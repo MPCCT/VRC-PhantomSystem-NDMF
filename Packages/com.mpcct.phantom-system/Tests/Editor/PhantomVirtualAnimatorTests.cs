@@ -446,7 +446,7 @@ namespace MPCCT.PhantomSystem.Editor.Tests
             try
             {
                 var definitions = new Dictionary<string, PhantomParameterDefinition>();
-                PhantomParameterAnalysis.CollectControllerParameters(controller, definitions);
+                PhantomSourceParameterCollector.CollectControllerParameters(controller, definitions);
 
                 var controllerDefinition = definitions["ControllerOnly"];
                 var audioDefinition = definitions["AudioOnly"];
@@ -475,11 +475,10 @@ namespace MPCCT.PhantomSystem.Editor.Tests
                 {
                     Slot = slot,
                     SlotId = "Slot1",
-                    Identity = PhantomSlotIdentity.Create(slot),
-                    ParameterResolution = new PhantomSlotParameterResolution()
+                    Identity = PhantomSlotIdentity.Create(slot)
                 };
 
-                PhantomSourcePlayableControllerProcessor.RemapPlayAudioParameter(
+                PhantomSourceBehaviourTranslator.RemapPlayAudioParameter(
                     playAudio,
                     state);
 
@@ -734,13 +733,13 @@ namespace MPCCT.PhantomSystem.Editor.Tests
         [Test]
         public void LayerControl_PreservesOnlySelfTargetAlreadyInFinalPlayable()
         {
-            Assert.IsTrue(PhantomSourcePlayableControllerProcessor.CanPreserveLayerControl(
+            Assert.IsTrue(PhantomSourceBehaviourTranslator.CanPreserveLayerControl(
                 VRCAvatarDescriptor.AnimLayerType.FX,
                 VRCAvatarDescriptor.AnimLayerType.FX));
-            Assert.IsFalse(PhantomSourcePlayableControllerProcessor.CanPreserveLayerControl(
+            Assert.IsFalse(PhantomSourceBehaviourTranslator.CanPreserveLayerControl(
                 VRCAvatarDescriptor.AnimLayerType.Gesture,
                 VRCAvatarDescriptor.AnimLayerType.Gesture));
-            Assert.IsFalse(PhantomSourcePlayableControllerProcessor.CanPreserveLayerControl(
+            Assert.IsFalse(PhantomSourceBehaviourTranslator.CanPreserveLayerControl(
                 VRCAvatarDescriptor.AnimLayerType.Gesture,
                 VRCAvatarDescriptor.AnimLayerType.FX));
         }
@@ -751,7 +750,7 @@ namespace MPCCT.PhantomSystem.Editor.Tests
             bool enabled,
             float expectedWeight)
         {
-            var marker = PhantomSourcePlayableControllerProcessor
+            var marker = PhantomSourceBehaviourTranslator
                 .CreateConvertedActionLayerControlMarker(
                     new PhantomConvertedActionLayer("ActionTarget", 0.75f),
                     enabled,
@@ -1236,10 +1235,31 @@ namespace MPCCT.PhantomSystem.Editor.Tests
                     MergeAnimator = mergeAnimator
                 };
             state.CloneToAnimationDriverPaths["Bone"] = "Driver";
-            state.ParameterResolution = new PhantomSlotParameterResolution();
-            state.ParameterResolution.FinalNames["AudioIndex"] =
-                $"PhantomSystem/{id}/Original/AudioIndex";
+            state.ParameterPlan = CreateParameterPlan(state.Slot, "AudioIndex");
             return state;
+        }
+
+        private static PhantomSlotParameterPlan CreateParameterPlan(
+            PhantomSlot slot,
+            params string[] names)
+        {
+            return PhantomParameterPlanner.Create(
+                new Dictionary<string, PhantomParameterDefinition>(),
+                new[]
+                {
+                    new PhantomParameterSlotInput
+                    {
+                        Slot = slot,
+                        Identity = PhantomSlotIdentity.Create(slot),
+                        SourceParameters = names.Select(name => new PhantomParameterDefinition
+                        {
+                            Name = name,
+                            ParameterType = AnimatorControllerParameterType.Float,
+                            IsAnimatorOnly = true
+                        }).ToArray(),
+                        RetainedSourceParameterNames = new HashSet<string>(names)
+                    }
+                }).Slots[0];
         }
 
         private static ModularAvatarMergeAnimator AddMergeAnimator(

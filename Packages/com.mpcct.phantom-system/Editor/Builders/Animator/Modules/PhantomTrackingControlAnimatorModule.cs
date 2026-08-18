@@ -21,13 +21,13 @@ namespace MPCCT.PhantomSystem.Editor
 
             foreach (var group in PhantomTrackingControlGroups.All)
             {
-                AddFloatParameter(
+                AddCoreParameter(
                     context.Controller,
-                    PhantomTrackingControlGroups.Parameter(slot, group),
-                    1f);
+                    slot,
+                    PhantomTrackingControlGroups.Parameter(slot, group));
             }
             var directWeightParameter = PhantomParameterNames.TrackingDirectWeight(slot);
-            AddFloatParameter(context.Controller, directWeightParameter, 1f);
+            AddCoreParameter(context.Controller, slot, directWeightParameter);
 
             var bindings = CollectBindings(context);
             if (bindings.Count == 0)

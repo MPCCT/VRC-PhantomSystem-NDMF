@@ -16,8 +16,7 @@ namespace MPCCT.PhantomSystem.Editor
         public PhantomBuildReport Report { get; } = new PhantomBuildReport();
         internal PhantomSystemProjectSettingsSnapshot ProjectSettings { get; set; }
         internal PhantomHumanoidBakeCacheSession HumanoidBakeCache { get; set; }
-        internal Dictionary<string, PhantomParameterDefinition> BaseParameters { get; } =
-            new Dictionary<string, PhantomParameterDefinition>(global::System.StringComparer.Ordinal);
+        internal PhantomParameterPlan ParameterPlan { get; set; }
 
         public bool HasWork => System != null;
     }
@@ -107,7 +106,7 @@ namespace MPCCT.PhantomSystem.Editor
                 new Dictionary<VRCAvatarDescriptor.AnimLayerType, PhantomSourcePlayableRegistration>();
         internal readonly List<PhantomConvertedActionLayer> ConvertedActionLayers =
             new List<PhantomConvertedActionLayer>();
-        internal PhantomSlotParameterResolution ParameterResolution;
+        internal PhantomSlotParameterPlan ParameterPlan;
         internal readonly Dictionary<NdmfObjectReference, PhantomConvertedClipMetadata> ConvertedClipReferences =
             new Dictionary<NdmfObjectReference, PhantomConvertedClipMetadata>();
         internal readonly HashSet<VirtualClip> WarnedUnsupportedAnimatorClips =

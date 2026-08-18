@@ -2,118 +2,78 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using nadena.dev.modular_avatar.core;
-using UnityEditor.Animations;
 using UnityEngine;
-using VRC.SDK3.Avatars.ScriptableObjects;
 
 namespace MPCCT.PhantomSystem.Editor
 {
-    /// <summary>Converts prebaked avatar parameter definitions into Modular Avatar mappings.</summary>
+    /// <summary>Projects the resolved slot parameter plan into Modular Avatar mappings.</summary>
     internal static class PhantomParameterConfigBuilder
     {
-        public static List<ParameterConfig> Build(
-            PhantomSlotBuildState slot,
-            IEnumerable<RuntimeAnimatorController> controllers)
-        {
-            return BuildStandardMappings(slot, controllers).Values.ToList();
-        }
-
-        private static Dictionary<string, ParameterConfig> BuildStandardMappings(
-            PhantomSlotBuildState slot,
-            IEnumerable<RuntimeAnimatorController> controllers)
+        public static List<ParameterConfig> Build(PhantomSlotBuildState slot)
         {
             var configs = new Dictionary<string, ParameterConfig>(StringComparer.Ordinal);
-            var parameters = slot.BakedAvatar != null ? slot.BakedAvatar.expressionParameters : null;
-            if (parameters?.parameters != null)
+            var plan = slot?.ParameterPlan;
+            if (plan == null)
             {
-                foreach (var parameter in parameters.parameters)
+                return configs.Values.ToList();
+            }
+
+            foreach (var parameter in plan.SourceParameters)
+            {
+                if (parameter == null || ShouldSkipOriginalParameter(parameter.Name, slot))
                 {
-                    AddExpressionParameterConfig(configs, parameter, slot);
+                    continue;
+                }
+
+                if (!parameter.IsAnimatorOnly && !parameter.IsParameterPrefix)
+                {
+                    AddDeclaredParameter(configs, parameter, slot);
+                }
+                else
+                {
+                    AddRemapOnlyParameter(configs, parameter.Name, slot);
                 }
             }
 
-            if (controllers != null)
+            foreach (var originalName in plan.FinalParameterNames.Keys
+                         .OrderBy(name => name, StringComparer.Ordinal))
             {
-                foreach (var runtimeController in controllers)
-                {
-                    var animatorController = GetBaseController(runtimeController);
-                    if (animatorController == null)
-                    {
-                        continue;
-                    }
-
-                    foreach (var parameter in animatorController.parameters)
-                    {
-                        AddRemapOnlyParameter(configs, parameter.name, slot);
-                    }
-                }
+                AddRemapOnlyParameter(configs, originalName, slot);
             }
 
-            if (slot?.ParameterResolution != null)
-            {
-                foreach (var originalName in slot.ParameterResolution.FinalNames.Keys
-                             .OrderBy(name => name, StringComparer.Ordinal))
-                {
-                    AddRemapOnlyParameter(configs, originalName, slot);
-                }
-            }
-
-            return configs;
+            return configs.Values.ToList();
         }
 
-        private static AnimatorController GetBaseController(
-            RuntimeAnimatorController controller)
-        {
-            var current = controller;
-            var visited = new HashSet<RuntimeAnimatorController>();
-            while (current is AnimatorOverrideController overrideController)
-            {
-                if (!visited.Add(current))
-                {
-                    return null;
-                }
-
-                current = overrideController.runtimeAnimatorController;
-            }
-
-            return current as AnimatorController;
-        }
-
-        private static void AddExpressionParameterConfig(
-            Dictionary<string, ParameterConfig> configs,
-            VRCExpressionParameters.Parameter parameter,
+        private static void AddDeclaredParameter(
+            IDictionary<string, ParameterConfig> configs,
+            PhantomParameterDefinition parameter,
             PhantomSlotBuildState slot)
         {
-            if (parameter == null || ShouldSkipOriginalParameter(parameter.name, slot))
-            {
-                return;
-            }
-
             var config = new ParameterConfig
             {
-                nameOrPrefix = parameter.name,
-                defaultValue = parameter.defaultValue,
+                nameOrPrefix = parameter.Name,
+                defaultValue = parameter.DefaultValue ?? 0f,
                 hasExplicitDefaultValue = true,
-                saved = parameter.saved,
-                localOnly = !parameter.networkSynced,
-                syncType = ConvertSyncType(parameter.valueType)
+                saved = parameter.Saved ?? false,
+                localOnly = !parameter.WantSynced,
+                syncType = ConvertSyncType(parameter.ParameterType)
             };
 
             if (PhantomSourceParameterMapping.TryResolve(
                     slot,
-                    parameter.name,
+                    parameter.Name,
                     "Expression Parameters",
                     out var finalName)
-                && !string.Equals(finalName, parameter.name, StringComparison.Ordinal))
+                && !string.Equals(finalName, parameter.Name, StringComparison.Ordinal))
             {
                 config.remapTo = finalName;
             }
 
-            configs[parameter.name] = config;
+            configs[parameter.Name] = config;
         }
 
         private static void AddRemapOnlyParameter(
-            Dictionary<string, ParameterConfig> configs,
+            IDictionary<string, ParameterConfig> configs,
             string name,
             PhantomSlotBuildState slot)
         {
@@ -131,6 +91,7 @@ namespace MPCCT.PhantomSystem.Editor
             {
                 return;
             }
+
             configs[name] = new ParameterConfig
             {
                 nameOrPrefix = name,
@@ -143,25 +104,24 @@ namespace MPCCT.PhantomSystem.Editor
 
         private static bool ShouldSkipOriginalParameter(string name, PhantomSlotBuildState slot)
         {
-            if (string.IsNullOrWhiteSpace(name)
-                || PhantomParameterPolicy.IsVrcReserved(name)
-                || slot?.Slot == null)
-            {
-                return true;
-            }
-
-            return false;
+            return string.IsNullOrWhiteSpace(name)
+                   || PhantomParameterPolicy.IsVrcReserved(name)
+                   || slot?.Slot == null;
         }
 
-        private static ParameterSyncType ConvertSyncType(VRCExpressionParameters.ValueType type)
+        private static ParameterSyncType ConvertSyncType(AnimatorControllerParameterType? type)
         {
-            return type switch
+            switch (type)
             {
-                VRCExpressionParameters.ValueType.Bool => ParameterSyncType.Bool,
-                VRCExpressionParameters.ValueType.Int => ParameterSyncType.Int,
-                VRCExpressionParameters.ValueType.Float => ParameterSyncType.Float,
-                _ => ParameterSyncType.NotSynced
-            };
+                case AnimatorControllerParameterType.Bool:
+                    return ParameterSyncType.Bool;
+                case AnimatorControllerParameterType.Int:
+                    return ParameterSyncType.Int;
+                case AnimatorControllerParameterType.Float:
+                    return ParameterSyncType.Float;
+                default:
+                    return ParameterSyncType.NotSynced;
+            }
         }
     }
 }
