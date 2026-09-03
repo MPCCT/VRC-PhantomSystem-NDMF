@@ -36,7 +36,7 @@ PhantomSystem は、VRChat アバターに 1 体以上の Humanoid 分身（Phan
 ### Phantom Grabbing
 
 - 固定中の分身の Hips をハンドジェスチャーで移動できます。
-- 身体用 PhysBone Proxy を生成し、接触への反応やポーズ操作を可能にします。
+- 身体用 PhysBone Proxy を生成し、固定中の分身の各ボーンを掴んでポーズを調整できます。
 - 位置を確認しやすい簡易ボーン表示を使用できます。この表示は VRChat のミラーやカメラには
   映りません。
 

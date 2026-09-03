@@ -38,8 +38,8 @@ retained.
 ### Phantom Grabbing
 
 - Move a frozen phantom's Hips with a hand gesture.
-- Generates PhysBone body proxies so the phantom can react to touches and be
-  posed.
+- Generates PhysBone body proxies so individual bones can be grabbed and posed
+  while the phantom is frozen.
 - Shows a simplified bone display for positioning. The display is hidden from
   VRChat mirrors and cameras.
 
