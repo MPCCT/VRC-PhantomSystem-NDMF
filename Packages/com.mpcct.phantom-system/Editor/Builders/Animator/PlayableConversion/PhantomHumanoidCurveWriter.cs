@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -134,7 +135,7 @@ namespace MPCCT.PhantomSystem.Editor
             if (outputBonePaths == null || outputBonePaths.Count == 0)
             {
                 throw new ArgumentException(
-                    "At least one Humanoid Driver output path is required.",
+                    L.F("diagnostic.driver.noOutputPaths"),
                     nameof(outputBonePaths));
             }
 
@@ -148,12 +149,12 @@ namespace MPCCT.PhantomSystem.Editor
                 if (string.IsNullOrEmpty(pair.Value))
                 {
                     throw new InvalidOperationException(
-                        $"Humanoid bone '{pair.Key}' has no Driver output path.");
+                        L.F("diagnostic.driver.noBoneOutput", pair.Key));
                 }
                 if (rotations.ContainsKey(pair.Value))
                 {
                     throw new InvalidOperationException(
-                        $"Multiple Humanoid bones resolve to Driver output path '{pair.Value}'.");
+                        L.F("diagnostic.driver.duplicateOutput", pair.Value));
                 }
                 rotations[pair.Value] = boneRotations[pair.Key];
             }
@@ -234,17 +235,17 @@ namespace MPCCT.PhantomSystem.Editor
                     || string.IsNullOrEmpty(outputPath))
                 {
                     throw new InvalidOperationException(
-                        $"Humanoid bone '{bone}' has no Driver output path.");
+                        L.F("diagnostic.driver.noBoneOutput", bone));
                 }
                 if (!neutralBoneRotations.TryGetValue(bone, out var rotation))
                 {
                     throw new InvalidOperationException(
-                        $"Humanoid bone '{bone}' has no sampled neutral rotation.");
+                        L.F("diagnostic.driver.noNeutralRotation", bone));
                 }
                 if (rotations.ContainsKey(outputPath))
                 {
                     throw new InvalidOperationException(
-                        $"Multiple Humanoid bones resolve to Driver output path '{outputPath}'.");
+                        L.F("diagnostic.driver.duplicateOutput", outputPath));
                 }
                 rotations[outputPath] = rotation;
             }
@@ -302,7 +303,7 @@ namespace MPCCT.PhantomSystem.Editor
                 if (string.IsNullOrEmpty(pair.Key))
                 {
                     throw new ArgumentException(
-                        "Humanoid Driver output paths must not be empty.",
+                        L.F("diagnostic.driver.emptyOutputPath"),
                         nameof(rotations));
                 }
 

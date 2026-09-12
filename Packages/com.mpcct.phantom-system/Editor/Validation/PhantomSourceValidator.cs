@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -29,7 +30,8 @@ namespace MPCCT.PhantomSystem.Editor
     {
         public string Code;
         public PhantomValidationSeverity Severity;
-        public string Message;
+        internal PhantomDiagnostic Diagnostic;
+        public string Message { get => Diagnostic?.ToString(); set => Diagnostic = value; }
         public UnityEngine.Object Context;
         public int SlotIndex = -1;
         public UnityEngine.Object[] SelectionTargets;
@@ -147,8 +149,7 @@ namespace MPCCT.PhantomSystem.Editor
 
             parameterPlan ??= PhantomParameterPlan.Empty;
             foreach (var error in parameterPlan.Errors.Where(error =>
-                         error == null
-                         || error.IndexOf("use the same core parameter prefix", StringComparison.Ordinal) < 0))
+                         error?.Key != "diagnostic.parameter.duplicatePrefix"))
             {
                 AddGlobal(report, PhantomValidationSeverity.ConfigurationError, "PHS200", error, authoring);
             }
@@ -160,8 +161,7 @@ namespace MPCCT.PhantomSystem.Editor
                         report.Slots[index],
                         PhantomValidationSeverity.Warning,
                         "PHS201",
-                        $"Parameter '{rename.OriginalName}' will be renamed to '{rename.FinalName}' "
-                        + $"to avoid an incompatible collision ({rename.Reason}).",
+                        L.D("diagnostic.validation.PHS201", rename.OriginalName, rename.FinalName, rename.Reason),
                         authoring);
                 }
             }
@@ -191,7 +191,7 @@ namespace MPCCT.PhantomSystem.Editor
                     report,
                     PhantomValidationSeverity.ConfigurationError,
                     "PHS300",
-                    $"PhantomSystem on '{system.AuthoringComponent.name}' has no slots.",
+                    L.D("diagnostic.validation.PHS300", system.AuthoringComponent.name),
                     system.AuthoringComponent);
                 return report;
             }
@@ -206,8 +206,7 @@ namespace MPCCT.PhantomSystem.Editor
                         result,
                         PhantomValidationSeverity.ConfigurationError,
                         "PHS301",
-                        $"Slot '{slot.SlotId}' has no PhantomSystem prebake result. Manual Bake commands do not "
-                        + "run the VRChat preprocess hook; use 'Bake Avatar with PhantomSystem' or VRChat SDK Build/Upload.",
+                        L.D("diagnostic.validation.PHS301", slot.SlotId),
                         system.AuthoringComponent);
                     continue;
                 }
@@ -219,7 +218,7 @@ namespace MPCCT.PhantomSystem.Editor
                         result,
                         PhantomValidationSeverity.InternalError,
                         "PHS302",
-                        $"Prebaked phantom for Slot '{slot.SlotId}' has no VRCAvatarDescriptor.",
+                        L.D("diagnostic.validation.PHS302", slot.SlotId),
                         slot.PrebakedRoot);
                 }
 
@@ -230,7 +229,7 @@ namespace MPCCT.PhantomSystem.Editor
                         result,
                         PhantomValidationSeverity.InternalError,
                         "PHS303",
-                        $"Prebaked phantom for Slot '{slot.SlotId}' has no Humanoid Animator.",
+                        L.D("diagnostic.validation.PHS303", slot.SlotId),
                         slot.PrebakedRoot);
                 }
             }
@@ -249,7 +248,7 @@ namespace MPCCT.PhantomSystem.Editor
         {
             if (slot == null)
             {
-                Add(result, PhantomValidationSeverity.ConfigurationError, "PHS001", "The slot data is missing.", authoring);
+                Add(result, PhantomValidationSeverity.ConfigurationError, "PHS001", L.D("diagnostic.validation.PHS001"), authoring);
                 return;
             }
 
@@ -259,14 +258,14 @@ namespace MPCCT.PhantomSystem.Editor
                     result,
                     PhantomValidationSeverity.Info,
                     "PHS002",
-                    $"Slot Name is empty; it will be resolved as '{PhantomSlot.DefaultId}'.",
+                    L.D("diagnostic.validation.PHS002", PhantomSlot.DefaultId),
                     authoring);
             }
 
             var source = slot.phantomAvatar;
             if (source == null)
             {
-                Add(result, PhantomValidationSeverity.ConfigurationError, "PHS010", "No phantom avatar is assigned.", authoring);
+                Add(result, PhantomValidationSeverity.ConfigurationError, "PHS010", L.D("diagnostic.validation.PHS010"), authoring);
                 return;
             }
 
@@ -278,7 +277,7 @@ namespace MPCCT.PhantomSystem.Editor
                     result,
                     PhantomValidationSeverity.ConfigurationError,
                     "PHS011",
-                    "The slot references the base avatar itself.",
+                    L.D("diagnostic.validation.PHS011"),
                     source);
                 return;
             }
@@ -289,7 +288,7 @@ namespace MPCCT.PhantomSystem.Editor
                     result,
                     PhantomValidationSeverity.ConfigurationError,
                     "PHS012",
-                    "The phantom source is inside the base avatar hierarchy.",
+                    L.D("diagnostic.validation.PHS012"),
                     source);
             }
 
@@ -300,7 +299,7 @@ namespace MPCCT.PhantomSystem.Editor
                     result,
                     PhantomValidationSeverity.ConfigurationError,
                     "PHS013",
-                    "The phantom source root has no Animator.",
+                    L.D("diagnostic.validation.PHS013"),
                     source);
             }
             else if (animator.avatar == null)
@@ -309,7 +308,7 @@ namespace MPCCT.PhantomSystem.Editor
                     result,
                     PhantomValidationSeverity.ConfigurationError,
                     "PHS014",
-                    "The phantom source Animator has no Avatar asset.",
+                    L.D("diagnostic.validation.PHS014"),
                     animator);
             }
             else if (!animator.avatar.isValid || !animator.avatar.isHuman || !animator.isHuman)
@@ -318,7 +317,7 @@ namespace MPCCT.PhantomSystem.Editor
                     result,
                     PhantomValidationSeverity.ConfigurationError,
                     "PHS015",
-                    "The phantom source Animator is not a valid Humanoid.",
+                    L.D("diagnostic.validation.PHS015"),
                     animator);
             }
             else if (!HasHumanoidBone(animator, HumanBodyBones.Hips))
@@ -327,7 +326,7 @@ namespace MPCCT.PhantomSystem.Editor
                     result,
                     PhantomValidationSeverity.ConfigurationError,
                     "PHS016",
-                    "The phantom source Humanoid has no resolvable Hips bone.",
+                    L.D("diagnostic.validation.PHS016"),
                     animator);
             }
             else if (slot.enablePhantomView && !HasHumanoidBone(animator, HumanBodyBones.Head))
@@ -336,7 +335,7 @@ namespace MPCCT.PhantomSystem.Editor
                     result,
                     PhantomValidationSeverity.ConfigurationError,
                     "PHS017",
-                    "Phantom View requires the phantom source Humanoid to expose a Head bone.",
+                    L.D("diagnostic.validation.PHS017"),
                     animator);
             }
 
@@ -350,7 +349,7 @@ namespace MPCCT.PhantomSystem.Editor
                     result,
                     PhantomValidationSeverity.ConfigurationError,
                     "PHS018",
-                    $"The phantom source contains {nestedSystems.Length} nested PhantomSystem component(s).",
+                    L.D("diagnostic.validation.PHS018", nestedSystems.Length),
                     nestedSystems[0]);
             }
 
@@ -364,8 +363,7 @@ namespace MPCCT.PhantomSystem.Editor
                     result,
                     PhantomValidationSeverity.Warning,
                     "PHS020",
-                    $"The phantom source contains {missingScriptCount} missing script(s) on "
-                    + $"{missingScriptObjects.Length} GameObject(s).",
+                    L.D("diagnostic.validation.PHS020", missingScriptCount, missingScriptObjects.Length),
                     source,
                     missingScriptObjects);
             }
@@ -388,14 +386,14 @@ namespace MPCCT.PhantomSystem.Editor
             if (baseDescriptor == null)
             {
                 AddGlobal(report, PhantomValidationSeverity.ConfigurationError, "PHS100",
-                    "PhantomSystem must be placed under a VRCAvatarDescriptor.", authoring);
+                    L.D("diagnostic.validation.PHS100"), authoring);
                 return;
             }
 
             if (animator == null)
             {
                 AddGlobal(report, PhantomValidationSeverity.ConfigurationError, "PHS101",
-                    "The base avatar root has no Animator.", context);
+                    L.D("diagnostic.validation.PHS101"), context);
                 return;
             }
 
@@ -403,21 +401,21 @@ namespace MPCCT.PhantomSystem.Editor
             if (animator.avatar == null || !animator.avatar.isValid || !animator.avatar.isHuman || !animator.isHuman)
             {
                 AddGlobal(report, PhantomValidationSeverity.ConfigurationError, "PHS102",
-                    "The base avatar Animator must use a valid Humanoid Avatar.", animator);
+                    L.D("diagnostic.validation.PHS102"), animator);
                 return;
             }
 
             if (!HasHumanoidBone(animator, HumanBodyBones.Hips))
             {
                 AddGlobal(report, PhantomValidationSeverity.ConfigurationError, "PHS103",
-                    "The base avatar Humanoid has no resolvable Hips bone.", animator);
+                    L.D("diagnostic.validation.PHS103"), animator);
             }
 
             if (slots.Any(slot => slot != null && slot.enablePhantomView)
                 && !HasHumanoidBone(animator, HumanBodyBones.Head))
             {
                 AddGlobal(report, PhantomValidationSeverity.ConfigurationError, "PHS104",
-                    "Phantom View requires the base avatar Humanoid to expose a Head bone.", animator);
+                    L.D("diagnostic.validation.PHS104"), animator);
             }
 
             if (slots.Any(slot => slot != null && slot.enablePhantomGrabbing)
@@ -425,7 +423,7 @@ namespace MPCCT.PhantomSystem.Editor
                     || !HasHumanoidBone(animator, HumanBodyBones.RightHand)))
             {
                 AddGlobal(report, PhantomValidationSeverity.ConfigurationError, "PHS105",
-                    "Phantom Grabbing requires both Humanoid hand bones on the base avatar.", animator);
+                    L.D("diagnostic.validation.PHS105"), animator);
             }
         }
 
@@ -477,8 +475,7 @@ namespace MPCCT.PhantomSystem.Editor
                     result,
                     PhantomValidationSeverity.Warning,
                     "PHS021",
-                    $"Component type '{componentType.FullName}' does not implement INDMFEditorOnly;"
-                    + $"phantom prebake compatibility cannot be verified.",
+                    L.D("diagnostic.validation.PHS021", componentType.FullName),
                     components[0],
                     gameObjects);
             }
@@ -524,7 +521,7 @@ namespace MPCCT.PhantomSystem.Editor
                         report.Slots[item.Index],
                         PhantomValidationSeverity.ConfigurationError,
                         "PHS030",
-                        $"Slot Name '{group.Key}' is duplicated.",
+                        L.D("diagnostic.validation.PHS030", group.Key),
                         authoring);
                 }
             }
@@ -556,7 +553,7 @@ namespace MPCCT.PhantomSystem.Editor
                         report.Slots[item.Index],
                         PhantomValidationSeverity.ConfigurationError,
                         "PHS032",
-                        $"The core parameter namespace is duplicated ('{group.Key}').",
+                        L.D("diagnostic.validation.PHS032", group.Key),
                         authoring);
                 }
             }
@@ -587,7 +584,7 @@ namespace MPCCT.PhantomSystem.Editor
                         report.Slots[item.Index],
                         PhantomValidationSeverity.ConfigurationError,
                         "PHS031",
-                        $"Slot hierarchy name '{group.Key}' is duplicated after invalid path characters are normalized.",
+                        L.D("diagnostic.validation.PHS031", group.Key),
                         authoring);
                 }
             }
@@ -783,7 +780,7 @@ namespace MPCCT.PhantomSystem.Editor
             PhantomSlotValidationResult result,
             PhantomValidationSeverity severity,
             string code,
-            string message,
+            PhantomDiagnostic message,
             UnityEngine.Object context,
             UnityEngine.Object[] selectionTargets = null)
         {
@@ -791,7 +788,7 @@ namespace MPCCT.PhantomSystem.Editor
             {
                 Code = code,
                 Severity = severity,
-                Message = message,
+                Diagnostic = message,
                 Context = context,
                 SelectionTargets = selectionTargets
                     ?? (context != null
@@ -804,14 +801,14 @@ namespace MPCCT.PhantomSystem.Editor
             PhantomSourceValidationReport report,
             PhantomValidationSeverity severity,
             string code,
-            string message,
+            PhantomDiagnostic message,
             UnityEngine.Object context)
         {
             report.GlobalIssues.Add(new PhantomValidationIssue
             {
                 Code = code,
                 Severity = severity,
-                Message = message,
+                Diagnostic = message,
                 Context = context,
                 SelectionTargets = context != null
                     ? new[] { context }

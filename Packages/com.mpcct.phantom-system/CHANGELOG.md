@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.1
+
+### Added
+
+- Added English, Simplified Chinese, and Japanese localization for the Inspector, Global Settings, tool dialogs, and generated PhantomSystem Expression Menus. One NDMF language preference controls the UI, diagnostics, and generated menus; parameter names and source menu content are preserved.
+- Localized PhantomSystem validation, parameter conflict reasons, build diagnostics, and prebake/cache messages. Cached Inspector diagnostics and existing NDMF Console entries update when the language changes; diagnostic codes, names, paths, and original exception details are retained.
+- Build warnings now appear as non-blocking entries in the NDMF Console, using its standard localized view and object references.
+
+### Fixed
+
+- NDMF diagnostic views now retain unresolved object paths as text when their scene has closed, preventing language changes in Test Runner from throwing 'The scene is invalid'. Persistent asset references remain selectable.
+- Source FX filtering now follows generated constraint ownership per Transform property. Extra skinned bones, unowned intermediate nodes, visible-bone scale, and position curves on rotation-only bones are retained. Generated animation-driver transforms and source root motion remain protected.
+- Source FX Transform Masks no longer inherit Humanoid body-part exclusions. Explicit Transform exclusions are still respected, and final binding diagnostics use the same ownership rules as conversion.
+
+
 ## 0.3.0
 
 ### Added

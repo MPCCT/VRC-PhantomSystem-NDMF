@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using System.Collections.Generic;
 using System.Linq;
 using nadena.dev.modular_avatar.core;
@@ -172,7 +173,7 @@ namespace MPCCT.PhantomSystem.Editor
             if (context == null || system?.AvatarRoot == null || host == null)
             {
                 report.InternalError(
-                    $"Slot '{slot.SlotId}' could not create its Driver neutral animator because the build context is incomplete.");
+                    L.D("diagnostic.driver.incompleteContext", slot.SlotId));
                 return;
             }
 
@@ -181,7 +182,7 @@ namespace MPCCT.PhantomSystem.Editor
                 || !slot.CloneAnimator.isHuman)
             {
                 report.Error(
-                    $"Slot '{slot.SlotId}' could not sample its Driver neutral pose because its cloned Animator is not a valid Humanoid.",
+                    L.D("diagnostic.driver.invalidHumanoid", slot.SlotId),
                     slot.CloneRoot);
                 return;
             }
@@ -209,7 +210,7 @@ namespace MPCCT.PhantomSystem.Editor
             {
                 Object.DestroyImmediate(clip);
                 report.Error(
-                    $"Slot '{slot.SlotId}' could not sample its Humanoid Driver neutral pose: {exception.Message}",
+                    L.D("diagnostic.driver.sampleFailed", slot.SlotId, exception.Message),
                     slot.CloneRoot);
                 return;
             }
@@ -281,7 +282,7 @@ namespace MPCCT.PhantomSystem.Editor
                 if (pair.Value == null)
                 {
                     report.Error(
-                        $"Slot '{slot.SlotId}' has no Driver transform for Humanoid bone '{pair.Key}'.",
+                        L.D("diagnostic.driver.missingBone", slot.SlotId, pair.Key),
                         slot.CloneRoot);
                     outputPaths = null;
                     return false;
@@ -291,7 +292,7 @@ namespace MPCCT.PhantomSystem.Editor
                 if (path == null)
                 {
                     report.Error(
-                        $"Slot '{slot.SlotId}' could not resolve the avatar-relative Driver path for Humanoid bone '{pair.Key}'.",
+                        L.D("diagnostic.driver.missingPath", slot.SlotId, pair.Key),
                         pair.Value);
                     outputPaths = null;
                     return false;
@@ -300,7 +301,7 @@ namespace MPCCT.PhantomSystem.Editor
                 if (!slot.AnimationDriverPoseParentClonePaths.ContainsKey(pair.Key))
                 {
                     report.Error(
-                        $"Slot '{slot.SlotId}' could not resolve the sampling pose parent for Humanoid bone '{pair.Key}'.",
+                        L.D("diagnostic.driver.missingParent", slot.SlotId, pair.Key),
                         pair.Value);
                     outputPaths = null;
                     return false;

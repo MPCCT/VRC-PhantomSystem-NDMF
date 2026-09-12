@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using System;
 using System.Linq;
 using nadena.dev.ndmf.preview;
@@ -30,6 +31,8 @@ namespace MPCCT.PhantomSystem.Editor
             slotFoldoutStateKey = SlotFoldoutStatePrefix
                 + GlobalObjectId.GetGlobalObjectIdSlow(target);
             ClearFoldoutCaches();
+            nadena.dev.ndmf.localization.LanguagePrefs.RegisterLanguageChangeCallback(
+                this, editor => { if (editor != null) editor.Repaint(); });
             Undo.undoRedoPerformed += ScheduleRefresh;
             ScheduleRefresh();
         }
@@ -46,6 +49,7 @@ namespace MPCCT.PhantomSystem.Editor
         {
             serializedObject.Update();
 
+            L.DrawLanguageSelector();
             DrawPhantomHeader();
             var changed = DrawSlots();
             DrawSystemOptions();
@@ -63,7 +67,7 @@ namespace MPCCT.PhantomSystem.Editor
                 EditorGUILayout.LabelField("PhantomSystem", EditorStyles.boldLabel);
                 GUILayout.FlexibleSpace();
                 EditorGUILayout.LabelField(OverallStatus(), EditorStyles.miniLabel, GUILayout.Width(90f));
-                if (GUILayout.Button("Refresh", GUILayout.Width(72f)))
+                if (GUILayout.Button(L.S("common.refresh"), GUILayout.MinWidth(72f)))
                 {
                     serializedObject.ApplyModifiedProperties();
                     RefreshAnalysis();
@@ -74,12 +78,11 @@ namespace MPCCT.PhantomSystem.Editor
             var totalCost = parameterPlan?.Slots.Sum(slot => slot.FinalContributionCost);
             EditorGUILayout.LabelField(
                 totalCost.HasValue
-                    ? $"{slots.arraySize} slot(s) · estimated PhantomSystem contribution {totalCost.Value} bits"
-                    : $"{slots.arraySize} slot(s) · analyzing parameters...",
-                EditorStyles.miniLabel);
+                    ? L.F("header.cost", slots.arraySize, totalCost.Value)
+                    : L.F("header.analyzing", slots.arraySize),
+                EditorStyles.wordWrappedMiniLabel);
             EditorGUILayout.HelpBox(
-                "Each source avatar is independently prebaked through NDMF. Configure and validate each slot below; "
-                + "the original source avatar is never modified.",
+                L.S("header.description"),
                 MessageType.Info);
 
             if (validationReport != null)

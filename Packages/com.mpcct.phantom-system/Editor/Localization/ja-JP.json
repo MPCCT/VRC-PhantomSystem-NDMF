@@ -1,0 +1,1264 @@
+{
+  "entries": [
+    {
+      "key": "language.editor",
+      "value": "言語"
+    },
+    {
+      "key": "common.refresh",
+      "value": "更新"
+    },
+    {
+      "key": "common.select",
+      "value": "選択"
+    },
+    {
+      "key": "common.select.count",
+      "value": "選択 ({0})"
+    },
+    {
+      "key": "common.up",
+      "value": "上へ"
+    },
+    {
+      "key": "common.down",
+      "value": "下へ"
+    },
+    {
+      "key": "common.remove",
+      "value": "削除"
+    },
+    {
+      "key": "common.clear",
+      "value": "クリア"
+    },
+    {
+      "key": "common.cancel",
+      "value": "キャンセル"
+    },
+    {
+      "key": "common.ok",
+      "value": "OK"
+    },
+    {
+      "key": "common.bits",
+      "value": "{0} ビット"
+    },
+    {
+      "key": "header.cost",
+      "value": "{0} スロット · PhantomSystem の推定使用量 {1} ビット"
+    },
+    {
+      "key": "header.analyzing",
+      "value": "{0} スロット · パラメーターを解析中…"
+    },
+    {
+      "key": "header.description",
+      "value": "各分身元アバターを NDMF で個別に事前ビルドします。以下で各スロットを設定・確認してください。分身元のオブジェクトは変更されません。"
+    },
+    {
+      "key": "slots.title",
+      "value": "スロット"
+    },
+    {
+      "key": "slots.empty",
+      "value": "スロットがありません。追加して Humanoid の分身元アバターを指定してください。"
+    },
+    {
+      "key": "slots.add",
+      "value": "スロットを追加"
+    },
+    {
+      "key": "slot.name",
+      "value": "スロット名"
+    },
+    {
+      "key": "slot.source",
+      "value": "分身元アバター"
+    },
+    {
+      "key": "slot.spawn",
+      "value": "出現位置を上書き"
+    },
+    {
+      "key": "slot.includeMenu",
+      "value": "分身元メニューを含める"
+    },
+    {
+      "key": "slot.includeMenu.tooltip",
+      "value": "分身元アバターの NDMF 事前ビルドで生成された最終 Expression Menu を含めます。"
+    },
+    {
+      "key": "slot.grabbing",
+      "value": "ファントムグラブを有効化"
+    },
+    {
+      "key": "slot.grabbing.tooltip",
+      "value": "分身のフリーズ中は、左右どちらの手でもロックンロールジェスチャーと接触で Hips をつかんで動かせます。生成された Humanoid PhysBone プロキシで体を動かし、ポーズを付けられます。フリーズを解除するとグラブが無効になり、本体への追従に戻ります。"
+    },
+    {
+      "key": "slot.scale",
+      "value": "スケール操作を有効化"
+    },
+    {
+      "key": "slot.scale.tooltip",
+      "value": "スロットごとにスケールのラジアル操作、リセット、X 軸ミラーを追加します。"
+    },
+    {
+      "key": "slot.view",
+      "value": "ファントムビューを有効化"
+    },
+    {
+      "key": "slot.view.tooltip",
+      "value": "分身の Humanoid Head から描画する、ローカル専用の立体ビューを追加します。"
+    },
+    {
+      "key": "slot.parameters",
+      "value": "パラメーター設定"
+    },
+    {
+      "key": "slot.prefix",
+      "value": "パラメータープレフィックス"
+    },
+    {
+      "key": "slot.namespace",
+      "value": "分身パラメーターを名前空間化"
+    },
+    {
+      "key": "slot.sourceExcluded",
+      "value": "分身元の FX、Action、Gesture、パラメーター、メニューは除外されます。"
+    },
+    {
+      "key": "slot.advanced",
+      "value": "詳細設定"
+    },
+    {
+      "key": "slot.removeControls",
+      "value": "分身元の制御を削除"
+    },
+    {
+      "key": "slot.removeControls.tooltip",
+      "value": "分身の事前ビルド済み FX、Action、Gesture コントローラー、元のパラメーター定義、最終 Expression Menu を除外します。PhantomSystem のコア制御は追加されます。"
+    },
+    {
+      "key": "slot.rotation",
+      "value": "回転 Constraint を使用"
+    },
+    {
+      "key": "slot.rotation.tooltip",
+      "value": "Hips 以外の Humanoid ボーンには Parent Constraint の代わりに Rotation Constraint を使います。"
+    },
+    {
+      "key": "slot.worldRotation",
+      "value": "回転をワールド空間で計算"
+    },
+    {
+      "key": "slot.worldRotation.tooltip",
+      "value": "生成した Rotation Constraint をワールド空間で計算します。"
+    },
+    {
+      "key": "slot.immobile",
+      "value": "PhysBone の Immobile Type を上書き"
+    },
+    {
+      "key": "slot.immobile.tooltip",
+      "value": "このスロット内の全 PhysBone の Immobile Type を All Motion に設定します。フリーズ中に PhysBone が本体と一緒に動く問題を改善できますが、元の設定を上書きするため挙動が変わる場合があります。"
+    },
+    {
+      "key": "slot.tracking",
+      "value": "Animator Tracking Control の変換を試行"
+    },
+    {
+      "key": "slot.tracking.tooltip",
+      "value": "対応する Animator Tracking Control を PhantomSystem のボーングループ同期に変換します。未対応の表情制御は部分変換として報告されます。"
+    },
+    {
+      "key": "slot.nearClip",
+      "value": "ビューの近クリップ距離 (m)"
+    },
+    {
+      "key": "slot.nearClip.tooltip",
+      "value": "分身が等倍のときの近クリップ距離です。顔が視界を遮る場合は値を大きくしてください。生成カメラの値は分身のスケールに自動追従します。"
+    },
+    {
+      "key": "system.title",
+      "value": "システム設定"
+    },
+    {
+      "key": "system.installMenu",
+      "value": "ファントムメニューを追加"
+    },
+    {
+      "key": "system.installMenu.tooltip",
+      "value": "PhantomSystem のコアメニューを生成して追加します。"
+    },
+    {
+      "key": "system.menuLocation",
+      "value": "コアメニューの追加先を選択"
+    },
+    {
+      "key": "system.installerHelp",
+      "value": "付属の MA Menu Installer では追加先のみを設定してください。追加するメニューはビルド時に設定されます。"
+    },
+    {
+      "key": "system.settings",
+      "value": "グローバル設定を開く"
+    },
+    {
+      "key": "system.bakeHelp",
+      "value": "Modular Avatar の通常の手動ベイク（Manual Bake）では、PhantomSystem が使う VRChat 前処理フックは実行されません。この手動ベイクボタンでは、すべての分身元を事前ベイクしてから NDMF の手動アバターベイクを実行します。"
+    },
+    {
+      "key": "system.bake",
+      "value": "PhantomSystem でアバターを手動ベイク"
+    },
+    {
+      "key": "system.bake.tooltip",
+      "value": "アバターを手動ベイクします。設定済みのすべての分身元を事前ベイクし、NDMF の通常の Manual Bake Avatar を実行します。"
+    },
+    {
+      "key": "sharing.title",
+      "value": "同名パラメーター共有"
+    },
+    {
+      "key": "sharing.analyzing",
+      "value": "NDMF パラメーターを解析中…"
+    },
+    {
+      "key": "sharing.cost",
+      "value": "分身元 {0} ビット · 共有で {1} ビット削減 · PhantomSystem {2} ビット · 合計 {3} ビット"
+    },
+    {
+      "key": "sharing.disabled",
+      "value": "名前空間化は無効です。互換性のある同名パラメーターは元の名前で共有されます。互換性のないものは、このスロットの Original プレフィックス下へ自動的に移されます。"
+    },
+    {
+      "key": "sharing.empty",
+      "value": "本体アバターに同名の Expression Parameters が見つかりません。"
+    },
+    {
+      "key": "sharing.compatible",
+      "value": "互換パラメーターを共有"
+    },
+    {
+      "key": "sharing.keep",
+      "value": "この分身パラメーターの名前を変更せず、本体パラメーターと共有します。"
+    },
+    {
+      "key": "sharing.network",
+      "value": "ネットワーク同期"
+    },
+    {
+      "key": "sharing.local",
+      "value": "ローカル"
+    },
+    {
+      "key": "sharing.avatarParameters",
+      "value": "アバターパラメーター · {0}"
+    },
+    {
+      "key": "sharing.unknown",
+      "value": "不明なパラメーター提供元"
+    },
+    {
+      "key": "sharing.avatarTooltip",
+      "value": "事前ビルド済みアバターの VRCExpressionParameters アセットで宣言されたパラメーターです。"
+    },
+    {
+      "key": "sharing.unknownTooltip",
+      "value": "NDMF はこの解決済みパラメーターの提供元コンポーネントを公開していません。"
+    },
+    {
+      "key": "sharing.provider",
+      "value": "名称のない NDMF プロバイダー"
+    },
+    {
+      "key": "sharing.plugin",
+      "value": "{0} NDMF プラグイン"
+    },
+    {
+      "key": "sharing.providedBy",
+      "value": "'{1}' の {0} が {2} を通して提供します。"
+    },
+    {
+      "key": "sharing.root",
+      "value": "アバターのルート"
+    },
+    {
+      "key": "sharing.removeStale",
+      "value": "無効なルールを削除"
+    },
+    {
+      "key": "alerts.title",
+      "value": "警告とエラーを確認"
+    },
+    {
+      "key": "alerts.title.count",
+      "value": "警告とエラーを確認 ({0})"
+    },
+    {
+      "key": "alerts.checking",
+      "value": "分身元アバターを確認中…"
+    },
+    {
+      "key": "alerts.none",
+      "value": "分身元の検証警告はありません。"
+    },
+    {
+      "key": "alerts.compatibility",
+      "value": "コンポーネント互換性"
+    },
+    {
+      "key": "alerts.notScanned",
+      "value": "未確認"
+    },
+    {
+      "key": "alerts.components",
+      "value": "NDMF コンポーネント {0} 個"
+    },
+    {
+      "key": "alerts.unclassified",
+      "value": " · {1} 個のコンポーネントに {0} 種類の警告"
+    },
+    {
+      "key": "alerts.classified",
+      "value": " · 未分類のスクリプトコンポーネントなし"
+    },
+    {
+      "key": "status.checking",
+      "value": "確認中…"
+    },
+    {
+      "key": "status.errors",
+      "value": "エラーあり"
+    },
+    {
+      "key": "status.error",
+      "value": "エラー"
+    },
+    {
+      "key": "status.warnings",
+      "value": "警告あり"
+    },
+    {
+      "key": "status.noSlots",
+      "value": "スロットなし"
+    },
+    {
+      "key": "status.ready",
+      "value": "準備完了"
+    },
+    {
+      "key": "status.warning.one",
+      "value": "警告 1 件"
+    },
+    {
+      "key": "status.warning.many",
+      "value": "警告 {0} 件"
+    },
+    {
+      "key": "status.warning.cost",
+      "value": "{0} · {1} ビット"
+    },
+    {
+      "key": "settings.window",
+      "value": "PhantomSystem 設定"
+    },
+    {
+      "key": "settings.title",
+      "value": "PhantomSystem グローバル設定"
+    },
+    {
+      "key": "settings.description",
+      "value": "この Unity プロジェクト内の全 PhantomSystem アバターで共有する設定です。各ビルドの開始時に設定のスナップショットを取得します。"
+    },
+    {
+      "key": "settings.view",
+      "value": "ファントムビュー"
+    },
+    {
+      "key": "settings.texture",
+      "value": "テクスチャサイズ"
+    },
+    {
+      "key": "settings.texture.tooltip",
+      "value": "共有するファントムビューの各眼用 RenderTexture の解像度です。"
+    },
+    {
+      "key": "settings.textureHelp",
+      "value": "共有の左眼用・右眼用 RenderTexture に同じサイズを適用します。"
+    },
+    {
+      "key": "settings.largeTexture",
+      "value": "4096 では非常に大きな描画先を 2 つ作成し、大量の GPU メモリーを消費する場合があります。対象 PC で性能を確認してから使用してください。"
+    },
+    {
+      "key": "settings.conversion",
+      "value": "Humanoid アニメーション変換"
+    },
+    {
+      "key": "settings.sampleRate",
+      "value": "最大適応サンプリングレート"
+    },
+    {
+      "key": "settings.sampleRate.tooltip",
+      "value": "自動追加するサンプルを制限します。元のキーフレーム時刻は候補として保持されます。"
+    },
+    {
+      "key": "settings.positionError",
+      "value": "位置誤差の許容値"
+    },
+    {
+      "key": "settings.positionError.tooltip",
+      "value": "適応分割とキー削減で使用する、ローカル位置の最大補間誤差です。"
+    },
+    {
+      "key": "settings.rotationError",
+      "value": "回転誤差の許容値"
+    },
+    {
+      "key": "settings.rotationError.tooltip",
+      "value": "適応分割とキー削減で使用する、ローカル回転の最大角度誤差です。"
+    },
+    {
+      "key": "settings.degrees",
+      "value": "度"
+    },
+    {
+      "key": "settings.toleranceHelp",
+      "value": "許容値を小さくすると動きの細部を保持できますが、AnimationClip が大きくなります。許容値を満たす前にサンプリングレートの上限に達すると、ビルド時に警告します。"
+    },
+    {
+      "key": "settings.cache",
+      "value": "Humanoid ベイクキャッシュ"
+    },
+    {
+      "key": "settings.cacheData",
+      "value": "キャッシュ済みポーズデータ"
+    },
+    {
+      "key": "settings.cacheStats",
+      "value": "{0} 件、{1}"
+    },
+    {
+      "key": "settings.cacheHelp",
+      "value": "キャッシュはこのプロジェクトの Library に保存される派生データです。ビルド済みアバターからは参照されず、いつでも削除できます。"
+    },
+    {
+      "key": "settings.clearCache",
+      "value": "Humanoid ベイクキャッシュを削除"
+    },
+    {
+      "key": "settings.reset",
+      "value": "既定値に戻す"
+    },
+    {
+      "key": "tools.deleteTitle",
+      "value": "生成済みの分身事前ビルドアセットをすべて削除しますか？"
+    },
+    {
+      "key": "tools.deleteDescription",
+      "value": "VRC ビルドが成功すると、通常は自動的に削除されます。残っている PhantomSystem 管理下の PhantomPrebake_<Hash> ディレクトリを、参照を確認せずにすべて削除します。完了済みの VRC・手動ビルド結果はこれらの中間アセットに依存しません。この操作は元に戻せません。"
+    },
+    {
+      "key": "tools.deleteAll",
+      "value": "すべて削除"
+    },
+    {
+      "key": "tools.deletedTitle",
+      "value": "分身事前ビルドアセットの削除"
+    },
+    {
+      "key": "tools.noAssets",
+      "value": "生成済みの分身事前ビルドアセットのディレクトリはありません。"
+    },
+    {
+      "key": "tools.deleted",
+      "value": "生成済みの事前ビルドディレクトリが {0} 個見つかりました。\n\n削除済み: {1}\n削除失敗: {2}"
+    },
+    {
+      "key": "tools.clearTitle",
+      "value": "Humanoid ベイクキャッシュを削除しますか？"
+    },
+    {
+      "key": "tools.clearDescription",
+      "value": "このプロジェクトの Library フォルダーから Humanoid ベイクキャッシュ {0} 件 ({1}) を削除しますか？\n\nキャッシュには派生ポーズデータのみが含まれ、必要に応じて再生成されます。"
+    },
+    {
+      "key": "tools.clear",
+      "value": "キャッシュを削除"
+    },
+    {
+      "key": "menu.activate",
+      "value": "有効化"
+    },
+    {
+      "key": "menu.freeze",
+      "value": "フリーズ"
+    },
+    {
+      "key": "menu.positionLock",
+      "value": "位置固定"
+    },
+    {
+      "key": "menu.settings",
+      "value": "設定"
+    },
+    {
+      "key": "menu.scale",
+      "value": "スケール"
+    },
+    {
+      "key": "menu.resetScale",
+      "value": "スケールをリセット"
+    },
+    {
+      "key": "menu.mirror",
+      "value": "ミラー"
+    },
+    {
+      "key": "menu.bones",
+      "value": "ボーン表示"
+    },
+    {
+      "key": "menu.view",
+      "value": "ファントムビュー"
+    },
+    {
+      "key": "menu.enabled",
+      "value": "有効化"
+    },
+    {
+      "key": "menu.stereo",
+      "value": "立体感の強さ"
+    },
+    {
+      "key": "menu.mask",
+      "value": "マスクサイズ"
+    },
+    {
+      "key": "menu.original",
+      "value": "分身元メニュー"
+    },
+    {
+      "key": "menu.source",
+      "value": "{0} メニュー"
+    },
+    {
+      "key": "diagnostic.build.passFailed",
+      "value": "ビルド処理「{0}」で予期しない例外が発生しました。"
+    },
+    {
+      "key": "diagnostic.driver.incompleteContext",
+      "value": "スロット「{0}」のビルドコンテキストが不完全なため、Driver のニュートラル姿勢用 Animator を作成できません。"
+    },
+    {
+      "key": "diagnostic.driver.invalidHumanoid",
+      "value": "スロット「{0}」の複製された Animator が有効な Humanoid ではないため、Driver のニュートラル姿勢をサンプリングできません。"
+    },
+    {
+      "key": "diagnostic.driver.sampleFailed",
+      "value": "スロット「{0}」の Humanoid Driver のニュートラル姿勢をサンプリングできませんでした：{1}"
+    },
+    {
+      "key": "diagnostic.driver.missingBone",
+      "value": "スロット「{0}」の Humanoid ボーン「{1}」に対応する Driver Transform がありません。"
+    },
+    {
+      "key": "diagnostic.driver.missingPath",
+      "value": "スロット「{0}」の Humanoid ボーン「{1}」について、Avatar ルートからの Driver パスを解決できません。"
+    },
+    {
+      "key": "diagnostic.driver.missingParent",
+      "value": "スロット「{0}」の Humanoid ボーン「{1}」について、姿勢サンプリング用の親を解決できません。"
+    },
+    {
+      "key": "diagnostic.animator.missingMotion",
+      "value": "生成された Animator レイヤー「{0}」のステート「{1}」に Motion がありません。"
+    },
+    {
+      "key": "diagnostic.animator.priorityExhausted",
+      "value": "本体 Avatar がすでに int.MaxValue を使用しているため、スロット「{0}」に Merge Animator の優先度を割り当てられません。"
+    },
+    {
+      "key": "diagnostic.rig.positionLockPaths",
+      "value": "スロット「{0}」の PositionLock 補助オブジェクトのパスを解決できません。"
+    },
+    {
+      "key": "diagnostic.rig.bodyProxyPaths",
+      "value": "スロット「{0}」でファントムグラブに必要な身体プロキシボーンを解決できません。"
+    },
+    {
+      "key": "diagnostic.rig.boneDisplayPaths",
+      "value": "スロット「{0}」に生成されたファントムグラブ用ボーン表示を解決できません。"
+    },
+    {
+      "key": "diagnostic.rig.grabbingConstraintPaths",
+      "value": "スロット「{0}」でファントムグラブに必要なコンストレイントのパスを解決できません。"
+    },
+    {
+      "key": "diagnostic.rig.viewPaths",
+      "value": "スロット「{0}」に生成されたファントムビューのパスを解決できません。"
+    },
+    {
+      "key": "diagnostic.rig.scalePaths",
+      "value": "スロット「{0}」の ScaleRoot または MirrorRoot のパスを解決できません。"
+    },
+    {
+      "key": "diagnostic.layerControl.missingDescriptor",
+      "value": "最終 Avatar Descriptor がないため、分身の Animator Layer Control を検証できません。"
+    },
+    {
+      "key": "diagnostic.layerControl.duplicateName",
+      "value": "統合後の {0} コントローラーに PhantomSystem のレイヤー名「{1}」が重複しているため、Animator Layer Control の対象を特定できません。"
+    },
+    {
+      "key": "diagnostic.layerControl.missingMergedController",
+      "value": "統合後の {0} コントローラーがないため、変換済み Action レイヤーを無効にできません。"
+    },
+    {
+      "key": "diagnostic.layerControl.missingActionLayer",
+      "value": "統合後の {1} コントローラー内で、変換済み Action レイヤー「{0}」を解決できません。"
+    },
+    {
+      "key": "diagnostic.layerControl.actionAtZero",
+      "value": "変換済み Action レイヤー「{0}」が統合後の {1} のレイヤー 0 になったため、ウェイトを制御できません。"
+    },
+    {
+      "key": "diagnostic.layerControl.unresolvedTarget",
+      "value": "VRCFury の処理前に、分身の Animator Layer Control の対象「{0}/{1}」を解決できません。"
+    },
+    {
+      "key": "diagnostic.layerControl.markersBeforeVrcfury",
+      "value": "VRCFury の処理前に、統合後の {0} コントローラーに分身の Animator Layer Control の一時マーカーが {1} 個残っています。"
+    },
+    {
+      "key": "diagnostic.layerControl.markersFinal",
+      "value": "最終 {0} コントローラーに分身の Animator Layer Control の一時マーカーが {1} 個残っています。"
+    },
+    {
+      "key": "diagnostic.cache.keyFailed",
+      "value": "[PhantomSystem]「{0}」の Humanoid ベイクキャッシュキーを作成できません。このクリップは通常どおりベイクされます。{1}"
+    },
+    {
+      "key": "diagnostic.cache.damaged",
+      "value": "[PhantomSystem] 破損した Humanoid ベイクキャッシュ「{0}」を無視しました。このクリップは再ベイクされます。{1}"
+    },
+    {
+      "key": "diagnostic.cache.writeFailed",
+      "value": "[PhantomSystem] Humanoid ベイクキャッシュ「{0}」を保存できません。現在のビルドは続行できます。{1}"
+    },
+    {
+      "key": "diagnostic.cache.cleanupFailed",
+      "value": "[PhantomSystem] 互換性のない Humanoid ベイクキャッシュデータを削除できません。{0}"
+    },
+    {
+      "key": "diagnostic.conversion.fxMirror",
+      "value": "スロット「{0}」の FX ステート「{1}」はパラメーター「{2}」で Humanoid Mirror を制御しています。元の FX のボーンアニメーションは除去されるため、この Mirror パラメーターは無視されます。"
+    },
+    {
+      "key": "diagnostic.conversion.mirror",
+      "value": "スロット「{0}」の {1} ステート「{2}」はパラメーター「{3}」で Humanoid Mirror を制御しています。既定の Mirror 値（{4}）をベイクしたため、実行時の変更は無視されます。"
+    },
+    {
+      "key": "diagnostic.conversion.fxFiltered",
+      "value": "スロット「{0}」の元の FX クリップバリアント {3} 個から、ボーンの Transform カーブ {1} 本とパラメーター以外の Animator カーブ {2} 本を除去しました。ダミーバインディングでクリップの長さを維持し、空クリップの Write Defaults 動作を防ぎます。"
+    },
+    {
+      "key": "diagnostic.conversion.unsupportedBindings",
+      "value": "スロット「{0}」の {1} クリップ「{2}」で、未対応の Animator バインディング {3} 個をスキップしました{4}"
+    },
+    {
+      "key": "diagnostic.conversion.rootMotion",
+      "value": "スロット「{0}」の {1} クリップ「{2}」の Root Motion を分身の Hips に限定しました。"
+    },
+    {
+      "key": "diagnostic.conversion.rootScale",
+      "value": "スロット「{0}」の {1} クリップ「{2}」で、ルートのスケールバインディング {3} 個を無視しました。"
+    },
+    {
+      "key": "diagnostic.conversion.samplingLimit",
+      "value": "スロット「{0}」の {1} クリップ「{2}」は適応サンプリングの上限（{3:0.###} FPS）に達しましたが、一部のボーン誤差が設定された許容値を超えています。"
+    },
+    {
+      "key": "diagnostic.behaviour.trackingConverted",
+      "value": "スロット「{0}」の Animator Tracking Control ビヘイビア {1} 個を、分身用パラメータードライバー {2} 個に変換しました。"
+    },
+    {
+      "key": "diagnostic.behaviour.trackingRemoved",
+      "value": "スロット「{0}」の Animator Tracking Control ビヘイビア {1} 個を変換せずに除去しました。"
+    },
+    {
+      "key": "diagnostic.behaviour.locomotionRemoved",
+      "value": "スロット「{0}」の Avatar 全体に作用する Animator Locomotion Control ビヘイビア {1} 個を除去しました。"
+    },
+    {
+      "key": "diagnostic.behaviour.poseSpaceRemoved",
+      "value": "スロット「{0}」の Avatar 全体に作用する Animator Temporary Pose Space ビヘイビア {1} 個を除去しました。"
+    },
+    {
+      "key": "diagnostic.behaviour.playableRemoved",
+      "value": "スロット「{0}」で、対象が利用できないか未対応の Playable Layer Control ビヘイビア {1} 個を除去しました。"
+    },
+    {
+      "key": "diagnostic.behaviour.actionConverted",
+      "value": "スロット「{0}」の二値 Action Playable Layer Control ビヘイビア {1} 個を、変換済み Action レイヤー全体の即時制御に変換しました。"
+    },
+    {
+      "key": "diagnostic.behaviour.actionNonBinary",
+      "value": "スロット「{0}」で、Goal Weight が 0 でも 1 でもない Action Playable Layer Control ビヘイビア {1} 個を除去しました。"
+    },
+    {
+      "key": "diagnostic.behaviour.actionBlendIgnored",
+      "value": "スロット「{0}」で、変換した Action Playable Layer Control ビヘイビア {1} 個の Blend Duration を無視しました。変換済み Action は即座に切り替わります。"
+    },
+    {
+      "key": "diagnostic.behaviour.actionLayerRemoved",
+      "value": "スロット「{0}」で、Action を対象とする Animator Layer Control ビヘイビア {1} 個を除去しました。変換済み Action のウェイトは Playable グループ全体で制御されます。"
+    },
+    {
+      "key": "diagnostic.behaviour.layerRetargeted",
+      "value": "スロット「{0}」の Animator Layer Control ビヘイビア {1} 個を、最終段階で対象レイヤーに再設定します。"
+    },
+    {
+      "key": "diagnostic.behaviour.layerRemoved",
+      "value": "スロット「{0}」で、対象が利用できないか未対応の Animator Layer Control ビヘイビア {1} 個を除去しました。"
+    },
+    {
+      "key": "diagnostic.behaviour.eyesPartial",
+      "value": "スロット「{0}」の Eyes & Eyelids は、利用可能な目のボーンのみで変換されます。"
+    },
+    {
+      "key": "diagnostic.behaviour.mouthPartial",
+      "value": "スロット「{0}」の Mouth & Jaw は、利用可能な顎のボーンのみで変換されます。"
+    },
+    {
+      "key": "diagnostic.conversion.unregisteredController",
+      "value": "スロット「{0}」の {1} の元の Merge Animator が NDMF Animator Services に登録されていません。"
+    },
+    {
+      "key": "diagnostic.rig.missingCloneArmature",
+      "value": "Humanoid の Hips から、スロット「{0}」の事前ビルド済み分身の Armature を解決できません。"
+    },
+    {
+      "key": "diagnostic.conversion.unsupportedController",
+      "value": "スロット「{0}」は未対応の {1} コントローラー型「{2}」を使用しています。"
+    },
+    {
+      "key": "diagnostic.menu.missingCore",
+      "value": "スロット「{0}」は元のメニューのインストールを要求しましたが、有効なコアメニュービルダーがメニューを返しませんでした。"
+    },
+    {
+      "key": "diagnostic.rig.missingBaseAnimator",
+      "value": "コンストレイントの生成前に、本体 Avatar の Animator が失われました。"
+    },
+    {
+      "key": "diagnostic.rig.missingBaseArmature",
+      "value": "Humanoid の Hips から本体 Avatar の Armature を解決できません。"
+    },
+    {
+      "key": "diagnostic.grabbing.missingHips",
+      "value": "スロット「{0}」はファントムグラブを有効にしていますが、ベイク後の Avatar に Humanoid の Hips がありません。"
+    },
+    {
+      "key": "diagnostic.grabbing.missingProxyHips",
+      "value": "スロット「{0}」にファントムグラブ用身体プロキシの Hips を生成できません。"
+    },
+    {
+      "key": "diagnostic.boneDisplay.missingMaterial",
+      "value": "「{0}」にファントムグラブ用ボーン表示マテリアルが見つかりません。"
+    },
+    {
+      "key": "diagnostic.boneDisplay.missingSegments",
+      "value": "スロット「{0}」にボーン表示用のファントムグラブ身体セグメントが生成されませんでした。"
+    },
+    {
+      "key": "diagnostic.boneDisplay.missingMesh",
+      "value": "「{0}」にファントムグラブ用ボーン表示メッシュが見つかりません。"
+    },
+    {
+      "key": "diagnostic.boneDisplay.zeroBounds",
+      "value": "ファントムグラブ用ボーン表示テンプレート「{0}」の X・Y・Z のバウンズは、すべてゼロ以外である必要があります。"
+    },
+    {
+      "key": "diagnostic.boneDisplay.emptyGeometry",
+      "value": "ファントムグラブ用ボーン表示テンプレート「{0}」にジオメトリがありません。"
+    },
+    {
+      "key": "diagnostic.grabbing.missingHands",
+      "value": "スロット「{0}」はファントムグラブを有効にしていますが、本体 Avatar に Humanoid の両手のボーンがありません。"
+    },
+    {
+      "key": "diagnostic.view.missingCloneHead",
+      "value": "スロット「{0}」はファントムビューを有効にしていますが、事前ビルド後の Avatar に Humanoid の Head がありません。"
+    },
+    {
+      "key": "diagnostic.view.missingDescriptor",
+      "value": "スロット「{0}」はファントムビューを有効にしていますが、事前ビルド後の Avatar Descriptor が利用できません。"
+    },
+    {
+      "key": "diagnostic.view.missingBaseHead",
+      "value": "スロット「{0}」はファントムビューを有効にしていますが、本体 Avatar に Humanoid の Head がありません。"
+    },
+    {
+      "key": "diagnostic.view.missingShader",
+      "value": "「{0}」にファントムビューの表示シェーダーが見つかりません。"
+    },
+    {
+      "key": "diagnostic.build.multipleComponents",
+      "value": "Avatar「{0}」に PhantomSystem コンポーネントが {1} 個あります。各 Avatar で使用できる PhantomSystem は 1 個です。ビルド前にすべてのスロットを 1 個のコンポーネントにまとめ、余分なコンポーネントを削除してください。"
+    },
+    {
+      "key": "diagnostic.parameter.duplicatePrefix",
+      "value": "スロット「{0}」と「{1}」が同じコアパラメーター接頭辞「{2}」を使用しています。"
+    },
+    {
+      "key": "diagnostic.parameter.coreConflict",
+      "value": "スロット「{0}」のコアパラメーター「{1}」が本体 Avatar と競合しています（{2}）。"
+    },
+    {
+      "key": "diagnostic.parameter.unresolvedReferences",
+      "value": "スロット「{0}」で、{2} 種類の参照に含まれる未解決の元のパラメーター名 {1} 個をそのまま保持しました：{3}。これらの参照は生成前のパラメーター解決結果に含まれていませんでした。"
+    },
+    {
+      "key": "diagnostic.prebake.manualMissingDescriptor",
+      "value": "[PhantomSystem] 手動ベイクには、PhantomSystem が VRCAvatarDescriptor の内側にある必要があります。"
+    },
+    {
+      "key": "diagnostic.prebake.alreadyRunning",
+      "value": "[PhantomSystem] 分身の事前ベイクを実行中です。完了してから手動ベイクを開始してください。"
+    },
+    {
+      "key": "diagnostic.prebake.manualFailed",
+      "value": "[PhantomSystem] Avatar の手動ベイクに失敗しました。詳細は NDMF コンソールを確認してください。"
+    },
+    {
+      "key": "diagnostic.prebake.unconsumed",
+      "value": "[PhantomSystem] 分身の元 Avatar は事前ベイクされましたが、本体の NDMF ビルドで使用されませんでした。NDMF の Apply on Build/Play を有効にして再試行してください。"
+    },
+    {
+      "key": "diagnostic.prebake.automaticFailed",
+      "value": "[PhantomSystem] 分身の自動事前ベイクに失敗したため、Avatar のビルドを停止しました。"
+    },
+    {
+      "key": "diagnostic.prebake.cleanupPartial",
+      "value": "[PhantomSystem] {2}に、生成された事前ビルドディレクトリ {1} 個のうち {0} 個を削除できませんでした。Tools > PhantomSystem > Delete Prebake Assets で再試行してください。"
+    },
+    {
+      "key": "diagnostic.prebake.cleanupFailed",
+      "value": "[PhantomSystem] {0}に、生成された事前ビルドアセットを削除できませんでした。Avatar のビルドは続行できます。{1}"
+    },
+    {
+      "key": "diagnostic.binding.missingTarget",
+      "value": "最終 {0} クリップ「{1}」に無効な分身バインディング「{2}」（{3}.{4}）があります。対象のないバインディングは、別のビルドツールが意図的に残した可能性があります。"
+    },
+    {
+      "key": "diagnostic.binding.visibleBone",
+      "value": "変換後の {0} クリップ「{1}」が「{3}」を通じて表示用の分身 Humanoid ボーン「{2}」を直接制御しています。ボーンアニメーションは Phantom Animation Driver ボーンを対象にする必要があります。"
+    },
+    {
+      "key": "diagnostic.binding.fxConflict",
+      "value": "変換後の元の FX クリップ「{0}」が「{2}」を通じて分身ボーンの Transform「{1}」を制御しています。生成されたボーン制御と競合する元の FX カーブは、コントローラー統合前に除去する必要があります。"
+    },
+    {
+      "key": "diagnostic.binding.unsupportedAnimator",
+      "value": "変換後の {0} クリップ「{1}」に、未対応または Humanoid の Animator バインディング「{2}」が残っています。"
+    },
+    {
+      "key": "diagnostic.binding.protectedRoot",
+      "value": "変換後の {0} クリップ「{1}」が「{3}」を通じて保護された分身ルート「{2}」を制御しています。Root Motion は Hips のみを対象にする必要があります。"
+    },
+    {
+      "key": "diagnostic.binding.missingFx",
+      "value": "変換済み Action レイヤーが存在しますが、最終 FX コントローラーがありません。"
+    },
+    {
+      "key": "diagnostic.binding.actionNotUnique",
+      "value": "最終 FX コントローラー内の「{0}」という変換済み Action レイヤーが、ちょうど 1 個ではありません。"
+    },
+    {
+      "key": "diagnostic.binding.actionAtZero",
+      "value": "変換済み Action レイヤー「{0}」が FX のレイヤー 0 になりました。"
+    },
+    {
+      "key": "diagnostic.binding.actionWeight",
+      "value": "変換済み Action レイヤー「{0}」の最終的な既定ウェイトが 0 ではなく {1:0.###} です。"
+    },
+    {
+      "key": "diagnostic.cache.clearFailed",
+      "value": "[PhantomSystem] Humanoid ベイクキャッシュを削除できません。{0}"
+    },
+    {
+      "key": "diagnostic.cache.cleared",
+      "value": "[PhantomSystem] Humanoid ベイクキャッシュを削除しました。"
+    },
+    {
+      "key": "diagnostic.validation.PHS201",
+      "value": "互換性のない競合（{2}）を避けるため、パラメーター「{0}」を「{1}」に変更します。"
+    },
+    {
+      "key": "diagnostic.validation.PHS300",
+      "value": "「{0}」の PhantomSystem にスロットがありません。"
+    },
+    {
+      "key": "diagnostic.validation.PHS301",
+      "value": "スロット「{0}」に PhantomSystem の事前ベイク結果がありません。通常の Manual Bake コマンドは VRChat の前処理フックを実行しません。Inspector の「PhantomSystem でアバターを手動ベイク」ボタン、または VRChat SDK の Build/Upload を使用してください。"
+    },
+    {
+      "key": "diagnostic.validation.PHS302",
+      "value": "スロット「{0}」の事前ベイク後の分身に VRCAvatarDescriptor がありません。"
+    },
+    {
+      "key": "diagnostic.validation.PHS303",
+      "value": "スロット「{0}」の事前ベイク後の分身に Humanoid Animator がありません。"
+    },
+    {
+      "key": "diagnostic.validation.PHS001",
+      "value": "スロットのデータがありません。"
+    },
+    {
+      "key": "diagnostic.validation.PHS002",
+      "value": "スロット名が空のため、「{0}」として扱います。"
+    },
+    {
+      "key": "diagnostic.validation.PHS010",
+      "value": "分身の元 Avatar が指定されていません。"
+    },
+    {
+      "key": "diagnostic.validation.PHS011",
+      "value": "このスロットは本体 Avatar 自身を参照しています。"
+    },
+    {
+      "key": "diagnostic.validation.PHS012",
+      "value": "分身の元 Avatar が本体 Avatar の階層内にあります。"
+    },
+    {
+      "key": "diagnostic.validation.PHS013",
+      "value": "分身の元 Avatar のルートに Animator がありません。"
+    },
+    {
+      "key": "diagnostic.validation.PHS014",
+      "value": "分身の元 Avatar の Animator に Avatar アセットがありません。"
+    },
+    {
+      "key": "diagnostic.validation.PHS015",
+      "value": "分身の元 Avatar の Animator が有効な Humanoid ではありません。"
+    },
+    {
+      "key": "diagnostic.validation.PHS016",
+      "value": "分身の元 Avatar の Humanoid で Hips ボーンを解決できません。"
+    },
+    {
+      "key": "diagnostic.validation.PHS017",
+      "value": "ファントムビューには、分身の元 Avatar の Humanoid に Head ボーンが必要です。"
+    },
+    {
+      "key": "diagnostic.validation.PHS018",
+      "value": "分身の元 Avatar に、入れ子になった PhantomSystem コンポーネントが {0} 個あります。"
+    },
+    {
+      "key": "diagnostic.validation.PHS020",
+      "value": "分身の元 Avatar の GameObject {1} 個に、見つからないスクリプトが {0} 個あります。"
+    },
+    {
+      "key": "diagnostic.validation.PHS100",
+      "value": "PhantomSystem は VRCAvatarDescriptor の配下に配置してください。"
+    },
+    {
+      "key": "diagnostic.validation.PHS101",
+      "value": "本体 Avatar のルートに Animator がありません。"
+    },
+    {
+      "key": "diagnostic.validation.PHS102",
+      "value": "本体 Avatar の Animator には、有効な Humanoid Avatar が必要です。"
+    },
+    {
+      "key": "diagnostic.validation.PHS103",
+      "value": "本体 Avatar の Humanoid で Hips ボーンを解決できません。"
+    },
+    {
+      "key": "diagnostic.validation.PHS104",
+      "value": "ファントムビューには、本体 Avatar の Humanoid に Head ボーンが必要です。"
+    },
+    {
+      "key": "diagnostic.validation.PHS105",
+      "value": "ファントムグラブには、本体 Avatar に Humanoid の両手のボーンが必要です。"
+    },
+    {
+      "key": "diagnostic.validation.PHS021",
+      "value": "コンポーネント型「{0}」は INDMFEditorOnly を実装していないため、分身の事前ベイクとの互換性を検証できません。"
+    },
+    {
+      "key": "diagnostic.validation.PHS030",
+      "value": "スロット名「{0}」が重複しています。"
+    },
+    {
+      "key": "diagnostic.validation.PHS032",
+      "value": "コアパラメーターの名前空間が重複しています（「{0}」）。"
+    },
+    {
+      "key": "diagnostic.validation.PHS031",
+      "value": "パスに使えない文字を正規化した結果、スロットの階層名「{0}」が重複しました。"
+    },
+    {
+      "key": "diagnostic.animator.unsupportedCoreType",
+      "value": "コア Animator パラメーター「{1}」の型「{0}」には対応していません。"
+    },
+    {
+      "key": "diagnostic.sampling.trackCount",
+      "value": "一定区間のトラック数は、サンプリングした姿勢のトラック数と一致する必要があります。"
+    },
+    {
+      "key": "diagnostic.sampling.emptyTimeline",
+      "value": "元のサンプリング時刻が少なくとも 1 個必要です。"
+    },
+    {
+      "key": "diagnostic.sampling.unorderedTimeline",
+      "value": "元のサンプリング時刻は厳密な昇順である必要があります。"
+    },
+    {
+      "key": "diagnostic.sampling.evaluatorTrackCount",
+      "value": "姿勢評価器が返したトラックは {0} 本ですが、{1} 本必要です。"
+    },
+    {
+      "key": "diagnostic.cache.trailingData",
+      "value": "キャッシュエントリーの末尾に余分なデータがあります。"
+    },
+    {
+      "key": "diagnostic.cache.unsupportedHeader",
+      "value": "キャッシュのヘッダーには対応していません。"
+    },
+    {
+      "key": "diagnostic.cache.keyMismatch",
+      "value": "キャッシュキーがファイル名と一致しません。"
+    },
+    {
+      "key": "diagnostic.cache.invalidDiagnostics",
+      "value": "キャッシュの診断件数が無効です。"
+    },
+    {
+      "key": "diagnostic.cache.invalidTimeline",
+      "value": "キャッシュのサンプリングタイムラインが無効です。"
+    },
+    {
+      "key": "diagnostic.cache.invalidDimensions",
+      "value": "キャッシュの姿勢データの次元が無効です。"
+    },
+    {
+      "key": "diagnostic.cache.trackTimelineMismatch",
+      "value": "キャッシュの姿勢トラックがタイムラインと一致しません。"
+    },
+    {
+      "key": "diagnostic.cache.nonFinitePose",
+      "value": "キャッシュの姿勢に有限値ではない値が含まれています。"
+    },
+    {
+      "key": "diagnostic.cache.reductionTrackCount",
+      "value": "キャッシュのカーブ削減データのトラック数が正しくありません。"
+    },
+    {
+      "key": "diagnostic.cache.invalidKeptIndices",
+      "value": "キャッシュの保持インデックス一覧が無効です。"
+    },
+    {
+      "key": "diagnostic.cache.invalidCount",
+      "value": "キャッシュの {0} の件数が無効です。"
+    },
+    {
+      "key": "diagnostic.cache.invalidBone",
+      "value": "キャッシュに無効な Humanoid ボーンが含まれています。"
+    },
+    {
+      "key": "diagnostic.sampling.invalidHumanoid",
+      "value": "「{0}」のルートには有効な Humanoid Animator が必要です。"
+    },
+    {
+      "key": "diagnostic.driver.noOutputPaths",
+      "value": "Humanoid Driver の出力パスが少なくとも 1 個必要です。"
+    },
+    {
+      "key": "diagnostic.driver.noBoneOutput",
+      "value": "Humanoid ボーン「{0}」に Driver の出力パスがありません。"
+    },
+    {
+      "key": "diagnostic.driver.duplicateOutput",
+      "value": "複数の Humanoid ボーンが同じ Driver 出力パス「{0}」に対応しています。"
+    },
+    {
+      "key": "diagnostic.driver.noNeutralRotation",
+      "value": "Humanoid ボーン「{0}」のニュートラル姿勢の回転がサンプリングされていません。"
+    },
+    {
+      "key": "diagnostic.driver.emptyOutputPath",
+      "value": "Humanoid Driver の出力パスは空にできません。"
+    },
+    {
+      "key": "diagnostic.sampling.noMuscles",
+      "value": "ニュートラル姿勢のサンプリング時に、Unity が Humanoid のマッスルデータを返しませんでした。"
+    },
+    {
+      "key": "diagnostic.sampling.missingNeutralBone",
+      "value": "Unity がニュートラル姿勢のサンプリング階層内で Humanoid ボーン「{0}」を解決できません。"
+    },
+    {
+      "key": "diagnostic.sampling.missingParentPath",
+      "value": "Humanoid ボーン「{0}」に、姿勢サンプリング用の親パスがありません。"
+    },
+    {
+      "key": "diagnostic.sampling.missingParent",
+      "value": "Unity が Humanoid ボーン「{1}」の姿勢サンプリング用の親「{0}」を解決できません。"
+    },
+    {
+      "key": "diagnostic.sampling.bindFailed",
+      "value": "Unity が Humanoid Avatar「{0}」を一時サンプリング階層にバインドできません。"
+    },
+    {
+      "key": "diagnostic.cache.unpreparedHit",
+      "value": "準備済みの Humanoid キャッシュヒット結果が必要です。"
+    },
+    {
+      "key": "diagnostic.conversion.blendTreeChildCount",
+      "value": "変換後の BlendTree の Motion 数は、元の子の数と一致する必要があります。"
+    },
+    {
+      "key": "diagnostic.conversion.virtualizeFailed",
+      "value": "NDMF が変換後のクリップ「{0}」を仮想化できませんでした。"
+    },
+    {
+      "key": "diagnostic.parameter.disabledCore",
+      "value": "現在の PhantomSystem スロットでは、コアパラメーター「{0}」が有効ではありません。"
+    },
+    {
+      "key": "diagnostic.parameter.reason.derivedExists",
+      "value": "派生する動的パラメーターがすでに存在します"
+    },
+    {
+      "key": "diagnostic.parameter.reason.missing",
+      "value": "パラメーター情報がありません"
+    },
+    {
+      "key": "diagnostic.parameter.reason.unknownType",
+      "value": "パラメーターの型が不明です"
+    },
+    {
+      "key": "diagnostic.parameter.reason.type",
+      "value": "型が一致しません：{0} と {1}"
+    },
+    {
+      "key": "diagnostic.parameter.reason.animatorOnly",
+      "value": "Animator 専用の設定が一致しません"
+    },
+    {
+      "key": "diagnostic.parameter.reason.network",
+      "value": "ネットワーク同期の設定が一致しません"
+    },
+    {
+      "key": "diagnostic.parameter.reason.hidden",
+      "value": "非表示の設定が一致しません"
+    },
+    {
+      "key": "diagnostic.parameter.reason.default",
+      "value": "既定値が一致しません：{0} と {1}"
+    },
+    {
+      "key": "diagnostic.parameter.reason.saved",
+      "value": "保存の設定が一致しません"
+    },
+    {
+      "key": "diagnostic.prebake.ndmfFailed",
+      "value": "分身「{0}」の事前ベイク中に NDMF がエラーを報告しました。"
+    },
+    {
+      "key": "diagnostic.prebake.descriptorLost",
+      "value": "事前ベイク後の分身「{0}」から VRCAvatarDescriptor が失われました。"
+    },
+    {
+      "key": "diagnostic.prebake.animatorLost",
+      "value": "事前ベイク後の分身「{0}」から Humanoid Animator が失われました。"
+    },
+    {
+      "key": "diagnostic.prebake.validationFailed",
+      "value": "PhantomSystem の設定検証に失敗しました：\n{0}"
+    },
+    {
+      "key": "diagnostic.report.internal",
+      "value": "内部ビルドエラー：{0}"
+    },
+    {
+      "key": "diagnostic.report.aborted",
+      "value": "PhantomSystem のビルドに失敗しました。詳細は NDMF コンソールを確認してください。"
+    },
+    {
+      "key": "diagnostic.report.failed",
+      "value": "PhantomSystem のビルドに失敗しました"
+    },
+    {
+      "key": "diagnostic.report.warning",
+      "value": "PhantomSystem のビルド警告"
+    },
+    {
+      "key": "diagnostic.report.coded",
+      "value": "[{0}] {1}"
+    },
+    {
+      "key": "diagnostic.list.more",
+      "value": "{0}、ほか {1} 件"
+    },
+    {
+      "key": "diagnostic.conversion.boneClipCount",
+      "value": "{0}（クリップ {1} 個）"
+    },
+    {
+      "key": "diagnostic.conversion.missingBones",
+      "value": "スロット「{0}」の変換クリップ {2} 個が参照する、利用できない任意の Humanoid ボーン {1} 個のカーブをベイクできませんでした：{3}。影響を受けるクリップの例：{4}。利用できないボーンのカーブをスキップし、残りのアニメーションカーブを保持しました。これらのアニメーションが必要な場合のみ、元の Humanoid マッピングに不足するボーンを追加してください。"
+    },
+    {
+      "key": "diagnostic.cache.summary",
+      "value": "Humanoid ベイクキャッシュ：ヒット {0} 件、ミス {1} 件、バイパス {2} 件、書き込み失敗 {3} 件。"
+    },
+    {
+      "key": "diagnostic.ui.missingInstaller",
+      "value": "必要な MA Menu Installer がありません。"
+    },
+    {
+      "key": "diagnostic.ui.bakeMissingDescriptor",
+      "value": "手動ベイクする前に、PhantomSystem を VRCAvatarDescriptor を持つ Avatar の内側に配置してください。"
+    },
+    {
+      "key": "diagnostic.ui.staleSharing",
+      "value": "保存済みの共有ルールは適用できなくなったため、名前空間による分離に戻ります：{0}"
+    },
+    {
+      "key": "diagnostic.ui.cacheTitle",
+      "value": "Humanoid ベイクキャッシュ"
+    },
+    {
+      "key": "diagnostic.ui.cacheClearFailed",
+      "value": "キャッシュを削除できませんでした。詳細はコンソールを確認してください。"
+    },
+    {
+      "key": "diagnostic.cleanup.playMode",
+      "value": "プレイモード終了時"
+    },
+    {
+      "key": "diagnostic.cleanup.postprocess",
+      "value": "VRC Avatar の後処理時"
+    },
+    {
+      "key": "diagnostic.cleanup.unconsumed",
+      "value": "未使用の事前ベイク結果の削除時"
+    },
+    {
+      "key": "diagnostic.cleanup.before",
+      "value": "事前ベイク開始前"
+    },
+    {
+      "key": "diagnostic.cleanup.failed",
+      "value": "事前ベイク失敗後"
+    },
+    {
+      "key": "diagnostic.cleanup.manual",
+      "value": "Avatar の手動ベイク時"
+    }
+  ]
+}

@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using System;
 using System.Linq;
 
@@ -63,10 +64,7 @@ namespace MPCCT.PhantomSystem.Editor
             }
 
             report.Warning(
-                $"Slot '{slot.SlotId}' kept {slot.UnresolvedSourceParameterReferences.Count} "
-                + $"unresolved source parameter name(s) unchanged across {references.Length} "
-                + $"reference type(s): {examples}. "
-                + "These references were not present in the pre-generation parameter resolution.",
+                L.D("diagnostic.parameter.unresolvedReferences", slot.SlotId, slot.UnresolvedSourceParameterReferences.Count, references.Length, examples),
                 slot.CloneRoot);
         }
 

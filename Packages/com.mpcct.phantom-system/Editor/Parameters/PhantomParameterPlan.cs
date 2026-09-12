@@ -41,14 +41,14 @@ namespace MPCCT.PhantomSystem.Editor
         public string Name { get; }
         public PhantomParameterDefinition SourceParameter { get; }
         public bool IsCompatible { get; }
-        public string IncompatibilityReason { get; }
+        public PhantomDiagnostic IncompatibilityReason { get; }
         public bool IsSelected { get; }
 
         public PhantomSharedParameterCandidate(
             string name,
             PhantomParameterDefinition sourceParameter,
             bool isCompatible,
-            string incompatibilityReason,
+            PhantomDiagnostic incompatibilityReason,
             bool isSelected)
         {
             Name = name;
@@ -161,23 +161,23 @@ namespace MPCCT.PhantomSystem.Editor
         public static readonly PhantomParameterPlan Empty = new PhantomParameterPlan(
             ImmutableDictionary<string, PhantomParameterDefinition>.Empty,
             ImmutableList<PhantomSlotParameterPlan>.Empty,
-            ImmutableList<string>.Empty);
+            ImmutableList<PhantomDiagnostic>.Empty);
 
         public ImmutableDictionary<string, PhantomParameterDefinition> BaseParameters { get; }
         public ImmutableList<PhantomSlotParameterPlan> Slots { get; }
-        public ImmutableList<string> Errors { get; }
+        public ImmutableList<PhantomDiagnostic> Errors { get; }
         public int TotalContributionCost => Slots.Sum(slot => slot.FinalContributionCost);
 
         internal PhantomParameterPlan(
             IEnumerable<KeyValuePair<string, PhantomParameterDefinition>> baseParameters,
             IEnumerable<PhantomSlotParameterPlan> slots,
-            IEnumerable<string> errors)
+            IEnumerable<PhantomDiagnostic> errors)
         {
             BaseParameters = (baseParameters
                               ?? Enumerable.Empty<KeyValuePair<string, PhantomParameterDefinition>>())
                 .ToImmutableDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
             Slots = (slots ?? Enumerable.Empty<PhantomSlotParameterPlan>()).ToImmutableList();
-            Errors = (errors ?? Enumerable.Empty<string>()).ToImmutableList();
+            Errors = (errors ?? Enumerable.Empty<PhantomDiagnostic>()).ToImmutableList();
         }
     }
 }

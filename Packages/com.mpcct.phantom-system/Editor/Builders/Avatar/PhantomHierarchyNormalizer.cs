@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using UnityEngine;
 
 namespace MPCCT.PhantomSystem.Editor
@@ -17,7 +18,7 @@ namespace MPCCT.PhantomSystem.Editor
             if (slot.CloneArmature == null)
             {
                 var context = (Object)slot.CloneRoot ?? system.AuthoringComponent;
-                report.InternalError($"Slot '{slot.SlotId}' could not resolve the prebaked phantom armature from humanoid hips.", context);
+                report.InternalError(L.D("diagnostic.rig.missingCloneArmature", slot.SlotId), context);
                 return;
             }
 

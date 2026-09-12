@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using System.Collections.Generic;
 using nadena.dev.modular_avatar.core;
 using nadena.dev.ndmf;
@@ -56,8 +57,7 @@ namespace MPCCT.PhantomSystem.Editor
                         out var baseController))
                 {
                     report.Error(
-                        $"Slot '{slot.SlotId}' uses unsupported {playable} controller type "
-                        + $"'{source.Controller.GetType().FullName}'.",
+                        L.D("diagnostic.conversion.unsupportedController", slot.SlotId, playable, source.Controller.GetType().FullName),
                         descriptor);
                     continue;
                 }
@@ -179,7 +179,7 @@ namespace MPCCT.PhantomSystem.Editor
             if (coreMenu == null)
             {
                 report.InternalError(
-                    $"Slot '{slot.SlotId}' requested source menu installation, but the enabled Core Menu builder returned no menu.");
+                    L.D("diagnostic.menu.missingCore", slot.SlotId));
                 return;
             }
 
@@ -232,8 +232,8 @@ namespace MPCCT.PhantomSystem.Editor
         private static string OriginalMenuControlName(PhantomSlotBuildState slot)
         {
             return string.IsNullOrWhiteSpace(slot.SourceAvatar?.name)
-                ? "Original Menu"
-                : $"{slot.SourceAvatar.name} Menu";
+                ? L.S("menu.original")
+                : L.F("menu.source", slot.SourceAvatar.name);
         }
     }
 }

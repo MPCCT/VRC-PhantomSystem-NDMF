@@ -10,7 +10,7 @@ PhantomSystem は、VRChat アバターに 1 体以上の Humanoid 分身（Phan
 からのビュー表示などを操作できます。分身元アバターのメニューや一般的なアニメーション制御も
 引き継ぐことができます。
 
-> Inspector と生成される Expression Menu の表示は現在英語のみです。
+> 英語・簡体字中国語・日本語に対応しています。
 
 > [!NOTE]
 > この日本語 README は AI によって翻訳されています。表現や用語に誤りが含まれる
@@ -91,7 +91,7 @@ https://mpcct.github.io/VRC-PhantomSystem-NDMF/index.json
 5. 通常どおり VRChat SDK から Build & Test またはアップロードを実行します。分身元は
    メインビルドの前に自動で Prebake されます。
 
-確認用の Manual Bake には、コンポーネントの **Bake Avatar with PhantomSystem** を使用
+確認用の手動ベイクには、コンポーネントの **PhantomSystem でアバターを手動ベイク** を使用
 してください。通常の Modular Avatar Manual Bake では、PhantomSystem に必要な分身元の
 Prebake は実行されません。
 
@@ -149,6 +149,10 @@ Prebake は実行されません。
   調整します。
 
 ## 制限事項
+
+- 分身元 FX では、生成リグの制御と競合する Transform カーブ、および Humanoid・Root Motion
+  カーブを除去します。追加ボーン、制御対象外の中間ノード、表示用ボーンのスケールは保持します。
+  Rotation Constraint のみを使うボーンでは位置カーブも保持します。FX の Transform Mask は引き続き適用されます。
 
 - 本体とすべての分身元は、必要な Humanoid ボーンを持つ有効な Humanoid Avatar である
   必要があります。

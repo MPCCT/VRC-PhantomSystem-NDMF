@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using System;
 using System.Linq;
 using nadena.dev.ndmf;
@@ -92,7 +93,7 @@ namespace MPCCT.PhantomSystem.Editor
             if (virtualClip == null)
             {
                 throw new InvalidOperationException(
-                    $"NDMF failed to virtualize converted clip '{converted.name}'.");
+                    L.F("diagnostic.conversion.virtualizeFailed", converted.name));
             }
 
             virtualClip.AdditiveReferencePoseClip = source?.AdditiveReferencePoseClip;

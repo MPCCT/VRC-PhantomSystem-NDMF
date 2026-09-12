@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using System.Collections.Generic;
 using System.Linq;
 using nadena.dev.ndmf;
@@ -28,7 +29,7 @@ namespace MPCCT.PhantomSystem.Editor
                 if (material == null)
                 {
                     report.InternalError(
-                        $"Phantom Grabbing bone display material was not found at '{DisplayMaterialAssetPath}'.",
+                        L.D("diagnostic.boneDisplay.missingMaterial", DisplayMaterialAssetPath),
                         slot.CloneRoot);
                 }
 
@@ -46,7 +47,7 @@ namespace MPCCT.PhantomSystem.Editor
             if (segments.Count == 0)
             {
                 report.InternalError(
-                    $"Slot '{slot.SlotId}' generated no Phantom Grabbing body segments for bone display.",
+                    L.D("diagnostic.boneDisplay.missingSegments", slot.SlotId),
                     slot.CloneRoot);
                 return;
             }
@@ -91,7 +92,7 @@ namespace MPCCT.PhantomSystem.Editor
             if (mesh == null)
             {
                 report.InternalError(
-                    $"Phantom Grabbing bone display mesh was not found in '{TemplateMeshAssetPath}'.",
+                    L.D("diagnostic.boneDisplay.missingMesh", TemplateMeshAssetPath),
                     slot.CloneRoot);
             }
 
@@ -111,7 +112,7 @@ namespace MPCCT.PhantomSystem.Editor
                 || bounds.size.z <= 0.000001f)
             {
                 report.InternalError(
-                    $"Phantom Grabbing bone display template '{template.name}' must have non-zero X, Y, and Z bounds.",
+                    L.D("diagnostic.boneDisplay.zeroBounds", template.name),
                     template);
                 return null;
             }
@@ -122,7 +123,7 @@ namespace MPCCT.PhantomSystem.Editor
             if (sourceVertices.Length == 0 || sourceTriangles.Length == 0)
             {
                 report.InternalError(
-                    $"Phantom Grabbing bone display template '{template.name}' contains no geometry.",
+                    L.D("diagnostic.boneDisplay.emptyGeometry", template.name),
                     template);
                 return null;
             }

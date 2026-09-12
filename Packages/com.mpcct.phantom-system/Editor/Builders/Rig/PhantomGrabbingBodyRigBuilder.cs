@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using System.Collections.Generic;
 using nadena.dev.ndmf;
 using UnityEngine;
@@ -49,7 +50,7 @@ namespace MPCCT.PhantomSystem.Editor
             if (!slot.CloneBones.TryGetValue(HumanBodyBones.Hips, out var cloneHips))
             {
                 report.InternalError(
-                    $"Slot '{slot.SlotId}' enables Phantom Grabbing, but its baked avatar has no Humanoid Hips.",
+                    L.D("diagnostic.grabbing.missingHips", slot.SlotId),
                     slot.CloneRoot);
                 return;
             }
@@ -67,7 +68,7 @@ namespace MPCCT.PhantomSystem.Editor
                     out var proxyHips))
             {
                 report.InternalError(
-                    $"Slot '{slot.SlotId}' could not generate the Phantom Grabbing body proxy Hips.",
+                    L.D("diagnostic.grabbing.missingProxyHips", slot.SlotId),
                     slot.CloneRoot);
                 return;
             }

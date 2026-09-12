@@ -16,10 +16,13 @@ namespace MPCCT.PhantomSystem.Editor.Tests
     internal sealed class PhantomHumanoidBakeCacheTests
     {
         private string cacheRoot;
+        private string previousLanguage;
 
         [SetUp]
         public void SetUp()
         {
+            previousLanguage = nadena.dev.ndmf.localization.LanguagePrefs.Language;
+            nadena.dev.ndmf.localization.LanguagePrefs.Language = "en-US";
             cacheRoot = Path.Combine(
                 Path.GetTempPath(),
                 "PhantomSystemHumanoidBakeCacheTests_" + Guid.NewGuid().ToString("N"));
@@ -29,6 +32,7 @@ namespace MPCCT.PhantomSystem.Editor.Tests
         public void TearDown()
         {
             PhantomHumanoidBakeCacheSession.ClearAll(cacheRoot, out _);
+            nadena.dev.ndmf.localization.LanguagePrefs.Language = previousLanguage;
         }
 
         [Test]

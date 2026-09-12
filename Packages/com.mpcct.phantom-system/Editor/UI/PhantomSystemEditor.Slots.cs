@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
@@ -18,7 +19,7 @@ namespace MPCCT.PhantomSystem.Editor
         private bool DrawSlots()
         {
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Slots", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(L.S("slots.title"), EditorStyles.boldLabel);
 
             var changed = false;
             var action = SlotListAction.None;
@@ -43,14 +44,14 @@ namespace MPCCT.PhantomSystem.Editor
             if (slots.arraySize == 0)
             {
                 EditorGUILayout.HelpBox(
-                    "No slots are configured. Add a slot and assign a humanoid source avatar.",
+                    L.S("slots.empty"),
                     MessageType.Warning);
             }
 
             using (new EditorGUILayout.HorizontalScope())
             {
                 GUILayout.FlexibleSpace();
-                if (GUILayout.Button("Add Slot", GUILayout.Width(120f)))
+                if (GUILayout.Button(L.S("slots.add"), GUILayout.Width(120f)))
                 {
                     AddSlot();
                     changed = true;
@@ -124,16 +125,10 @@ namespace MPCCT.PhantomSystem.Editor
                     headerRect.y,
                     54f,
                     headerRect.height);
-                const float statusWidth = 132f;
-                var statusRect = new Rect(
-                    upRect.xMin - statusWidth - 4f,
-                    headerRect.y,
-                    statusWidth,
-                    headerRect.height);
                 var foldoutRect = new Rect(
                     headerRect.x,
                     headerRect.y,
-                    Mathf.Max(0f, statusRect.xMin - headerRect.x - 4f),
+                    Mathf.Max(0f, upRect.xMin - headerRect.x - 4f),
                     headerRect.height);
 
                 expanded = EditorGUI.Foldout(
@@ -141,25 +136,22 @@ namespace MPCCT.PhantomSystem.Editor
                     expanded,
                     source == null ? slotName : $"{slotName} · {source.name}",
                     true);
-                EditorGUI.LabelField(
-                    statusRect,
-                    SlotStatus(slotIndex),
-                    EditorStyles.miniLabel);
-                if (GUI.Button(upRect, "Up", EditorStyles.miniButtonLeft))
+                if (GUI.Button(upRect, L.S("common.up"), EditorStyles.miniButtonLeft))
                 {
                     action = SlotListAction.MoveUp;
                 }
 
-                if (GUI.Button(downRect, "Down", EditorStyles.miniButtonMid))
+                if (GUI.Button(downRect, L.S("common.down"), EditorStyles.miniButtonMid))
                 {
                     action = SlotListAction.MoveDown;
                 }
 
-                if (GUI.Button(removeRect, "Remove", EditorStyles.miniButtonRight))
+                if (GUI.Button(removeRect, L.S("common.remove"), EditorStyles.miniButtonRight))
                 {
                     action = SlotListAction.Remove;
                 }
 
+                EditorGUILayout.LabelField(SlotStatus(slotIndex), EditorStyles.miniLabel);
                 SetSlotFoldout(slotIndex, expanded);
                 if (!expanded)
                 {
@@ -168,41 +160,33 @@ namespace MPCCT.PhantomSystem.Editor
 
                 using (new EditorGUI.IndentLevelScope())
                 {
-                    EditorGUILayout.PropertyField(idProperty, new GUIContent("Slot Name"));
-                    EditorGUILayout.PropertyField(sourceProperty, new GUIContent("Phantom Avatar"));
-                    EditorGUILayout.PropertyField(spawnProperty, new GUIContent("Spawn Override"));
+                    EditorGUILayout.PropertyField(idProperty, new GUIContent(L.S("slot.name")));
+                    EditorGUILayout.PropertyField(sourceProperty, new GUIContent(L.S("slot.source")));
+                    EditorGUILayout.PropertyField(spawnProperty, new GUIContent(L.S("slot.spawn")));
                     using (new EditorGUI.DisabledScope(removeSourceControls.boolValue))
                     {
                         EditorGUILayout.PropertyField(
                             includePhantomMenu,
-                            new GUIContent(
-                                "Include Phantom Menu",
-                                "Include the final Expression Menu produced by this phantom avatar's NDMF prebake."));
+                            L.G("slot.includeMenu"));
                     }
                     EditorGUILayout.PropertyField(
                         enablePhantomGrabbing,
-                        new GUIContent(
-                            "Enable Phantom Grabbing",
-                            "While the phantom is frozen, Rock&Roll gesture lets either hand move its Hips through contact grabbing, while a generated Humanoid PhysBone proxy lets its body react and be posed. Turning Freeze off disables Phantom Grabbing and returns the phantom to base-avatar following."));
+                        L.G("slot.grabbing"));
                     EditorGUILayout.PropertyField(
                         enableScaleControl,
-                        new GUIContent(
-                            "Enable Scale Control",
-                            "Add per-slot radial scale control, reset, and X-axis mirror controls."));
+                        L.G("slot.scale"));
                     EditorGUILayout.PropertyField(
                         enablePhantomView,
-                        new GUIContent(
-                            "Enable Phantom View",
-                            "Add a local stereo view rendered from the phantom's Humanoid Head."));
+                        L.G("slot.view"));
 
                     EditorGUILayout.Space();
-                    EditorGUILayout.LabelField("Parameter Settings", EditorStyles.boldLabel);
+                    EditorGUILayout.LabelField(L.S("slot.parameters"), EditorStyles.boldLabel);
                     using (new EditorGUI.DisabledScope(removeSourceControls.boolValue))
                     {
-                        EditorGUILayout.PropertyField(prefixProperty, new GUIContent("Parameter Prefix"));
+                        EditorGUILayout.PropertyField(prefixProperty, new GUIContent(L.S("slot.prefix")));
                         EditorGUILayout.PropertyField(
                             renameProperty,
-                            new GUIContent("Namespace Phantom Parameters"));
+                            new GUIContent(L.S("slot.namespace")));
                         changed |= DrawParameterSharing(
                             slotIndex,
                             renameProperty,
@@ -212,7 +196,7 @@ namespace MPCCT.PhantomSystem.Editor
                     if (removeSourceControls.boolValue)
                     {
                         EditorGUILayout.LabelField(
-                            "Source FX, Action, Gesture, parameters, and menu are excluded.",
+                            L.S("slot.sourceExcluded"),
                             EditorStyles.miniLabel);
                     }
                     DrawSlotAdvancedOptions(
@@ -246,7 +230,7 @@ namespace MPCCT.PhantomSystem.Editor
             var expanded = GetSlotAdvancedFoldout(slotIndex);
             var nextExpanded = EditorGUILayout.Foldout(
                 expanded,
-                "Advanced",
+                L.S("slot.advanced"),
                 true);
             if (nextExpanded != expanded)
             {
@@ -262,42 +246,30 @@ namespace MPCCT.PhantomSystem.Editor
             {
                 EditorGUILayout.PropertyField(
                     removeSourceControls,
-                    new GUIContent(
-                        "Remove Source Controls",
-                        "Exclude this phantom's prebaked FX, Action, and Gesture controllers, source parameter definitions, and final source Expression Menu. PhantomSystem Core controls remain installed."));
+                    L.G("slot.removeControls"));
                 EditorGUILayout.PropertyField(
                     useRotationConstraint,
-                    new GUIContent(
-                        "Use Rotation Constraint",
-                        "Use Rotation Constraints instead of Parent Constraints for non-Hips humanoid bones."));
+                    L.G("slot.rotation"));
                 using (new EditorGUI.DisabledScope(!useRotationConstraint.boolValue))
                 {
                     EditorGUILayout.PropertyField(
                         rotationSolveInWorldSpace,
-                        new GUIContent(
-                            "Rotation Solve In World Space",
-                            "Solve generated Rotation Constraints in world space."));
+                        L.G("slot.worldRotation"));
                 }
                 EditorGUILayout.PropertyField(
                     overridePhysBoneImmobileType,
-                    new GUIContent(
-                        "Override PhysBone Immobile Type",
-                        "Set every PhysBone in this slot to All Motion. This can fix cases where a frozen phantom's PhysBones move along with the base avatar, but it overrides the source settings and may break PhysBone behavior."));
+                    L.G("slot.immobile"));
                 using (new EditorGUI.DisabledScope(removeSourceControls.boolValue))
                 {
                     EditorGUILayout.PropertyField(
                         tryConvertAnimatorTrackingControl,
-                        new GUIContent(
-                            "Try Convert Animator Tracking Control",
-                            "Convert supported Animator Tracking Control behaviors into PhantomSystem bone-group synchronization. Unsupported face simulation is reported as a partial conversion."));
+                        L.G("slot.tracking"));
                 }
                 using (new EditorGUI.DisabledScope(!enablePhantomView.boolValue))
                 {
                     EditorGUI.BeginChangeCheck();
                     var nearClipPlane = EditorGUILayout.FloatField(
-                        new GUIContent(
-                            "Phantom View Near Clip (m)",
-                            "Near clipping distance at 1x phantom scale. Increase it if the phantom's face obscures the view. The generated camera value follows Phantom Scale automatically."),
+                        L.G("slot.nearClip"),
                         PhantomViewBuilder.NormalizeNearClipPlane(
                             phantomViewNearClipPlane.floatValue));
                     if (EditorGUI.EndChangeCheck())

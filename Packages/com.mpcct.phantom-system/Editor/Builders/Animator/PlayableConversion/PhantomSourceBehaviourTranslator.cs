@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -62,59 +63,59 @@ namespace MPCCT.PhantomSystem.Editor
                 if (TrackingConverted > 0)
                 {
                     report.Info(
-                        $"Slot '{slot.SlotId}' converted {TrackingConverted} Animator Tracking Control behavior(s) into {DriverCount} phantom parameter driver(s).",
+                        L.D("diagnostic.behaviour.trackingConverted", slot.SlotId, TrackingConverted, DriverCount),
                         reportContext);
                 }
                 else
                 {
                     report.Warning(
-                        $"Slot '{slot.SlotId}' removed {TrackingRemoved} Animator Tracking Control behavior(s) without conversion.",
+                        L.D("diagnostic.behaviour.trackingRemoved", slot.SlotId, TrackingRemoved),
                         reportContext);
                 }
             }
             if (LocomotionRemoved > 0)
             {
-                report.Warning($"Slot '{slot.SlotId}' removed {LocomotionRemoved} avatar-global Animator Locomotion Control behavior(s).", reportContext);
+                report.Warning(L.D("diagnostic.behaviour.locomotionRemoved", slot.SlotId, LocomotionRemoved), reportContext);
             }
             if (TemporaryPoseRemoved > 0)
             {
-                report.Warning($"Slot '{slot.SlotId}' removed {TemporaryPoseRemoved} avatar-global Animator Temporary Pose Space behavior(s).", reportContext);
+                report.Warning(L.D("diagnostic.behaviour.poseSpaceRemoved", slot.SlotId, TemporaryPoseRemoved), reportContext);
             }
             if (PlayableLayerRemoved > 0)
             {
-                report.Warning($"Slot '{slot.SlotId}' removed {PlayableLayerRemoved} Playable Layer Control behavior(s) with unavailable or unsupported targets.", reportContext);
+                report.Warning(L.D("diagnostic.behaviour.playableRemoved", slot.SlotId, PlayableLayerRemoved), reportContext);
             }
             if (ActionPlayableLayerConverted > 0)
             {
-                report.Info($"Slot '{slot.SlotId}' converted {ActionPlayableLayerConverted} binary Action Playable Layer Control behavior(s) into instant controls for all Converted Action layers.", reportContext);
+                report.Info(L.D("diagnostic.behaviour.actionConverted", slot.SlotId, ActionPlayableLayerConverted), reportContext);
             }
             if (NonBinaryActionPlayableLayerRemoved > 0)
             {
-                report.Warning($"Slot '{slot.SlotId}' removed {NonBinaryActionPlayableLayerRemoved} Action Playable Layer Control behavior(s) whose Goal Weight was neither 0 nor 1.", reportContext);
+                report.Warning(L.D("diagnostic.behaviour.actionNonBinary", slot.SlotId, NonBinaryActionPlayableLayerRemoved), reportContext);
             }
             if (ActionPlayableBlendDurationIgnored > 0)
             {
-                report.Warning($"Slot '{slot.SlotId}' ignored Blend Duration on {ActionPlayableBlendDurationIgnored} converted Action Playable Layer Control behavior(s); Converted Action switching is instant.", reportContext);
+                report.Warning(L.D("diagnostic.behaviour.actionBlendIgnored", slot.SlotId, ActionPlayableBlendDurationIgnored), reportContext);
             }
             if (ActionLayerControlRemoved > 0)
             {
-                report.Warning($"Slot '{slot.SlotId}' removed {ActionLayerControlRemoved} Animator Layer Control behavior(s) targeting Action because Converted Action weight is controlled as one playable group.", reportContext);
+                report.Warning(L.D("diagnostic.behaviour.actionLayerRemoved", slot.SlotId, ActionLayerControlRemoved), reportContext);
             }
             if (LayerControlRetargeted > 0)
             {
-                report.Info($"Slot '{slot.SlotId}' scheduled {LayerControlRetargeted} Animator Layer Control behavior(s) for final layer retargeting.", reportContext);
+                report.Info(L.D("diagnostic.behaviour.layerRetargeted", slot.SlotId, LayerControlRetargeted), reportContext);
             }
             if (LayerControlRemoved > 0)
             {
-                report.Warning($"Slot '{slot.SlotId}' removed {LayerControlRemoved} Animator Layer Control behavior(s) with unavailable or unsupported targets.", reportContext);
+                report.Warning(L.D("diagnostic.behaviour.layerRemoved", slot.SlotId, LayerControlRemoved), reportContext);
             }
             if (EyePartialConversion)
             {
-                report.Warning($"Slot '{slot.SlotId}' converts Eyes & Eyelids using available eye bones only.", reportContext);
+                report.Warning(L.D("diagnostic.behaviour.eyesPartial", slot.SlotId), reportContext);
             }
             if (MouthPartialConversion)
             {
-                report.Warning($"Slot '{slot.SlotId}' converts Mouth & Jaw using the available jaw bone only.", reportContext);
+                report.Warning(L.D("diagnostic.behaviour.mouthPartial", slot.SlotId), reportContext);
             }
         }
     }

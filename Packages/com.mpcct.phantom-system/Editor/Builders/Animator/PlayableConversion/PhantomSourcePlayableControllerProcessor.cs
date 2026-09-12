@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -95,7 +96,7 @@ namespace MPCCT.PhantomSystem.Editor
             return controller != null;
         }
 
-        internal static string BuildMissingBoneSummary(PhantomSlotBuildState slot)
+        internal static PhantomDiagnostic BuildMissingBoneSummary(PhantomSlotBuildState slot)
         {
             if (slot == null || slot.MissingHumanoidBoneClips.Count == 0)
             {
@@ -112,25 +113,22 @@ namespace MPCCT.PhantomSystem.Editor
                 .ToArray();
             const int maximumDisplayedBones = 12;
             const int maximumDisplayedClips = 5;
-            var boneSummary = string.Join(", ", bones
+            var boneSummary = PhantomDiagnostic.Join(", ", bones
                 .Take(maximumDisplayedBones)
-                .Select(pair => $"{pair.Key} ({pair.Value.Count} clip(s))"));
+                .Select(pair => L.D("diagnostic.conversion.boneClipCount", pair.Key, pair.Value.Count)));
             if (bones.Length > maximumDisplayedBones)
             {
-                boneSummary += $", +{bones.Length - maximumDisplayedBones} more";
+                boneSummary = L.D("diagnostic.list.more", boneSummary, bones.Length - maximumDisplayedBones);
             }
 
-            var clipExamples = string.Join(", ", affectedClips.Take(maximumDisplayedClips));
+            PhantomDiagnostic clipExamples = string.Join(", ", affectedClips.Take(maximumDisplayedClips));
             if (affectedClips.Length > maximumDisplayedClips)
             {
-                clipExamples += $", +{affectedClips.Length - maximumDisplayedClips} more";
+                clipExamples = L.D("diagnostic.list.more", clipExamples, affectedClips.Length - maximumDisplayedClips);
             }
 
-            return $"Slot '{slot.SlotId}' could not bake curves for {bones.Length} unavailable optional "
-                   + $"humanoid bone(s) referenced by {affectedClips.Length} converted clip(s): {boneSummary}. "
-                   + $"Affected clip examples: {clipExamples}. Curves for unavailable bones were skipped; "
-                   + "remaining animation curves were preserved. Add the missing bones to the source Humanoid "
-                   + "mapping only if those animations are required.";
+            return L.D("diagnostic.conversion.missingBones",
+                slot.SlotId, bones.Length, affectedClips.Length, boneSummary, clipExamples);
         }
 
         private static void ResetConversionState(PhantomSlotBuildState slot)
@@ -164,8 +162,7 @@ namespace MPCCT.PhantomSystem.Editor
                     || controller == null)
                 {
                     report.InternalError(
-                        $"Slot '{slot.SlotId}' {pair.Key} Source Merge Animator was not registered "
-                        + "in NDMF Animator Services.",
+                        L.D("diagnostic.conversion.unregisteredController", slot.SlotId, pair.Key),
                         slot.CloneRoot);
                     continue;
                 }

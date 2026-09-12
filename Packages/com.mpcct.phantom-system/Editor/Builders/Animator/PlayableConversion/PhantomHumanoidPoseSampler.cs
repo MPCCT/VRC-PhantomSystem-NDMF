@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -205,7 +206,7 @@ namespace MPCCT.PhantomSystem.Editor
             if (sourceAnimator == null || sourceAnimator.avatar == null || !sourceAnimator.isHuman)
             {
                 throw new ArgumentException(
-                    $"'{humanoidRoot.name}' must have a valid Humanoid Animator on its root.",
+                    L.F("diagnostic.sampling.invalidHumanoid", humanoidRoot.name),
                     nameof(humanoidRoot));
             }
 
@@ -224,7 +225,7 @@ namespace MPCCT.PhantomSystem.Editor
                 if (neutralPose.muscles == null || neutralPose.muscles.Length == 0)
                 {
                     throw new InvalidOperationException(
-                        "Unity returned no Humanoid muscles while sampling the neutral pose.");
+                        L.F("diagnostic.sampling.noMuscles"));
                 }
 
                 Array.Clear(neutralPose.muscles, 0, neutralPose.muscles.Length);
@@ -237,12 +238,12 @@ namespace MPCCT.PhantomSystem.Editor
                     if (target == null)
                     {
                         throw new InvalidOperationException(
-                            $"Unity could not resolve Humanoid bone '{bone}' in the neutral-pose sampling hierarchy.");
+                            L.F("diagnostic.sampling.missingNeutralBone", bone));
                     }
                     if (!outputBoneParentPaths.TryGetValue(bone, out var poseParentPath))
                     {
                         throw new InvalidOperationException(
-                            $"Humanoid bone '{bone}' has no sampling pose-parent path.");
+                            L.F("diagnostic.sampling.missingParentPath", bone));
                     }
 
                     var poseParent = string.IsNullOrEmpty(poseParentPath)
@@ -251,7 +252,7 @@ namespace MPCCT.PhantomSystem.Editor
                     if (poseParent == null)
                     {
                         throw new InvalidOperationException(
-                            $"Unity could not resolve sampling pose parent '{poseParentPath}' for Humanoid bone '{bone}'.");
+                            L.F("diagnostic.sampling.missingParent", poseParentPath, bone));
                     }
                     rotations[bone] = ReadRelativeRotation(target, poseParent);
                 }
@@ -313,7 +314,7 @@ namespace MPCCT.PhantomSystem.Editor
             {
                 Object.DestroyImmediate(root);
                 throw new InvalidOperationException(
-                    $"Unity could not bind humanoid avatar '{avatar.name}' to the temporary sampling hierarchy.");
+                    L.F("diagnostic.sampling.bindFailed", avatar.name));
             }
             return root;
         }

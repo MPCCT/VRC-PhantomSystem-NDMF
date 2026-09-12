@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -35,7 +36,7 @@ namespace MPCCT.PhantomSystem.Editor
                 phantomRootPath
             };
             var visibleHumanoidBonePaths = new HashSet<string>(StringComparer.Ordinal);
-            var sourceFxBonePaths = new HashSet<string>(StringComparer.Ordinal);
+            var sourceFxTransformChannels = new Dictionary<string, PhantomFxBoneAnimationFilter.TransformChannels>(StringComparer.Ordinal);
             foreach (var slot in state.System.Slots)
             {
                 AddPath(prohibitedRootPaths, slot.SlotRoot, context.AvatarRootTransform);
@@ -68,11 +69,12 @@ namespace MPCCT.PhantomSystem.Editor
                     context.AvatarRootTransform);
                 if (cloneRootPath != null)
                 {
-                    foreach (var relativePath in PhantomFxBoneAnimationFilter.CollectBonePaths(slot))
+                    foreach (var pair in PhantomFxBoneAnimationFilter.CollectTransformChannels(slot))
                     {
-                        sourceFxBonePaths.Add(string.IsNullOrEmpty(relativePath)
+                        var path = string.IsNullOrEmpty(pair.Key)
                             ? cloneRootPath
-                            : $"{cloneRootPath}/{relativePath}");
+                            : $"{cloneRootPath}/{pair.Key}";
+                        sourceFxTransformChannels[path] = pair.Value;
                     }
                 }
             }
@@ -95,7 +97,7 @@ namespace MPCCT.PhantomSystem.Editor
                         phantomRootPath,
                         prohibitedRootPaths,
                         visibleHumanoidBonePaths,
-                        sourceFxBonePaths,
+                        sourceFxTransformChannels,
                         animatorParameterNames,
                         reported);
                 }
@@ -146,7 +148,7 @@ namespace MPCCT.PhantomSystem.Editor
             string phantomRootPath,
             ISet<string> prohibitedRootPaths,
             ISet<string> visibleHumanoidBonePaths,
-            ISet<string> sourceFxBonePaths,
+            IReadOnlyDictionary<string, PhantomFxBoneAnimationFilter.TransformChannels> sourceFxTransformChannels,
             ISet<string> animatorParameterNames,
             ISet<string> reported)
         {
@@ -172,14 +174,13 @@ namespace MPCCT.PhantomSystem.Editor
                     if (reported.Add(key))
                     {
                         state.Report.Warning(
-                            $"Final {playable} clip '{clip.name}' has an invalid phantom binding '{binding.path}' "
-                            + $"({binding.type?.Name}.{binding.propertyName}). The missing target may have been left "
-                            + "intentionally by another build tool.",
+                            L.D("diagnostic.binding.missingTarget", playable, clip.name, binding.path, binding.type?.Name, binding.propertyName),
                             clip);
                     }
                 }
 
-                if (binding.type == typeof(Transform)
+                if (!string.Equals(metadata.Playable, VRCAvatarDescriptor.AnimLayerType.FX.ToString(), StringComparison.Ordinal)
+                    && binding.type == typeof(Transform)
                     && visibleHumanoidBonePaths.Contains(binding.path ?? string.Empty)
                     && IsPositionRotationOrScale(binding.propertyName))
                 {
@@ -187,9 +188,7 @@ namespace MPCCT.PhantomSystem.Editor
                     if (reported.Add(key))
                     {
                         state.Report.InternalError(
-                            $"Converted {playable} clip '{clip.name}' still animates visible phantom humanoid bone "
-                            + $"'{binding.path}' through '{binding.propertyName}'. Bone animation must target the "
-                            + "Phantom Animation Driver skeleton.",
+                            L.D("diagnostic.binding.visibleBone", playable, clip.name, binding.path, binding.propertyName),
                             clip);
                     }
                 }
@@ -200,16 +199,14 @@ namespace MPCCT.PhantomSystem.Editor
                         VRCAvatarDescriptor.AnimLayerType.FX.ToString(),
                         StringComparison.Ordinal)
                     && binding.type == typeof(Transform)
-                    && sourceFxBonePaths.Contains(binding.path ?? string.Empty)
-                    && IsPositionRotationOrScale(binding.propertyName))
+                    && PhantomFxBoneAnimationFilter.ShouldRemove(
+                        binding, sourceFxTransformChannels, animatorParameterNames))
                 {
                     var key = $"source-fx-bone|{clip.GetInstanceID()}|{binding.path}|{binding.propertyName}";
                     if (reported.Add(key))
                     {
                         state.Report.InternalError(
-                            $"Converted Source FX clip '{clip.name}' still animates phantom skeleton transform "
-                            + $"'{binding.path}' through '{binding.propertyName}'. Source FX bone animation "
-                            + "must be removed before controller merging.",
+                            L.D("diagnostic.binding.fxConflict", clip.name, binding.path, binding.propertyName),
                             clip);
                     }
                 }
@@ -223,8 +220,7 @@ namespace MPCCT.PhantomSystem.Editor
                     if (reported.Add(key))
                     {
                         state.Report.InternalError(
-                            $"Converted {playable} clip '{clip.name}' still contains an unsupported or humanoid Animator binding "
-                            + $"'{binding.propertyName}'.",
+                            L.D("diagnostic.binding.unsupportedAnimator", playable, clip.name, binding.propertyName),
                             clip);
                     }
                 }
@@ -237,8 +233,7 @@ namespace MPCCT.PhantomSystem.Editor
                     if (reported.Add(key))
                     {
                         state.Report.InternalError(
-                            $"Converted {playable} clip '{clip.name}' animates protected phantom root "
-                            + $"'{binding.path}' through '{binding.propertyName}'. Root Motion must target Hips only.",
+                            L.D("diagnostic.binding.protectedRoot", playable, clip.name, binding.path, binding.propertyName),
                             clip);
                     }
                 }
@@ -304,7 +299,7 @@ namespace MPCCT.PhantomSystem.Editor
                     out var fxController))
             {
                 state.Report.InternalError(
-                    "Final FX controller is missing while Converted Action layers are present.");
+                    L.D("diagnostic.binding.missingFx"));
                 return;
             }
 
@@ -319,8 +314,7 @@ namespace MPCCT.PhantomSystem.Editor
                     || matches.Length != 1)
                 {
                     state.Report.InternalError(
-                        $"Final FX controller does not contain exactly one Converted Action layer "
-                        + $"named '{actionLayer.LayerName}'.",
+                        L.D("diagnostic.binding.actionNotUnique", actionLayer.LayerName),
                         fxController);
                     continue;
                 }
@@ -329,14 +323,13 @@ namespace MPCCT.PhantomSystem.Editor
                 if (index == 0)
                 {
                     state.Report.InternalError(
-                        $"Converted Action layer '{actionLayer.LayerName}' became FX layer 0.",
+                        L.D("diagnostic.binding.actionAtZero", actionLayer.LayerName),
                         fxController);
                 }
                 if (!Mathf.Approximately(layers[index].defaultWeight, 0f))
                 {
                     state.Report.InternalError(
-                        $"Converted Action layer '{actionLayer.LayerName}' has final default weight "
-                        + $"{layers[index].defaultWeight:0.###} instead of 0.",
+                        L.D("diagnostic.binding.actionWeight", actionLayer.LayerName, layers[index].defaultWeight),
                         fxController);
                 }
             }

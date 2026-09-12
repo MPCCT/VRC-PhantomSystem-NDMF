@@ -11,8 +11,7 @@ it in the scene, pose its body, change its scale, or show a view from its
 position. The source avatar's menus and common animation controls can also be
 retained.
 
-> The Inspector and generated Expression Menus currently use English interface
-> text only.
+> Available in English, Simplified Chinese, and Japanese.
 
 ## Main features
 
@@ -100,7 +99,7 @@ https://mpcct.github.io/VRC-PhantomSystem-NDMF/index.json
 5. Build, test, or upload through the VRChat SDK normally. Phantom sources are
    prebaked automatically before the main build.
 
-For an inspectable manual bake, use **Bake Avatar with PhantomSystem** on the
+For an inspectable manual bake, use **Manual Bake Avatar with PhantomSystem** on the
 component. A regular Modular Avatar Manual Bake does not run the source-avatar
 prebake required by PhantomSystem.
 
@@ -168,6 +167,11 @@ Open project-wide settings with **Open Global Settings** on the component or
   Mask Size.
 
 ## Limitations
+
+- Source FX filtering removes Transform curves owned by generated rig controls,
+  plus Humanoid and root-motion curves. Extra bones, unowned intermediate nodes,
+  and visible-bone scale are retained; rotation-only constraints also retain
+  position curves. Source FX Transform Masks still apply.
 
 - The base avatar and all phantom sources must be valid Humanoid avatars with
   the required Humanoid bones.

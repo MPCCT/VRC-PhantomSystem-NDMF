@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -62,7 +63,7 @@ namespace MPCCT.PhantomSystem.Editor
             if (descriptor == null)
             {
                 state.Report.Error(
-                    "Cannot validate Phantom Animator Layer Controls because the final avatar descriptor is missing.");
+                    L.D("diagnostic.layerControl.missingDescriptor"));
                 return;
             }
 
@@ -104,8 +105,7 @@ namespace MPCCT.PhantomSystem.Editor
                         && layer.Name.StartsWith("PhantomSystem_", StringComparison.Ordinal))
                     {
                         report.InternalError(
-                            $"Merged {pair.Key} controller contains duplicate PhantomSystem layer name "
-                            + $"'{layer.Name}'. Animator Layer Control targets are ambiguous.",
+                            L.D("diagnostic.layerControl.duplicateName", pair.Key, layer.Name),
                             context);
                     }
                 }
@@ -130,7 +130,7 @@ namespace MPCCT.PhantomSystem.Editor
                 || !targets.TryGetValue(targetPlayable, out var targetLayers))
             {
                 state.Report.Error(
-                    $"Cannot disable Converted Action layers because the merged {targetPlayable} controller is missing.");
+                    L.D("diagnostic.layerControl.missingMergedController", targetPlayable));
                 return;
             }
 
@@ -142,8 +142,7 @@ namespace MPCCT.PhantomSystem.Editor
                     if (!targetLayers.TryGetValue(actionLayer.LayerName, out var layer))
                     {
                         state.Report.Error(
-                            $"Could not resolve Converted Action layer '{actionLayer.LayerName}' in the merged "
-                            + $"{targetPlayable} controller.",
+                            L.D("diagnostic.layerControl.missingActionLayer", actionLayer.LayerName, targetPlayable),
                             state.System.AuthoringComponent);
                         continue;
                     }
@@ -151,8 +150,7 @@ namespace MPCCT.PhantomSystem.Editor
                     if (orderedLayers.Length > 0 && ReferenceEquals(orderedLayers[0], layer))
                     {
                         state.Report.Error(
-                            $"Converted Action layer '{actionLayer.LayerName}' became merged {targetPlayable} "
-                            + "layer 0 and cannot be weight-controlled.",
+                            L.D("diagnostic.layerControl.actionAtZero", actionLayer.LayerName, targetPlayable),
                             state.System.AuthoringComponent);
                         continue;
                     }
@@ -256,8 +254,7 @@ namespace MPCCT.PhantomSystem.Editor
                 || !TryConvertPlayable(marker.targetPlayable, out var playable))
             {
                 report.InternalError(
-                    "Could not resolve Phantom Animator Layer Control target before VRCFury processing: "
-                    + $"'{marker.targetPlayable}/{marker.targetLayerName}'.",
+                    L.D("diagnostic.layerControl.unresolvedTarget", marker.targetPlayable, marker.targetLayerName),
                     context);
                 return null;
             }
@@ -314,8 +311,7 @@ namespace MPCCT.PhantomSystem.Editor
             if (found.Count > 0)
             {
                 report.InternalError(
-                    $"Merged {playable} controller still contains {found.Count} temporary Phantom Animator "
-                    + "Layer Control marker(s) before VRCFury processing.",
+                    L.D("diagnostic.layerControl.markersBeforeVrcfury", playable, found.Count),
                     context);
             }
         }
@@ -403,8 +399,7 @@ namespace MPCCT.PhantomSystem.Editor
             if (found.Count > 0)
             {
                 report.InternalError(
-                    $"Final {playable} controller still contains {found.Count} temporary Phantom Animator "
-                    + "Layer Control marker(s).",
+                    L.D("diagnostic.layerControl.markersFinal", playable, found.Count),
                     controller);
             }
         }

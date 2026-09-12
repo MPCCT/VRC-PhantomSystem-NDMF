@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using System;
 using nadena.dev.ndmf;
 using nadena.dev.ndmf.platform;
@@ -23,7 +24,7 @@ namespace MPCCT.PhantomSystem.Editor
             if (avatar == null)
             {
                 Debug.LogError(
-                    "[PhantomSystem] Manual bake requires PhantomSystem to be inside a VRCAvatarDescriptor.",
+                    L.D("diagnostic.prebake.manualMissingDescriptor"),
                     authoring);
                 return;
             }
@@ -31,7 +32,7 @@ namespace MPCCT.PhantomSystem.Editor
             if (PhantomPrebakeSession.IsPrebaking)
             {
                 Debug.LogWarning(
-                    "[PhantomSystem] A phantom prebake is already running. Wait for it to finish before starting a manual bake.",
+                    L.D("diagnostic.prebake.alreadyRunning"),
                     authoring);
                 return;
             }
@@ -55,14 +56,14 @@ namespace MPCCT.PhantomSystem.Editor
             catch (Exception exception)
             {
                 Debug.LogError(
-                    "[PhantomSystem] Manual avatar bake failed. See the NDMF Console for details.",
+                    L.D("diagnostic.prebake.manualFailed"),
                     authoring);
                 Debug.LogException(exception);
             }
             finally
             {
                 PhantomPrebakeSession.CleanupAll();
-                PhantomPrebakeService.CleanupGeneratedAssets("manual avatar bake");
+                PhantomPrebakeService.CleanupGeneratedAssets(L.D("diagnostic.cleanup.manual"));
             }
         }
     }

@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -44,7 +45,7 @@ namespace MPCCT.PhantomSystem.Editor
                 return;
             }
 
-            PhantomPrebakeService.CleanupGeneratedAssets("VRC avatar postprocess");
+            PhantomPrebakeService.CleanupGeneratedAssets(L.D("diagnostic.cleanup.postprocess"));
         }
     }
 
@@ -62,11 +63,10 @@ namespace MPCCT.PhantomSystem.Editor
             }
 
             Debug.LogError(
-                "[PhantomSystem] The phantom sources were prebaked, but the main NDMF build did not consume them. "
-                + "Enable NDMF Apply on Build/Play and retry.");
+                L.D("diagnostic.prebake.unconsumed"));
             PhantomPrebakeSession.CleanupBindings(avatarGameObject);
             PhantomPrebakeSession.ClearAutomaticCleanupPending();
-            PhantomPrebakeService.CleanupGeneratedAssets("unconsumed prebake");
+            PhantomPrebakeService.CleanupGeneratedAssets(L.D("diagnostic.cleanup.unconsumed"));
             return false;
         }
     }
@@ -83,7 +83,7 @@ namespace MPCCT.PhantomSystem.Editor
 
         internal static bool Prepare(GameObject avatarRoot, bool automaticCleanup)
         {
-            CleanupGeneratedAssets("before prebake");
+            CleanupGeneratedAssets(L.D("diagnostic.cleanup.before"));
             PhantomPrebakeSession.Begin(avatarRoot);
             PhantomPrebakeSession.IsPrebaking = true;
 
@@ -133,11 +133,11 @@ namespace MPCCT.PhantomSystem.Editor
             }
             catch (Exception exception)
             {
-                Debug.LogError("[PhantomSystem] Automatic phantom prebake failed. The avatar build has been stopped.");
+                Debug.LogError(L.D("diagnostic.prebake.automaticFailed"));
                 Debug.LogException(exception);
                 PhantomPrebakeSession.CleanupBindings(avatarRoot);
                 PhantomPrebakeSession.CleanupAll();
-                CleanupGeneratedAssets("failed prebake");
+                CleanupGeneratedAssets(L.D("diagnostic.cleanup.failed"));
                 PhantomPrebakeSession.ClearAutomaticCleanupPending();
                 return false;
             }
@@ -147,7 +147,7 @@ namespace MPCCT.PhantomSystem.Editor
             }
         }
 
-        internal static void CleanupGeneratedAssets(string reason)
+        internal static void CleanupGeneratedAssets(PhantomDiagnostic reason)
         {
             try
             {
@@ -155,16 +155,13 @@ namespace MPCCT.PhantomSystem.Editor
                 if (result.Failed > 0)
                 {
                     Debug.LogWarning(
-                        $"[PhantomSystem] Failed to remove {result.Failed} of {result.Candidates} "
-                        + $"generated prebake directories during {reason}. Use Tools > PhantomSystem > "
-                        + "Delete Prebake Assets to retry.");
+                        L.D("diagnostic.prebake.cleanupPartial", result.Failed, result.Candidates, reason));
                 }
             }
             catch (Exception exception)
             {
                 Debug.LogWarning(
-                    $"[PhantomSystem] Could not clean generated prebake assets during {reason}. "
-                    + $"The avatar build can continue. {exception.Message}");
+                    L.D("diagnostic.prebake.cleanupFailed", reason, exception.Message));
             }
         }
 
@@ -186,7 +183,7 @@ namespace MPCCT.PhantomSystem.Editor
             if (context == null || !context.Successful)
             {
                 throw new InvalidOperationException(
-                    $"NDMF reported errors while prebaking phantom '{sourceAvatar.name}'.");
+                    L.F("diagnostic.prebake.ndmfFailed", sourceAvatar.name));
             }
 
             var descriptor = stagingRoot.GetComponent<VRCAvatarDescriptor>();
@@ -194,13 +191,13 @@ namespace MPCCT.PhantomSystem.Editor
             if (descriptor == null)
             {
                 throw new InvalidOperationException(
-                    $"Prebaked phantom '{sourceAvatar.name}' no longer has a VRCAvatarDescriptor.");
+                    L.F("diagnostic.prebake.descriptorLost", sourceAvatar.name));
             }
 
             if (animator == null || !animator.isHuman)
             {
                 throw new InvalidOperationException(
-                    $"Prebaked phantom '{sourceAvatar.name}' no longer has a humanoid Animator.");
+                    L.F("diagnostic.prebake.animatorLost", sourceAvatar.name));
             }
 
             return stagingRoot;
@@ -244,7 +241,7 @@ namespace MPCCT.PhantomSystem.Editor
             if (errors.Length > 0)
             {
                 throw new InvalidOperationException(
-                    "PhantomSystem configuration validation failed:\n" + string.Join("\n", errors));
+                    L.F("diagnostic.prebake.validationFailed", string.Join("\n", errors)));
             }
         }
 

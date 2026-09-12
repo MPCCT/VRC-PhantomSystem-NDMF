@@ -8,7 +8,7 @@ Avatar 作为分身加入本体，并在构建时自动准备动画、参数、�
 通过生成的 Expression Menu，可以让分身跟随本体、冻结在场景中、抓取和摆放身体、调整大小，
 也可以从分身的位置观察周围。分身源原有的菜单与常用动画控制也可以一并保留。
 
-> Inspector 和生成的 Expression Menu 目前使用英文界面。
+> 已提供简体中文、英文和日文本地化。
 
 ## 主要功能
 
@@ -80,7 +80,7 @@ https://mpcct.github.io/VRC-PhantomSystem-NDMF/index.json
 4. 根据需要启用 Phantom Grabbing、Scale Control、Phantom View 或分身源菜单。
 5. 正常使用 VRChat SDK 执行 Build & Test 或上传。分身源会在构建前自动 Prebake。
 
-如需生成供检查使用的手动 Bake，请使用组件中的 **Bake Avatar with PhantomSystem**。
+如需手动烘焙生成供检查使用的 Avatar，请使用组件中的 **使用 PhantomSystem 手动烘焙 Avatar**。
 普通 Modular Avatar Manual Bake 不会执行 PhantomSystem 所需的分身源 Prebake。
 
 ## 常用选项
@@ -129,6 +129,10 @@ PhysBone Immobile Type 覆盖。
 - **Settings > Phantom View**：启用分身视角并调整 Stereo Strength 与 Mask Size。
 
 ## 使用限制
+
+- 源 FX 仅过滤与生成控制冲突的 Transform 曲线，以及 Humanoid／Root Motion 曲线。额外骨骼、
+  未接管的中间节点和可见骨骼缩放会保留；仅使用 Rotation Constraint 的骨骼也保留位置曲线。
+  FX 的 Transform Mask 仍然有效。
 
 - 本体和所有分身源都必须是有效的 Humanoid Avatar，并能解析必要的 Humanoid 骨骼。
 - 为避免 WD Off FX 在多个 Playable Controller 之间抢占 Transform，保留的分身源 Gesture、

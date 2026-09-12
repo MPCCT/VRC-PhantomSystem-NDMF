@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using System;
 using System.Collections.Generic;
 using UnityEditor;
@@ -59,7 +60,7 @@ namespace MPCCT.PhantomSystem.Editor
             if (sourceAnimator == null || sourceAnimator.avatar == null || !sourceAnimator.isHuman)
             {
                 throw new ArgumentException(
-                    $"'{humanoidRoot.name}' must have a valid humanoid Animator on its root.",
+                    L.F("diagnostic.sampling.invalidHumanoid", humanoidRoot.name),
                     nameof(humanoidRoot));
             }
 

@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using UnityEditor.Animations;
 using UnityEngine;
 using VRC.SDK3.Dynamics.Constraint.Components;
@@ -118,7 +119,7 @@ namespace MPCCT.PhantomSystem.Editor
             if (context.BaseAvatarPositionPath == null || context.ArmaturePath == null)
             {
                 context.Report.InternalError(
-                    $"Slot '{context.Slot.SlotId}' could not resolve PositionLock helper paths.",
+                    L.D("diagnostic.rig.positionLockPaths", context.Slot.SlotId),
                     context.ErrorContext);
             }
             else

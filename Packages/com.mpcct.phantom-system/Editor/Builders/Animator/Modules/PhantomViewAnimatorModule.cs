@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using UnityEditor.Animations;
 using UnityEngine;
 using static MPCCT.PhantomSystem.Editor.PhantomAnimatorClipUtility;
@@ -92,7 +93,7 @@ namespace MPCCT.PhantomSystem.Editor
             }
 
             context.Report.InternalError(
-                $"Slot '{context.Slot.SlotId}' could not resolve the generated Phantom View paths.",
+                L.D("diagnostic.rig.viewPaths", context.Slot.SlotId),
                 context.ErrorContext);
             return false;
         }

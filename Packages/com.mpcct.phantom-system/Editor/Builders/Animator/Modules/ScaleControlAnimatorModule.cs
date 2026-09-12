@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using UnityEditor.Animations;
 using UnityEngine;
 using static MPCCT.PhantomSystem.Editor.PhantomAnimatorClipUtility;
@@ -30,7 +31,7 @@ namespace MPCCT.PhantomSystem.Editor
                 || context.Slot.MirrorRoot == null)
             {
                 context.Report.Error(
-                    $"Slot '{context.Slot.SlotId}' could not resolve its ScaleRoot or MirrorRoot path.",
+                    L.D("diagnostic.rig.scalePaths", context.Slot.SlotId),
                     context.ErrorContext);
                 return;
             }

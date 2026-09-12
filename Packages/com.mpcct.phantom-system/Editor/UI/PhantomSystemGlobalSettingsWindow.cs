@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using UnityEditor;
 using UnityEngine;
 
@@ -14,22 +15,34 @@ namespace MPCCT.PhantomSystem.Editor
         internal static void Open()
         {
             var window = GetWindow<PhantomSystemGlobalSettingsWindow>();
-            window.titleContent = new GUIContent("PhantomSystem Settings");
+            window.titleContent = new GUIContent(L.S("settings.window"));
             window.minSize = new Vector2(470f, 420f);
             window.Show();
         }
 
+        private void OnEnable()
+        {
+            nadena.dev.ndmf.localization.LanguagePrefs.RegisterLanguageChangeCallback(
+                this, window =>
+                {
+                    if (window == null) return;
+                    window.titleContent = new GUIContent(L.S("settings.window"));
+                    window.Repaint();
+                });
+        }
+
         private void OnGUI()
         {
+            titleContent = new GUIContent(L.S("settings.window"));
+            L.DrawLanguageSelector();
             var settings = PhantomSystemProjectSettings.instance;
-            EditorGUILayout.LabelField("PhantomSystem Global Settings", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(L.S("settings.title"), EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
-                "These settings are shared by every PhantomSystem avatar in this Unity project. "
-                + "A stable snapshot is taken at the beginning of each build.",
+                L.S("settings.description"),
                 MessageType.Info);
 
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Phantom View", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(L.S("menu.view"), EditorStyles.boldLabel);
             var textureIndex = System.Array.IndexOf(
                 PhantomSystemProjectSettings.ViewTextureSizes,
                 settings.PhantomViewTextureSize);
@@ -37,9 +50,7 @@ namespace MPCCT.PhantomSystem.Editor
 
             EditorGUI.BeginChangeCheck();
             textureIndex = EditorGUILayout.Popup(
-                new GUIContent(
-                    "Texture Size",
-                    "Resolution of each shared Phantom View eye RenderTexture."),
+                L.G("settings.texture"),
                 textureIndex,
                 TextureSizeLabels);
             if (EditorGUI.EndChangeCheck())
@@ -50,40 +61,39 @@ namespace MPCCT.PhantomSystem.Editor
             }
 
             EditorGUILayout.LabelField(
-                "Applied equally to the shared left-eye and right-eye RenderTextures.",
+                L.S("settings.textureHelp"),
                 EditorStyles.wordWrappedMiniLabel);
             if (settings.PhantomViewTextureSize >= 4096)
             {
                 EditorGUILayout.HelpBox(
-                    "4096 creates two very large render targets and can consume substantial GPU memory. "
-                    + "Use it only after profiling the target PC setup.",
+                    L.S("settings.largeTexture"),
                     MessageType.Warning);
             }
 
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Humanoid Animation Conversion", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(L.S("settings.conversion"), EditorStyles.boldLabel);
             DrawFloatSetting(
-                "Maximum Adaptive Sample Rate",
+                L.S("settings.sampleRate"),
                 "FPS",
-                "Limits automatically inserted samples. Original key times are preserved as candidates.",
+                L.S("settings.sampleRate.tooltip"),
                 settings.MaximumAdaptiveSampleRate,
                 1f,
                 120f,
                 value => settings.MaximumAdaptiveSampleRate = value,
                 settings);
             DrawFloatSetting(
-                "Position Error Tolerance",
+                L.S("settings.positionError"),
                 "m",
-                "Maximum local-position interpolation error used for adaptive subdivision and reduction.",
+                L.S("settings.positionError.tooltip"),
                 settings.PositionErrorTolerance,
                 0.000001f,
                 0.1f,
                 value => settings.PositionErrorTolerance = value,
                 settings);
             DrawFloatSetting(
-                "Rotation Error Tolerance",
-                "degrees",
-                "Maximum local-rotation angular error used for adaptive subdivision and reduction.",
+                L.S("settings.rotationError"),
+                L.S("settings.degrees"),
+                L.S("settings.rotationError.tooltip"),
                 settings.RotationErrorToleranceDegrees,
                 0.001f,
                 10f,
@@ -92,30 +102,27 @@ namespace MPCCT.PhantomSystem.Editor
 
             EditorGUILayout.Space();
             EditorGUILayout.HelpBox(
-                "Smaller tolerances preserve more motion detail but produce larger AnimationClips. "
-                + "If the sample-rate limit is reached before tolerance is met, the build reports a warning.",
+                L.S("settings.toleranceHelp"),
                 MessageType.None);
 
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Humanoid Bake Cache", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(L.S("settings.cache"), EditorStyles.boldLabel);
             var cacheStatistics = PhantomHumanoidBakeCacheSession.GetStatistics();
             EditorGUILayout.LabelField(
-                "Cached Pose Data",
-                $"{cacheStatistics.EntryCount} entr"
-                + $"{(cacheStatistics.EntryCount == 1 ? "y" : "ies")}, "
-                + PhantomSystemToolsMenu.FormatBytes(cacheStatistics.Bytes));
+                L.S("settings.cacheData"),
+                L.F("settings.cacheStats", cacheStatistics.EntryCount,
+                    PhantomSystemToolsMenu.FormatBytes(cacheStatistics.Bytes)));
             EditorGUILayout.HelpBox(
-                "The cache is project-local derived data stored under Library. It is not referenced by "
-                + "the built avatar and can be cleared at any time.",
+                L.S("settings.cacheHelp"),
                 MessageType.None);
-            if (GUILayout.Button("Clear Humanoid Bake Cache"))
+            if (GUILayout.Button(L.S("settings.clearCache")))
             {
                 PhantomSystemToolsMenu.ClearHumanoidBakeCacheWithConfirmation();
                 Repaint();
             }
 
             EditorGUILayout.Space();
-            if (GUILayout.Button("Reset to Defaults"))
+            if (GUILayout.Button(L.S("settings.reset")))
             {
                 settings.ResetToDefaults();
                 GUI.FocusControl(null);

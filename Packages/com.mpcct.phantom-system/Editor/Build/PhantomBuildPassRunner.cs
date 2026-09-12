@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using System;
 using nadena.dev.ndmf;
 
@@ -41,7 +42,7 @@ namespace MPCCT.PhantomSystem.Editor
                     ? $"{action.Method.DeclaringType?.Name}.{action.Method.Name}"
                     : passName;
                 report.InternalError(
-                    $"Pass '{diagnosticName}' threw unexpectedly.",
+                    L.D("diagnostic.build.passFailed", diagnosticName),
                     context,
                     exception);
                 report.AbortIfErrors();

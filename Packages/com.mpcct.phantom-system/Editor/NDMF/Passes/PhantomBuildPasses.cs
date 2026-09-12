@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using System.Linq;
 using nadena.dev.ndmf;
 using UnityEngine;
@@ -38,9 +39,7 @@ namespace MPCCT.PhantomSystem.Editor
             if (authoringComponents.Length > 1)
             {
                 state.Report.Error(
-                    $"Avatar '{ctx.AvatarRootObject.name}' contains {authoringComponents.Length} PhantomSystem components. "
-                    + "Only one PhantomSystem component is supported per avatar. Merge all slots into one component "
-                    + "and remove the additional components before building.",
+                    L.D("diagnostic.build.multipleComponents", ctx.AvatarRootObject.name, authoringComponents.Length),
                     authoringComponents[1]);
                 return;
             }
@@ -170,8 +169,8 @@ namespace MPCCT.PhantomSystem.Editor
             }
 
             var message = string.IsNullOrEmpty(issue.Code)
-                ? issue.Message
-                : $"[{issue.Code}] {issue.Message}";
+                ? issue.Diagnostic
+                : L.D("diagnostic.report.coded", issue.Code, issue.Diagnostic);
             switch (issue.Severity)
             {
                 case PhantomValidationSeverity.Info:

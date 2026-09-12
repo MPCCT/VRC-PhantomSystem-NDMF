@@ -12,7 +12,8 @@ namespace MPCCT.PhantomSystem.Editor
             AvatarMask descriptorMask,
             AvatarMask layerMask,
             string name,
-            Transform outputRoot = null)
+            Transform outputRoot = null,
+            bool applyHumanoidBodyMask = true)
         {
             if (slot?.CloneRoot == null || descriptorMask == null && layerMask == null)
             {
@@ -45,7 +46,9 @@ namespace MPCCT.PhantomSystem.Editor
                     ? cloneRelativePath
                     : TransformPathUtility.GetRelativePath(transform, outputRoot)
                       ?? cloneRelativePath;
-                var part = FindNearestBodyPart(transform, slot.CloneRoot.transform, boneParts);
+                var part = applyHumanoidBodyMask
+                    ? FindNearestBodyPart(transform, slot.CloneRoot.transform, boneParts)
+                    : null;
                 var active = IsActive(descriptorMask, sourcePath, part)
                              && IsActive(layerMask, sourcePath, part);
                 result.SetTransformPath(index, outputPath);

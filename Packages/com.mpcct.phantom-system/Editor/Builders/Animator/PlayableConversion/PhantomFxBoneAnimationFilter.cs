@@ -1,74 +1,60 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEditor;
 using UnityEngine;
+using VRC.SDK3.Dynamics.Constraint.Components;
 
 namespace MPCCT.PhantomSystem.Editor
 {
     /// <summary>
-    /// Removes pose animation from retained source FX clips without touching their
-    /// parameters, blend shapes, materials, object references, or component curves.
+    /// Removes source FX curves that conflict with generated rig controls, while
+    /// preserving extra bones, visible-bone scale, and non-transform animation.
     /// </summary>
     internal static class PhantomFxBoneAnimationFilter
     {
         internal const string DummyPath = "$PhantomSystemRemovedFxBoneAnimation$";
         internal const string DummyProperty = "m_IsActive";
 
-        internal static HashSet<string> CollectBonePaths(PhantomSlotBuildState slot)
+        [Flags]
+        internal enum TransformChannels
         {
-            var result = new HashSet<string>(StringComparer.Ordinal);
+            Position = 1,
+            Rotation = 2,
+            Scale = 4,
+            Pose = Position | Rotation,
+            All = Pose | Scale
+        }
+
+        internal static Dictionary<string, TransformChannels> CollectTransformChannels(
+            PhantomSlotBuildState slot)
+        {
+            var result = new Dictionary<string, TransformChannels>(StringComparer.Ordinal);
             if (slot?.CloneRoot == null)
             {
                 return result;
             }
 
-            foreach (var path in slot.CloneToAnimationDriverPaths.Keys)
+            // Only generated constraints own visible transforms. In particular, being
+            // a skinning bone or an intermediate parent does not imply ownership.
+            AddTransform(result, slot.CloneArmature, slot, TransformChannels.Pose);
+            foreach (var pair in slot.CloneBoneConstraintTypes)
             {
-                AddPath(result, path);
-            }
-            foreach (var path in slot.CloneToAnimationDriverPaths.Values)
-            {
-                AddPath(result, path);
-            }
-
-            foreach (var bone in slot.CloneBones.Values.Where(value => value != null))
-            {
-                AddBoneAndParents(
-                    result,
-                    bone,
-                    slot.CloneArmature,
-                    slot.CloneRoot.transform);
-            }
-            foreach (var bone in slot.AnimationDriverBones.Values.Where(value => value != null))
-            {
-                AddBoneAndParents(
-                    result,
-                    bone,
-                    slot.AnimationDriverRoot,
-                    slot.CloneRoot.transform);
-            }
-
-            foreach (var renderer in slot.CloneRoot.GetComponentsInChildren<SkinnedMeshRenderer>(true))
-            {
-                if (renderer == null)
+                if (!slot.CloneBones.TryGetValue(pair.Key, out var bone))
                 {
                     continue;
                 }
 
-                AddBoneAndParents(
-                    result,
-                    renderer.rootBone,
-                    slot.CloneArmature,
-                    slot.CloneRoot.transform);
-                foreach (var bone in renderer.bones ?? Array.Empty<Transform>())
-                {
-                    AddBoneAndParents(
-                        result,
-                        bone,
-                        slot.CloneArmature,
-                        slot.CloneRoot.transform);
-                }
+                var channels = pair.Value == typeof(VRCRotationConstraint)
+                    ? TransformChannels.Rotation
+                    : TransformChannels.Pose;
+                AddTransform(result, bone, slot, channels);
+            }
+
+            // The generated driver skeleton is private to converted Gesture/Action.
+            AddTransform(result, slot.AnimationDriverRoot, slot, TransformChannels.All);
+            foreach (var bone in slot.AnimationDriverBones.Values)
+            {
+                AddTransform(result, bone, slot, TransformChannels.All);
             }
 
             return result;
@@ -76,7 +62,7 @@ namespace MPCCT.PhantomSystem.Editor
 
         internal static bool ShouldRemove(
             EditorCurveBinding binding,
-            ISet<string> bonePaths,
+            IReadOnlyDictionary<string, TransformChannels> transformChannels,
             ISet<string> animatorParameterNames)
         {
             if (binding.type == typeof(Animator))
@@ -94,13 +80,29 @@ namespace MPCCT.PhantomSystem.Editor
             }
 
             var path = binding.path ?? string.Empty;
-            return string.IsNullOrEmpty(path)
-                   || bonePaths != null && bonePaths.Contains(path);
+            if (string.IsNullOrEmpty(path))
+            {
+                // Source root motion/scale must never move or resize the whole clone.
+                return true;
+            }
+
+            if (transformChannels == null
+                || !transformChannels.TryGetValue(path, out var channels))
+            {
+                return false;
+            }
+
+            var channel = binding.propertyName.StartsWith("m_LocalPosition.", StringComparison.Ordinal)
+                ? TransformChannels.Position
+                : binding.propertyName.StartsWith("m_LocalScale.", StringComparison.Ordinal)
+                    ? TransformChannels.Scale
+                    : TransformChannels.Rotation;
+            return (channels & channel) != 0;
         }
 
         internal static PhantomFxBoneAnimationFilterResult Filter(
             AnimationClip clip,
-            ISet<string> bonePaths,
+            IReadOnlyDictionary<string, TransformChannels> transformChannels,
             ISet<string> animatorParameterNames)
         {
             if (clip == null)
@@ -113,7 +115,7 @@ namespace MPCCT.PhantomSystem.Editor
             var removedTransformCurves = 0;
             foreach (var binding in AnimationUtility.GetCurveBindings(clip))
             {
-                if (!ShouldRemove(binding, bonePaths, animatorParameterNames))
+                if (!ShouldRemove(binding, transformChannels, animatorParameterNames))
                 {
                     continue;
                 }
@@ -171,40 +173,22 @@ namespace MPCCT.PhantomSystem.Editor
                        || propertyName.StartsWith("m_LocalEulerAngles", StringComparison.Ordinal));
         }
 
-        private static void AddBoneAndParents(
-            ISet<string> paths,
-            Transform bone,
-            Transform stopAfter,
-            Transform cloneRoot)
+        private static void AddTransform(
+            IDictionary<string, TransformChannels> paths,
+            Transform transform,
+            PhantomSlotBuildState slot,
+            TransformChannels channels)
         {
-            if (bone == null || cloneRoot == null)
+            if (transform == null)
             {
                 return;
             }
 
-            for (var current = bone;
-                 current != null && current != cloneRoot;
-                 current = current.parent)
-            {
-                var path = TransformPathUtility.GetRelativePath(current, cloneRoot);
-                if (path == null)
-                {
-                    break;
-                }
-
-                AddPath(paths, path);
-                if (current == stopAfter)
-                {
-                    break;
-                }
-            }
-        }
-
-        private static void AddPath(ISet<string> paths, string path)
-        {
+            var path = TransformPathUtility.GetRelativePath(transform, slot.CloneRoot.transform);
             if (!string.IsNullOrEmpty(path))
             {
-                paths.Add(path);
+                paths.TryGetValue(path, out var existing);
+                paths[path] = existing | channels;
             }
         }
     }

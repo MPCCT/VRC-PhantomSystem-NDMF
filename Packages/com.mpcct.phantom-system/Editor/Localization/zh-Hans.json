@@ -1,0 +1,1264 @@
+{
+  "entries": [
+    {
+      "key": "language.editor",
+      "value": "语言"
+    },
+    {
+      "key": "common.refresh",
+      "value": "刷新"
+    },
+    {
+      "key": "common.select",
+      "value": "选择"
+    },
+    {
+      "key": "common.select.count",
+      "value": "选择（{0}）"
+    },
+    {
+      "key": "common.up",
+      "value": "上移"
+    },
+    {
+      "key": "common.down",
+      "value": "下移"
+    },
+    {
+      "key": "common.remove",
+      "value": "移除"
+    },
+    {
+      "key": "common.clear",
+      "value": "清除"
+    },
+    {
+      "key": "common.cancel",
+      "value": "取消"
+    },
+    {
+      "key": "common.ok",
+      "value": "确定"
+    },
+    {
+      "key": "common.bits",
+      "value": "{0} 位"
+    },
+    {
+      "key": "header.cost",
+      "value": "{0} 个槽位 · PhantomSystem 预计占用 {1} 位"
+    },
+    {
+      "key": "header.analyzing",
+      "value": "{0} 个槽位 · 正在分析参数……"
+    },
+    {
+      "key": "header.description",
+      "value": "每个分身源 Avatar 都会独立执行 NDMF 预构建。请在下方配置并检查各槽位；分身源原对象不会被修改。"
+    },
+    {
+      "key": "slots.title",
+      "value": "分身槽位"
+    },
+    {
+      "key": "slots.empty",
+      "value": "尚未配置槽位。请添加槽位并指定 Humanoid 分身源 Avatar。"
+    },
+    {
+      "key": "slots.add",
+      "value": "添加槽位"
+    },
+    {
+      "key": "slot.name",
+      "value": "槽位名称"
+    },
+    {
+      "key": "slot.source",
+      "value": "分身源 Avatar"
+    },
+    {
+      "key": "slot.spawn",
+      "value": "覆盖生成位置"
+    },
+    {
+      "key": "slot.includeMenu",
+      "value": "包含分身源菜单"
+    },
+    {
+      "key": "slot.includeMenu.tooltip",
+      "value": "包含此分身源 Avatar 经 NDMF 预构建后生成的最终 Expression Menu。"
+    },
+    {
+      "key": "slot.grabbing",
+      "value": "启用分身抓取"
+    },
+    {
+      "key": "slot.grabbing.tooltip",
+      "value": "分身冻结时，任一只手都可通过摇滚手势和接触抓取移动 Hips；生成的 Humanoid PhysBone 代理可让身体产生响应并调整姿势。关闭冻结后会停用分身抓取，恢复跟随本体。"
+    },
+    {
+      "key": "slot.scale",
+      "value": "启用缩放控制"
+    },
+    {
+      "key": "slot.scale.tooltip",
+      "value": "为每个槽位添加径向缩放、重置和 X 轴镜像控制。"
+    },
+    {
+      "key": "slot.view",
+      "value": "启用分身视角"
+    },
+    {
+      "key": "slot.view.tooltip",
+      "value": "添加从分身 Humanoid 头部渲染、仅本地可见的立体视角。"
+    },
+    {
+      "key": "slot.parameters",
+      "value": "参数设置"
+    },
+    {
+      "key": "slot.prefix",
+      "value": "参数前缀"
+    },
+    {
+      "key": "slot.namespace",
+      "value": "分身参数命名空间化"
+    },
+    {
+      "key": "slot.sourceExcluded",
+      "value": "已排除分身源 FX、Action、Gesture、参数和菜单。"
+    },
+    {
+      "key": "slot.advanced",
+      "value": "高级设置"
+    },
+    {
+      "key": "slot.removeControls",
+      "value": "移除分身源控制"
+    },
+    {
+      "key": "slot.removeControls.tooltip",
+      "value": "排除此分身预构建后的 FX、Action、Gesture 控制器、源参数定义和最终源 Expression Menu。仍会安装 PhantomSystem 核心控制。"
+    },
+    {
+      "key": "slot.rotation",
+      "value": "使用旋转约束"
+    },
+    {
+      "key": "slot.rotation.tooltip",
+      "value": "对 Hips 以外的 Humanoid 骨骼使用 Rotation Constraint，仅同步旋转。"
+    },
+    {
+      "key": "slot.worldRotation",
+      "value": "在世界空间求解旋转"
+    },
+    {
+      "key": "slot.worldRotation.tooltip",
+      "value": "在世界空间中求解生成的 Rotation Constraint。"
+    },
+    {
+      "key": "slot.immobile",
+      "value": "覆盖 PhysBone Immobile Type"
+    },
+    {
+      "key": "slot.immobile.tooltip",
+      "value": "将此槽位内所有 PhysBone 的 Immobile Type 设为 All Motion。可改善分身冻结后 PhysBone 仍随本体移动的情况；这会覆盖分身源设置，可能改变 PhysBone 行为。"
+    },
+    {
+      "key": "slot.tracking",
+      "value": "尝试转换 Animator Tracking Control"
+    },
+    {
+      "key": "slot.tracking.tooltip",
+      "value": "将支持的 Animator Tracking Control 行为转换为 PhantomSystem 骨骼组同步。不支持的面部模拟会作为部分转换报告。"
+    },
+    {
+      "key": "slot.nearClip",
+      "value": "分身视角近裁剪距离（米）"
+    },
+    {
+      "key": "slot.nearClip.tooltip",
+      "value": "分身为 1 倍大小时的近裁剪距离。如果分身脸部遮挡视野，可增大此值。生成的相机设置会自动跟随分身缩放。"
+    },
+    {
+      "key": "system.title",
+      "value": "系统选项"
+    },
+    {
+      "key": "system.installMenu",
+      "value": "安装分身菜单"
+    },
+    {
+      "key": "system.installMenu.tooltip",
+      "value": "生成并安装 PhantomSystem 核心菜单。"
+    },
+    {
+      "key": "system.menuLocation",
+      "value": "选择核心菜单位置"
+    },
+    {
+      "key": "system.installerHelp",
+      "value": "只需配置附带 MA Menu Installer 的目标位置；源菜单将在构建时提供。"
+    },
+    {
+      "key": "system.settings",
+      "value": "打开全局设置"
+    },
+    {
+      "key": "system.bakeHelp",
+      "value": "Modular Avatar 的普通手动烘焙（Manual Bake）不会执行 PhantomSystem 使用的 VRChat 预处理钩子。此按钮用于手动烘焙：先预烘焙所有分身源，再执行 NDMF 的手动 Avatar 烘焙。"
+    },
+    {
+      "key": "system.bake",
+      "value": "使用 PhantomSystem 手动烘焙 Avatar"
+    },
+    {
+      "key": "system.bake.tooltip",
+      "value": "手动烘焙 Avatar：先预烘焙所有已配置的分身源，再执行 NDMF 的 Manual Bake Avatar 流程。"
+    },
+    {
+      "key": "sharing.title",
+      "value": "同名参数共享"
+    },
+    {
+      "key": "sharing.analyzing",
+      "value": "正在分析 NDMF 参数……"
+    },
+    {
+      "key": "sharing.cost",
+      "value": "分身源 {0} 位 · 共享节省 {1} 位 · PhantomSystem {2} 位 · 最终 {3} 位"
+    },
+    {
+      "key": "sharing.disabled",
+      "value": "参数命名空间已关闭。兼容的同名参数会保留原名并共享；不兼容的冲突参数会自动移至此槽位的 Original 前缀下。"
+    },
+    {
+      "key": "sharing.empty",
+      "value": "本体 Avatar 上没有同名的表情参数。"
+    },
+    {
+      "key": "sharing.compatible",
+      "value": "共享兼容参数"
+    },
+    {
+      "key": "sharing.keep",
+      "value": "保留此分身参数的原名，使其与本体参数共享。"
+    },
+    {
+      "key": "sharing.network",
+      "value": "网络同步"
+    },
+    {
+      "key": "sharing.local",
+      "value": "本地"
+    },
+    {
+      "key": "sharing.avatarParameters",
+      "value": "Avatar 参数 · {0}"
+    },
+    {
+      "key": "sharing.unknown",
+      "value": "未知参数来源"
+    },
+    {
+      "key": "sharing.avatarTooltip",
+      "value": "预构建后的 Avatar 的 VRCExpressionParameters 资产所声明的参数。"
+    },
+    {
+      "key": "sharing.unknownTooltip",
+      "value": "NDMF 没有提供此已解析参数的来源组件。"
+    },
+    {
+      "key": "sharing.provider",
+      "value": "未命名的 NDMF 参数提供器"
+    },
+    {
+      "key": "sharing.plugin",
+      "value": "{0} NDMF 插件"
+    },
+    {
+      "key": "sharing.providedBy",
+      "value": "由位于“{1}”的 {0} 通过 {2} 提供。"
+    },
+    {
+      "key": "sharing.root",
+      "value": "Avatar 根节点"
+    },
+    {
+      "key": "sharing.removeStale",
+      "value": "移除失效规则"
+    },
+    {
+      "key": "alerts.title",
+      "value": "查看警告与错误"
+    },
+    {
+      "key": "alerts.title.count",
+      "value": "查看警告与错误（{0}）"
+    },
+    {
+      "key": "alerts.checking",
+      "value": "正在检查分身源 Avatar……"
+    },
+    {
+      "key": "alerts.none",
+      "value": "没有分身源验证警告。"
+    },
+    {
+      "key": "alerts.compatibility",
+      "value": "组件兼容性"
+    },
+    {
+      "key": "alerts.notScanned",
+      "value": "尚未扫描"
+    },
+    {
+      "key": "alerts.components",
+      "value": "{0} 个 NDMF 组件"
+    },
+    {
+      "key": "alerts.unclassified",
+      "value": " · {1} 个组件中有 {0} 类警告"
+    },
+    {
+      "key": "alerts.classified",
+      "value": " · 无未分类的脚本组件"
+    },
+    {
+      "key": "status.checking",
+      "value": "检查中……"
+    },
+    {
+      "key": "status.errors",
+      "value": "存在错误"
+    },
+    {
+      "key": "status.error",
+      "value": "错误"
+    },
+    {
+      "key": "status.warnings",
+      "value": "存在警告"
+    },
+    {
+      "key": "status.noSlots",
+      "value": "没有槽位"
+    },
+    {
+      "key": "status.ready",
+      "value": "就绪"
+    },
+    {
+      "key": "status.warning.one",
+      "value": "1 条警告"
+    },
+    {
+      "key": "status.warning.many",
+      "value": "{0} 条警告"
+    },
+    {
+      "key": "status.warning.cost",
+      "value": "{0} · {1} 位"
+    },
+    {
+      "key": "settings.window",
+      "value": "PhantomSystem 设置"
+    },
+    {
+      "key": "settings.title",
+      "value": "PhantomSystem 全局设置"
+    },
+    {
+      "key": "settings.description",
+      "value": "这些设置由此 Unity 项目中的所有 PhantomSystem Avatar 共享。每次构建开始时会读取一份固定快照。"
+    },
+    {
+      "key": "settings.view",
+      "value": "分身视角"
+    },
+    {
+      "key": "settings.texture",
+      "value": "纹理尺寸"
+    },
+    {
+      "key": "settings.texture.tooltip",
+      "value": "分身视角左右眼共用 RenderTexture 各自的分辨率。"
+    },
+    {
+      "key": "settings.textureHelp",
+      "value": "同样应用于共用的左眼和右眼 RenderTexture。"
+    },
+    {
+      "key": "settings.largeTexture",
+      "value": "4096 会创建两个很大的渲染目标，可能占用大量显存。请先测试目标 PC 的性能再使用。"
+    },
+    {
+      "key": "settings.conversion",
+      "value": "Humanoid 动画转换"
+    },
+    {
+      "key": "settings.sampleRate",
+      "value": "最大自适应采样率"
+    },
+    {
+      "key": "settings.sampleRate.tooltip",
+      "value": "限制自动插入的采样点数量。原始关键帧时间仍会保留为候选点。"
+    },
+    {
+      "key": "settings.positionError",
+      "value": "位置误差容限"
+    },
+    {
+      "key": "settings.positionError.tooltip",
+      "value": "自适应细分和关键帧精简使用的最大本地位置插值误差。"
+    },
+    {
+      "key": "settings.rotationError",
+      "value": "旋转误差容限"
+    },
+    {
+      "key": "settings.rotationError.tooltip",
+      "value": "自适应细分和关键帧精简使用的最大本地旋转角度误差。"
+    },
+    {
+      "key": "settings.degrees",
+      "value": "度"
+    },
+    {
+      "key": "settings.toleranceHelp",
+      "value": "较小的容限会保留更多动作细节，同时产生更大的 AnimationClip。如果在满足误差容限前达到采样率上限，构建时会报告警告。"
+    },
+    {
+      "key": "settings.cache",
+      "value": "Humanoid 烘焙缓存"
+    },
+    {
+      "key": "settings.cacheData",
+      "value": "已缓存姿态数据"
+    },
+    {
+      "key": "settings.cacheStats",
+      "value": "{0} 项，{1}"
+    },
+    {
+      "key": "settings.cacheHelp",
+      "value": "缓存是此项目存放在 Library 中的派生数据。构建后的 Avatar 不会引用它，可随时清理。"
+    },
+    {
+      "key": "settings.clearCache",
+      "value": "清理 Humanoid 烘焙缓存"
+    },
+    {
+      "key": "settings.reset",
+      "value": "恢复默认设置"
+    },
+    {
+      "key": "tools.deleteTitle",
+      "value": "删除所有生成的分身预构建资产？"
+    },
+    {
+      "key": "tools.deleteDescription",
+      "value": "成功的 VRC 构建通常会自动删除这些资产。所有剩余的、由 PhantomSystem 管理的 PhantomPrebake_<Hash> 目录都会被删除，不检查引用。已完成的 VRC 和手动构建结果不依赖这些中间资产。此操作无法撤销。"
+    },
+    {
+      "key": "tools.deleteAll",
+      "value": "全部删除"
+    },
+    {
+      "key": "tools.deletedTitle",
+      "value": "分身预构建资产清理"
+    },
+    {
+      "key": "tools.noAssets",
+      "value": "没有找到生成的分身预构建资产目录。"
+    },
+    {
+      "key": "tools.deleted",
+      "value": "找到 {0} 个生成的预构建目录。\n\n已删除：{1}\n删除失败：{2}"
+    },
+    {
+      "key": "tools.clearTitle",
+      "value": "清理 Humanoid 烘焙缓存？"
+    },
+    {
+      "key": "tools.clearDescription",
+      "value": "从此项目的 Library 文件夹中删除 {0} 项 Humanoid 烘焙缓存（{1}）？\n\n缓存只包含派生姿态数据，需要时会重新生成。"
+    },
+    {
+      "key": "tools.clear",
+      "value": "清理缓存"
+    },
+    {
+      "key": "menu.activate",
+      "value": "启用"
+    },
+    {
+      "key": "menu.freeze",
+      "value": "冻结"
+    },
+    {
+      "key": "menu.positionLock",
+      "value": "位置锁定"
+    },
+    {
+      "key": "menu.settings",
+      "value": "设置"
+    },
+    {
+      "key": "menu.scale",
+      "value": "缩放"
+    },
+    {
+      "key": "menu.resetScale",
+      "value": "重置缩放"
+    },
+    {
+      "key": "menu.mirror",
+      "value": "镜像"
+    },
+    {
+      "key": "menu.bones",
+      "value": "骨骼显示"
+    },
+    {
+      "key": "menu.view",
+      "value": "分身视角"
+    },
+    {
+      "key": "menu.enabled",
+      "value": "启用"
+    },
+    {
+      "key": "menu.stereo",
+      "value": "立体强度"
+    },
+    {
+      "key": "menu.mask",
+      "value": "视野遮罩大小"
+    },
+    {
+      "key": "menu.original",
+      "value": "分身源菜单"
+    },
+    {
+      "key": "menu.source",
+      "value": "{0} 菜单"
+    },
+    {
+      "key": "diagnostic.build.passFailed",
+      "value": "构建步骤“{0}”发生了未预期的异常。"
+    },
+    {
+      "key": "diagnostic.driver.incompleteContext",
+      "value": "槽位“{0}”的构建上下文不完整，无法创建 Driver 中立姿势动画控制器。"
+    },
+    {
+      "key": "diagnostic.driver.invalidHumanoid",
+      "value": "槽位“{0}”的克隆 Animator 不是有效的 Humanoid，无法采样 Driver 中立姿势。"
+    },
+    {
+      "key": "diagnostic.driver.sampleFailed",
+      "value": "槽位“{0}”的 Humanoid Driver 中立姿势采样失败：{1}"
+    },
+    {
+      "key": "diagnostic.driver.missingBone",
+      "value": "槽位“{0}”的 Humanoid 骨骼“{1}”没有对应的 Driver Transform。"
+    },
+    {
+      "key": "diagnostic.driver.missingPath",
+      "value": "无法解析槽位“{0}”中 Humanoid 骨骼“{1}”相对于 Avatar 根节点的 Driver 路径。"
+    },
+    {
+      "key": "diagnostic.driver.missingParent",
+      "value": "无法解析槽位“{0}”中 Humanoid 骨骼“{1}”用于姿势采样的父节点。"
+    },
+    {
+      "key": "diagnostic.animator.missingMotion",
+      "value": "生成的 Animator 层“{0}”中的状态“{1}”没有 Motion。"
+    },
+    {
+      "key": "diagnostic.animator.priorityExhausted",
+      "value": "本体 Avatar 已使用 int.MaxValue，无法为槽位“{0}”分配 Merge Animator 优先级。"
+    },
+    {
+      "key": "diagnostic.rig.positionLockPaths",
+      "value": "无法解析槽位“{0}”的 PositionLock 辅助对象路径。"
+    },
+    {
+      "key": "diagnostic.rig.bodyProxyPaths",
+      "value": "无法解析槽位“{0}”中分身抓取所需的身体代理骨架。"
+    },
+    {
+      "key": "diagnostic.rig.boneDisplayPaths",
+      "value": "无法解析槽位“{0}”中生成的分身抓取骨骼显示对象。"
+    },
+    {
+      "key": "diagnostic.rig.grabbingConstraintPaths",
+      "value": "无法解析槽位“{0}”中分身抓取所需的约束路径。"
+    },
+    {
+      "key": "diagnostic.rig.viewPaths",
+      "value": "无法解析槽位“{0}”中生成的分身视角对象路径。"
+    },
+    {
+      "key": "diagnostic.rig.scalePaths",
+      "value": "无法解析槽位“{0}”的 ScaleRoot 或 MirrorRoot 路径。"
+    },
+    {
+      "key": "diagnostic.layerControl.missingDescriptor",
+      "value": "最终 Avatar Descriptor 缺失，无法验证分身的 Animator Layer Control。"
+    },
+    {
+      "key": "diagnostic.layerControl.duplicateName",
+      "value": "合并后的 {0} 控制器中存在重复的 PhantomSystem 层名“{1}”，无法确定 Animator Layer Control 的目标。"
+    },
+    {
+      "key": "diagnostic.layerControl.missingMergedController",
+      "value": "合并后的 {0} 控制器缺失，无法禁用已转换的 Action 层。"
+    },
+    {
+      "key": "diagnostic.layerControl.missingActionLayer",
+      "value": "无法在合并后的 {1} 控制器中找到已转换的 Action 层“{0}”。"
+    },
+    {
+      "key": "diagnostic.layerControl.actionAtZero",
+      "value": "已转换的 Action 层“{0}”成为合并后 {1} 控制器的第 0 层，无法控制其权重。"
+    },
+    {
+      "key": "diagnostic.layerControl.unresolvedTarget",
+      "value": "在 VRCFury 处理前，无法解析分身 Animator Layer Control 的目标：“{0}/{1}”。"
+    },
+    {
+      "key": "diagnostic.layerControl.markersBeforeVrcfury",
+      "value": "在 VRCFury 处理前，合并后的 {0} 控制器仍包含 {1} 个临时分身 Animator Layer Control 标记。"
+    },
+    {
+      "key": "diagnostic.layerControl.markersFinal",
+      "value": "最终 {0} 控制器仍包含 {1} 个临时分身 Animator Layer Control 标记。"
+    },
+    {
+      "key": "diagnostic.cache.keyFailed",
+      "value": "[PhantomSystem] 无法为“{0}”创建 Humanoid 烘焙缓存键，将正常烘焙此动画片段。{1}"
+    },
+    {
+      "key": "diagnostic.cache.damaged",
+      "value": "[PhantomSystem] 已忽略损坏的 Humanoid 烘焙缓存项“{0}”，将重新烘焙此动画片段。{1}"
+    },
+    {
+      "key": "diagnostic.cache.writeFailed",
+      "value": "[PhantomSystem] 无法保存 Humanoid 烘焙缓存项“{0}”。当前构建可以继续。{1}"
+    },
+    {
+      "key": "diagnostic.cache.cleanupFailed",
+      "value": "[PhantomSystem] 无法移除不兼容的 Humanoid 烘焙缓存数据。{0}"
+    },
+    {
+      "key": "diagnostic.conversion.fxMirror",
+      "value": "槽位“{0}”的 FX 状态“{1}”使用参数“{2}”控制 Humanoid Mirror。源 FX 骨骼动画已被移除，PhantomSystem 将忽略此 Mirror 参数。"
+    },
+    {
+      "key": "diagnostic.conversion.mirror",
+      "value": "槽位“{0}”的 {1} 状态“{2}”使用参数“{3}”控制 Humanoid Mirror。PhantomSystem 已烘焙该状态的默认 Mirror 值（{4}），运行时对此参数的更改将被忽略。"
+    },
+    {
+      "key": "diagnostic.conversion.fxFiltered",
+      "value": "槽位“{0}”从 {3} 个源 FX 动画片段变体中移除了 {1} 条骨架 Transform 曲线和 {2} 条非参数 Animator 曲线。占位绑定会保留受影响片段的时长，并避免空片段的 Write Defaults 行为。"
+    },
+    {
+      "key": "diagnostic.conversion.unsupportedBindings",
+      "value": "槽位“{0}”的 {1} 动画片段“{2}”跳过了 {3} 个不支持的 Animator 绑定{4}"
+    },
+    {
+      "key": "diagnostic.conversion.rootMotion",
+      "value": "槽位“{0}”的 {1} 动画片段“{2}”已将 Root Motion 限定到分身的 Hips。"
+    },
+    {
+      "key": "diagnostic.conversion.rootScale",
+      "value": "槽位“{0}”的 {1} 动画片段“{2}”忽略了 {3} 个根节点缩放绑定。"
+    },
+    {
+      "key": "diagnostic.conversion.samplingLimit",
+      "value": "槽位“{0}”的 {1} 动画片段“{2}”已达到自适应采样上限（{3:0.###} FPS），但部分骨骼误差仍超出设定容差。"
+    },
+    {
+      "key": "diagnostic.behaviour.trackingConverted",
+      "value": "槽位“{0}”将 {1} 个 Animator Tracking Control 行为转换成了 {2} 个分身参数驱动器。"
+    },
+    {
+      "key": "diagnostic.behaviour.trackingRemoved",
+      "value": "槽位“{0}”移除了 {1} 个 Animator Tracking Control 行为，未进行转换。"
+    },
+    {
+      "key": "diagnostic.behaviour.locomotionRemoved",
+      "value": "槽位“{0}”移除了 {1} 个作用于整个 Avatar 的 Animator Locomotion Control 行为。"
+    },
+    {
+      "key": "diagnostic.behaviour.poseSpaceRemoved",
+      "value": "槽位“{0}”移除了 {1} 个作用于整个 Avatar 的 Animator Temporary Pose Space 行为。"
+    },
+    {
+      "key": "diagnostic.behaviour.playableRemoved",
+      "value": "槽位“{0}”移除了 {1} 个目标不可用或不受支持的 Playable Layer Control 行为。"
+    },
+    {
+      "key": "diagnostic.behaviour.actionConverted",
+      "value": "槽位“{0}”将 {1} 个二值 Action Playable Layer Control 行为转换为对全部已转换 Action 层的即时控制。"
+    },
+    {
+      "key": "diagnostic.behaviour.actionNonBinary",
+      "value": "槽位“{0}”移除了 {1} 个 Goal Weight 既非 0 也非 1 的 Action Playable Layer Control 行为。"
+    },
+    {
+      "key": "diagnostic.behaviour.actionBlendIgnored",
+      "value": "槽位“{0}”忽略了 {1} 个已转换 Action Playable Layer Control 行为的 Blend Duration；已转换 Action 会即时切换。"
+    },
+    {
+      "key": "diagnostic.behaviour.actionLayerRemoved",
+      "value": "槽位“{0}”移除了 {1} 个指向 Action 的 Animator Layer Control 行为，因为已转换 Action 的权重按整个 Playable 组统一控制。"
+    },
+    {
+      "key": "diagnostic.behaviour.layerRetargeted",
+      "value": "槽位“{0}”已安排在最终阶段重新定位 {1} 个 Animator Layer Control 行为的目标层。"
+    },
+    {
+      "key": "diagnostic.behaviour.layerRemoved",
+      "value": "槽位“{0}”移除了 {1} 个目标不可用或不受支持的 Animator Layer Control 行为。"
+    },
+    {
+      "key": "diagnostic.behaviour.eyesPartial",
+      "value": "槽位“{0}”仅使用可用的眼部骨骼转换 Eyes & Eyelids。"
+    },
+    {
+      "key": "diagnostic.behaviour.mouthPartial",
+      "value": "槽位“{0}”仅使用可用的下颌骨骼转换 Mouth & Jaw。"
+    },
+    {
+      "key": "diagnostic.conversion.unregisteredController",
+      "value": "槽位“{0}”的 {1} 源 Merge Animator 未注册到 NDMF Animator Services。"
+    },
+    {
+      "key": "diagnostic.rig.missingCloneArmature",
+      "value": "无法从 Humanoid Hips 解析槽位“{0}”的预构建分身骨架根节点。"
+    },
+    {
+      "key": "diagnostic.conversion.unsupportedController",
+      "value": "槽位“{0}”使用了不支持的 {1} 控制器类型“{2}”。"
+    },
+    {
+      "key": "diagnostic.menu.missingCore",
+      "value": "槽位“{0}”请求安装源菜单，但已启用的核心菜单构建器未返回菜单。"
+    },
+    {
+      "key": "diagnostic.rig.missingBaseAnimator",
+      "value": "本体 Avatar 的 Animator 在生成约束前已丢失。"
+    },
+    {
+      "key": "diagnostic.rig.missingBaseArmature",
+      "value": "无法从 Humanoid Hips 解析本体 Avatar 的骨架根节点。"
+    },
+    {
+      "key": "diagnostic.grabbing.missingHips",
+      "value": "槽位“{0}”启用了分身抓取，但烘焙后的 Avatar 没有 Humanoid Hips。"
+    },
+    {
+      "key": "diagnostic.grabbing.missingProxyHips",
+      "value": "无法为槽位“{0}”生成分身抓取的身体代理 Hips。"
+    },
+    {
+      "key": "diagnostic.boneDisplay.missingMaterial",
+      "value": "在“{0}”处未找到分身抓取骨骼显示材质。"
+    },
+    {
+      "key": "diagnostic.boneDisplay.missingSegments",
+      "value": "槽位“{0}”未生成用于骨骼显示的分身抓取身体分段。"
+    },
+    {
+      "key": "diagnostic.boneDisplay.missingMesh",
+      "value": "在“{0}”中未找到分身抓取骨骼显示网格。"
+    },
+    {
+      "key": "diagnostic.boneDisplay.zeroBounds",
+      "value": "分身抓取骨骼显示模板“{0}”的 X、Y、Z 包围盒尺寸必须均为非零。"
+    },
+    {
+      "key": "diagnostic.boneDisplay.emptyGeometry",
+      "value": "分身抓取骨骼显示模板“{0}”不包含几何数据。"
+    },
+    {
+      "key": "diagnostic.grabbing.missingHands",
+      "value": "槽位“{0}”启用了分身抓取，但本体 Avatar 未提供完整的 Humanoid 双手骨骼。"
+    },
+    {
+      "key": "diagnostic.view.missingCloneHead",
+      "value": "槽位“{0}”启用了分身视角，但预构建后的 Avatar 没有 Humanoid Head。"
+    },
+    {
+      "key": "diagnostic.view.missingDescriptor",
+      "value": "槽位“{0}”启用了分身视角，但预构建后的 Avatar Descriptor 不可用。"
+    },
+    {
+      "key": "diagnostic.view.missingBaseHead",
+      "value": "槽位“{0}”启用了分身视角，但本体 Avatar 没有 Humanoid Head。"
+    },
+    {
+      "key": "diagnostic.view.missingShader",
+      "value": "在“{0}”处未找到分身视角显示 Shader。"
+    },
+    {
+      "key": "diagnostic.build.multipleComponents",
+      "value": "Avatar“{0}”包含 {1} 个 PhantomSystem 组件。每个 Avatar 仅支持一个 PhantomSystem 组件。请在构建前将所有槽位合并到一个组件中，并移除多余组件。"
+    },
+    {
+      "key": "diagnostic.parameter.duplicatePrefix",
+      "value": "槽位“{0}”和“{1}”使用了相同的核心参数前缀“{2}”。"
+    },
+    {
+      "key": "diagnostic.parameter.coreConflict",
+      "value": "槽位“{0}”的核心参数“{1}”与本体 Avatar 冲突（{2}）。"
+    },
+    {
+      "key": "diagnostic.parameter.unresolvedReferences",
+      "value": "槽位“{0}”保留了 {2} 种引用类型中的 {1} 个未解析源参数名：{3}。这些引用未出现在生成前的参数解析结果中。"
+    },
+    {
+      "key": "diagnostic.prebake.manualMissingDescriptor",
+      "value": "[PhantomSystem] 手动烘焙要求 PhantomSystem 位于 VRCAvatarDescriptor 内。"
+    },
+    {
+      "key": "diagnostic.prebake.alreadyRunning",
+      "value": "[PhantomSystem] 分身预烘焙正在进行中。请等待其完成后再开始手动烘焙。"
+    },
+    {
+      "key": "diagnostic.prebake.manualFailed",
+      "value": "[PhantomSystem] Avatar 手动烘焙失败。请查看 NDMF 控制台了解详情。"
+    },
+    {
+      "key": "diagnostic.prebake.unconsumed",
+      "value": "[PhantomSystem] 分身源已完成预烘焙，但本体的 NDMF 构建未使用这些结果。请启用 NDMF Apply on Build/Play 后重试。"
+    },
+    {
+      "key": "diagnostic.prebake.automaticFailed",
+      "value": "[PhantomSystem] 分身自动预烘焙失败，Avatar 构建已停止。"
+    },
+    {
+      "key": "diagnostic.prebake.cleanupPartial",
+      "value": "[PhantomSystem] 在{2}时，{1} 个生成的预构建目录中有 {0} 个删除失败。请使用 Tools > PhantomSystem > Delete Prebake Assets 重试。"
+    },
+    {
+      "key": "diagnostic.prebake.cleanupFailed",
+      "value": "[PhantomSystem] 在{0}时无法清理生成的预构建资产。Avatar 构建可以继续。{1}"
+    },
+    {
+      "key": "diagnostic.binding.missingTarget",
+      "value": "最终 {0} 动画片段“{1}”包含无效的分身绑定“{2}”（{3}.{4}）。其他构建工具可能有意保留了这个缺少目标的绑定。"
+    },
+    {
+      "key": "diagnostic.binding.visibleBone",
+      "value": "转换后的 {0} 动画片段“{1}”仍通过“{3}”直接控制可见分身 Humanoid 骨骼“{2}”。骨骼动画必须指向 Phantom Animation Driver 骨架。"
+    },
+    {
+      "key": "diagnostic.binding.fxConflict",
+      "value": "转换后的源 FX 动画片段“{0}”仍通过“{2}”控制分身骨架 Transform“{1}”。与生成的骨架控制冲突的源 FX 曲线必须在合并控制器前移除。"
+    },
+    {
+      "key": "diagnostic.binding.unsupportedAnimator",
+      "value": "转换后的 {0} 动画片段“{1}”仍包含不支持的或 Humanoid Animator 绑定“{2}”。"
+    },
+    {
+      "key": "diagnostic.binding.protectedRoot",
+      "value": "转换后的 {0} 动画片段“{1}”通过“{3}”控制了受保护的分身根节点“{2}”。Root Motion 只能指向 Hips。"
+    },
+    {
+      "key": "diagnostic.binding.missingFx",
+      "value": "存在已转换的 Action 层，但最终 FX 控制器缺失。"
+    },
+    {
+      "key": "diagnostic.binding.actionNotUnique",
+      "value": "最终 FX 控制器中名为“{0}”的已转换 Action 层数量不是 1。"
+    },
+    {
+      "key": "diagnostic.binding.actionAtZero",
+      "value": "已转换的 Action 层“{0}”成为了 FX 第 0 层。"
+    },
+    {
+      "key": "diagnostic.binding.actionWeight",
+      "value": "已转换的 Action 层“{0}”的最终默认权重为 {1:0.###}，而不是 0。"
+    },
+    {
+      "key": "diagnostic.cache.clearFailed",
+      "value": "[PhantomSystem] 无法清理 Humanoid 烘焙缓存。{0}"
+    },
+    {
+      "key": "diagnostic.cache.cleared",
+      "value": "[PhantomSystem] 已清理 Humanoid 烘焙缓存。"
+    },
+    {
+      "key": "diagnostic.validation.PHS201",
+      "value": "参数“{0}”将重命名为“{1}”，以避免不兼容的冲突（{2}）。"
+    },
+    {
+      "key": "diagnostic.validation.PHS300",
+      "value": "“{0}”上的 PhantomSystem 没有槽位。"
+    },
+    {
+      "key": "diagnostic.validation.PHS301",
+      "value": "槽位“{0}”没有 PhantomSystem 预烘焙结果。普通 Manual Bake 命令不会运行 VRChat 预处理钩子；请使用 Inspector 中的“使用 PhantomSystem 手动烘焙 Avatar”按钮或 VRChat SDK Build/Upload。"
+    },
+    {
+      "key": "diagnostic.validation.PHS302",
+      "value": "槽位“{0}”预烘焙后的分身没有 VRCAvatarDescriptor。"
+    },
+    {
+      "key": "diagnostic.validation.PHS303",
+      "value": "槽位“{0}”预烘焙后的分身没有 Humanoid Animator。"
+    },
+    {
+      "key": "diagnostic.validation.PHS001",
+      "value": "槽位数据缺失。"
+    },
+    {
+      "key": "diagnostic.validation.PHS002",
+      "value": "槽位名称为空，将使用“{0}”。"
+    },
+    {
+      "key": "diagnostic.validation.PHS010",
+      "value": "尚未指定分身源 Avatar。"
+    },
+    {
+      "key": "diagnostic.validation.PHS011",
+      "value": "此槽位引用了本体 Avatar 自身。"
+    },
+    {
+      "key": "diagnostic.validation.PHS012",
+      "value": "分身源位于本体 Avatar 的层级内。"
+    },
+    {
+      "key": "diagnostic.validation.PHS013",
+      "value": "分身源根节点没有 Animator。"
+    },
+    {
+      "key": "diagnostic.validation.PHS014",
+      "value": "分身源 Animator 没有 Avatar 资产。"
+    },
+    {
+      "key": "diagnostic.validation.PHS015",
+      "value": "分身源 Animator 不是有效的 Humanoid。"
+    },
+    {
+      "key": "diagnostic.validation.PHS016",
+      "value": "无法解析分身源 Humanoid 的 Hips 骨骼。"
+    },
+    {
+      "key": "diagnostic.validation.PHS017",
+      "value": "分身视角要求分身源 Humanoid 提供 Head 骨骼。"
+    },
+    {
+      "key": "diagnostic.validation.PHS018",
+      "value": "分身源包含 {0} 个嵌套的 PhantomSystem 组件。"
+    },
+    {
+      "key": "diagnostic.validation.PHS020",
+      "value": "分身源的 {1} 个 GameObject 上有 {0} 个缺失脚本。"
+    },
+    {
+      "key": "diagnostic.validation.PHS100",
+      "value": "PhantomSystem 必须放置在 VRCAvatarDescriptor 下。"
+    },
+    {
+      "key": "diagnostic.validation.PHS101",
+      "value": "本体 Avatar 根节点没有 Animator。"
+    },
+    {
+      "key": "diagnostic.validation.PHS102",
+      "value": "本体 Avatar 的 Animator 必须使用有效的 Humanoid Avatar。"
+    },
+    {
+      "key": "diagnostic.validation.PHS103",
+      "value": "无法解析本体 Avatar Humanoid 的 Hips 骨骼。"
+    },
+    {
+      "key": "diagnostic.validation.PHS104",
+      "value": "分身视角要求本体 Avatar Humanoid 提供 Head 骨骼。"
+    },
+    {
+      "key": "diagnostic.validation.PHS105",
+      "value": "分身抓取要求本体 Avatar 提供 Humanoid 双手骨骼。"
+    },
+    {
+      "key": "diagnostic.validation.PHS021",
+      "value": "组件类型“{0}”未实现 INDMFEditorOnly，无法验证其与分身预烘焙的兼容性。"
+    },
+    {
+      "key": "diagnostic.validation.PHS030",
+      "value": "槽位名称“{0}”重复。"
+    },
+    {
+      "key": "diagnostic.validation.PHS032",
+      "value": "核心参数命名空间重复（“{0}”）。"
+    },
+    {
+      "key": "diagnostic.validation.PHS031",
+      "value": "槽位层级名称“{0}”在规范化无效路径字符后出现重复。"
+    },
+    {
+      "key": "diagnostic.animator.unsupportedCoreType",
+      "value": "核心 Animator 参数“{1}”的类型“{0}”不受支持。"
+    },
+    {
+      "key": "diagnostic.sampling.trackCount",
+      "value": "恒定区间轨道数量必须与采样姿势的轨道数量一致。"
+    },
+    {
+      "key": "diagnostic.sampling.emptyTimeline",
+      "value": "至少需要一个源采样时间点。"
+    },
+    {
+      "key": "diagnostic.sampling.unorderedTimeline",
+      "value": "源采样时间点必须严格递增。"
+    },
+    {
+      "key": "diagnostic.sampling.evaluatorTrackCount",
+      "value": "姿势求值器返回了 {0} 条轨道，预期为 {1} 条。"
+    },
+    {
+      "key": "diagnostic.cache.trailingData",
+      "value": "缓存项包含多余的尾部数据。"
+    },
+    {
+      "key": "diagnostic.cache.unsupportedHeader",
+      "value": "缓存头不受支持。"
+    },
+    {
+      "key": "diagnostic.cache.keyMismatch",
+      "value": "缓存键与文件名不匹配。"
+    },
+    {
+      "key": "diagnostic.cache.invalidDiagnostics",
+      "value": "缓存中的诊断计数无效。"
+    },
+    {
+      "key": "diagnostic.cache.invalidTimeline",
+      "value": "缓存的采样时间轴无效。"
+    },
+    {
+      "key": "diagnostic.cache.invalidDimensions",
+      "value": "缓存的姿势数据维度无效。"
+    },
+    {
+      "key": "diagnostic.cache.trackTimelineMismatch",
+      "value": "缓存的姿势轨道与时间轴不匹配。"
+    },
+    {
+      "key": "diagnostic.cache.nonFinitePose",
+      "value": "缓存的姿势包含非有限值。"
+    },
+    {
+      "key": "diagnostic.cache.reductionTrackCount",
+      "value": "缓存的曲线精简数据的轨道数量不正确。"
+    },
+    {
+      "key": "diagnostic.cache.invalidKeptIndices",
+      "value": "缓存中保留的索引列表无效。"
+    },
+    {
+      "key": "diagnostic.cache.invalidCount",
+      "value": "缓存中的 {0} 计数无效。"
+    },
+    {
+      "key": "diagnostic.cache.invalidBone",
+      "value": "缓存包含无效的 Humanoid 骨骼。"
+    },
+    {
+      "key": "diagnostic.sampling.invalidHumanoid",
+      "value": "“{0}”的根节点必须有有效的 Humanoid Animator。"
+    },
+    {
+      "key": "diagnostic.driver.noOutputPaths",
+      "value": "至少需要一个 Humanoid Driver 输出路径。"
+    },
+    {
+      "key": "diagnostic.driver.noBoneOutput",
+      "value": "Humanoid 骨骼“{0}”没有 Driver 输出路径。"
+    },
+    {
+      "key": "diagnostic.driver.duplicateOutput",
+      "value": "多个 Humanoid 骨骼对应同一个 Driver 输出路径“{0}”。"
+    },
+    {
+      "key": "diagnostic.driver.noNeutralRotation",
+      "value": "Humanoid 骨骼“{0}”没有采样得到的中立姿势旋转。"
+    },
+    {
+      "key": "diagnostic.driver.emptyOutputPath",
+      "value": "Humanoid Driver 输出路径不能为空。"
+    },
+    {
+      "key": "diagnostic.sampling.noMuscles",
+      "value": "Unity 在采样中立姿势时未返回 Humanoid 肌肉数据。"
+    },
+    {
+      "key": "diagnostic.sampling.missingNeutralBone",
+      "value": "Unity 无法在中立姿势采样层级中解析 Humanoid 骨骼“{0}”。"
+    },
+    {
+      "key": "diagnostic.sampling.missingParentPath",
+      "value": "Humanoid 骨骼“{0}”缺少采样姿势父节点路径。"
+    },
+    {
+      "key": "diagnostic.sampling.missingParent",
+      "value": "Unity 无法解析 Humanoid 骨骼“{1}”用于姿势采样的父节点“{0}”。"
+    },
+    {
+      "key": "diagnostic.sampling.bindFailed",
+      "value": "Unity 无法将 Humanoid Avatar“{0}”绑定到临时采样层级。"
+    },
+    {
+      "key": "diagnostic.cache.unpreparedHit",
+      "value": "需要已准备就绪的 Humanoid 缓存命中结果。"
+    },
+    {
+      "key": "diagnostic.conversion.blendTreeChildCount",
+      "value": "转换后的 BlendTree Motion 数量必须与源子节点数量一致。"
+    },
+    {
+      "key": "diagnostic.conversion.virtualizeFailed",
+      "value": "NDMF 无法将转换后的动画片段“{0}”虚拟化。"
+    },
+    {
+      "key": "diagnostic.parameter.disabledCore",
+      "value": "当前 PhantomSystem 槽位未启用核心参数“{0}”。"
+    },
+    {
+      "key": "diagnostic.parameter.reason.derivedExists",
+      "value": "一个或多个派生动态参数已存在"
+    },
+    {
+      "key": "diagnostic.parameter.reason.missing",
+      "value": "参数信息缺失"
+    },
+    {
+      "key": "diagnostic.parameter.reason.unknownType",
+      "value": "参数类型未知"
+    },
+    {
+      "key": "diagnostic.parameter.reason.type",
+      "value": "类型不匹配：{0} 与 {1}"
+    },
+    {
+      "key": "diagnostic.parameter.reason.animatorOnly",
+      "value": "仅限 Animator 的状态不一致"
+    },
+    {
+      "key": "diagnostic.parameter.reason.network",
+      "value": "网络同步状态不一致"
+    },
+    {
+      "key": "diagnostic.parameter.reason.hidden",
+      "value": "隐藏状态不一致"
+    },
+    {
+      "key": "diagnostic.parameter.reason.default",
+      "value": "默认值不一致：{0} 与 {1}"
+    },
+    {
+      "key": "diagnostic.parameter.reason.saved",
+      "value": "保存状态不一致"
+    },
+    {
+      "key": "diagnostic.prebake.ndmfFailed",
+      "value": "NDMF 在预烘焙分身“{0}”时报告了错误。"
+    },
+    {
+      "key": "diagnostic.prebake.descriptorLost",
+      "value": "预烘焙后的分身“{0}”已不再具有 VRCAvatarDescriptor。"
+    },
+    {
+      "key": "diagnostic.prebake.animatorLost",
+      "value": "预烘焙后的分身“{0}”已不再具有 Humanoid Animator。"
+    },
+    {
+      "key": "diagnostic.prebake.validationFailed",
+      "value": "PhantomSystem 配置验证失败：\n{0}"
+    },
+    {
+      "key": "diagnostic.report.internal",
+      "value": "内部构建错误：{0}"
+    },
+    {
+      "key": "diagnostic.report.aborted",
+      "value": "PhantomSystem 构建失败。请查看 NDMF 控制台了解详情。"
+    },
+    {
+      "key": "diagnostic.report.failed",
+      "value": "PhantomSystem 构建失败"
+    },
+    {
+      "key": "diagnostic.report.warning",
+      "value": "PhantomSystem 构建警告"
+    },
+    {
+      "key": "diagnostic.report.coded",
+      "value": "[{0}] {1}"
+    },
+    {
+      "key": "diagnostic.list.more",
+      "value": "{0}，另有 {1} 项"
+    },
+    {
+      "key": "diagnostic.conversion.boneClipCount",
+      "value": "{0}（{1} 个动画片段）"
+    },
+    {
+      "key": "diagnostic.conversion.missingBones",
+      "value": "槽位“{0}”的 {2} 个转换动画片段引用了 {1} 个不可用的可选 Humanoid 骨骼，无法烘焙这些骨骼的曲线：{3}。受影响的片段示例：{4}。不可用骨骼的曲线已跳过，其余动画曲线已保留。仅在需要这些动画时，才需在源 Humanoid 映射中补全缺失骨骼。"
+    },
+    {
+      "key": "diagnostic.cache.summary",
+      "value": "Humanoid 烘焙缓存：命中 {0} 次，未命中 {1} 次，绕过 {2} 次，写入失败 {3} 次。"
+    },
+    {
+      "key": "diagnostic.ui.missingInstaller",
+      "value": "缺少所需的 MA Menu Installer。"
+    },
+    {
+      "key": "diagnostic.ui.bakeMissingDescriptor",
+      "value": "手动烘焙前，必须将 PhantomSystem 放置在具有 VRCAvatarDescriptor 的 Avatar 内。"
+    },
+    {
+      "key": "diagnostic.ui.staleSharing",
+      "value": "已保存的共享规则不再适用，将回退到参数命名空间：{0}"
+    },
+    {
+      "key": "diagnostic.ui.cacheTitle",
+      "value": "Humanoid 烘焙缓存"
+    },
+    {
+      "key": "diagnostic.ui.cacheClearFailed",
+      "value": "缓存清理失败。请查看控制台了解详情。"
+    },
+    {
+      "key": "diagnostic.cleanup.playMode",
+      "value": "退出播放模式"
+    },
+    {
+      "key": "diagnostic.cleanup.postprocess",
+      "value": "VRC Avatar 后处理"
+    },
+    {
+      "key": "diagnostic.cleanup.unconsumed",
+      "value": "清理未使用的预烘焙结果"
+    },
+    {
+      "key": "diagnostic.cleanup.before",
+      "value": "开始预烘焙前"
+    },
+    {
+      "key": "diagnostic.cleanup.failed",
+      "value": "预烘焙失败后"
+    },
+    {
+      "key": "diagnostic.cleanup.manual",
+      "value": "手动烘焙 Avatar"
+    }
+  ]
+}

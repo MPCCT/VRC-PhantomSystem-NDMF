@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using nadena.dev.ndmf;
 using UnityEditor;
 using UnityEngine;
@@ -30,7 +31,7 @@ namespace MPCCT.PhantomSystem.Editor
             if (!slot.CloneBones.TryGetValue(HumanBodyBones.Head, out var phantomHead))
             {
                 report.InternalError(
-                    $"Slot '{slot.SlotId}' enables Phantom View, but its prebaked avatar has no Humanoid Head.",
+                    L.D("diagnostic.view.missingCloneHead", slot.SlotId),
                     slot.CloneRoot);
                 return;
             }
@@ -38,7 +39,7 @@ namespace MPCCT.PhantomSystem.Editor
             if (slot.BakedAvatar == null)
             {
                 report.InternalError(
-                    $"Slot '{slot.SlotId}' enables Phantom View, but its prebaked avatar descriptor is unavailable.",
+                    L.D("diagnostic.view.missingDescriptor", slot.SlotId),
                     slot.CloneRoot);
                 return;
             }
@@ -50,7 +51,7 @@ namespace MPCCT.PhantomSystem.Editor
             if (baseHead == null)
             {
                 report.InternalError(
-                    $"Slot '{slot.SlotId}' enables Phantom View, but the base avatar has no Humanoid Head.",
+                    L.D("diagnostic.view.missingBaseHead", slot.SlotId),
                     baseAnimator != null ? (Object)baseAnimator : context.AvatarRootObject);
                 return;
             }
@@ -59,7 +60,7 @@ namespace MPCCT.PhantomSystem.Editor
             if (shader == null)
             {
                 report.InternalError(
-                    $"Phantom View display shader was not found at '{DisplayShaderAssetPath}'.",
+                    L.D("diagnostic.view.missingShader", DisplayShaderAssetPath),
                     slot.CloneRoot);
                 return;
             }

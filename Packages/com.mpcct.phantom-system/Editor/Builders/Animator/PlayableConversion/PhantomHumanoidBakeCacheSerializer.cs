@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
@@ -78,11 +79,11 @@ namespace MPCCT.PhantomSystem.Editor
         {
             if (reader.ReadInt32() != Magic || reader.ReadInt32() != SchemaVersion)
             {
-                throw new InvalidDataException("The cache header is not supported.");
+                throw new InvalidDataException(L.F("diagnostic.cache.unsupportedHeader"));
             }
             if (!string.Equals(reader.ReadString(), expectedKey, System.StringComparison.Ordinal))
             {
-                throw new InvalidDataException("The cache key does not match its filename.");
+                throw new InvalidDataException(L.F("diagnostic.cache.keyMismatch"));
             }
 
             var trackCount = ReadCount(reader, MaximumTrackCount, "track");
@@ -121,7 +122,7 @@ namespace MPCCT.PhantomSystem.Editor
             var hitSampleRateLimit = reader.ReadBoolean();
             if (sourceCandidateCount < 0 || adaptiveSampleCount < 0)
             {
-                throw new InvalidDataException("The cache diagnostic counts are invalid.");
+                throw new InvalidDataException(L.F("diagnostic.cache.invalidDiagnostics"));
             }
 
             var timeCount = ReadCount(reader, MaximumSampleCount, "sample time");
@@ -131,14 +132,14 @@ namespace MPCCT.PhantomSystem.Editor
                 times[index] = reader.ReadSingle();
                 if (!IsFinite(times[index]) || index > 0 && times[index] <= times[index - 1])
                 {
-                    throw new InvalidDataException("The cached sample timeline is invalid.");
+                    throw new InvalidDataException(L.F("diagnostic.cache.invalidTimeline"));
                 }
             }
 
             var poseTrackCount = ReadCount(reader, MaximumTrackCount, "pose track");
             if (poseTrackCount != trackCount || (long)poseTrackCount * timeCount > MaximumPoseCount)
             {
-                throw new InvalidDataException("The cached pose dimensions are invalid.");
+                throw new InvalidDataException(L.F("diagnostic.cache.invalidDimensions"));
             }
             var posesByTrack = new PhantomPose[poseTrackCount][];
             for (var trackIndex = 0; trackIndex < poseTrackCount; trackIndex++)
@@ -146,7 +147,7 @@ namespace MPCCT.PhantomSystem.Editor
                 var poseCount = ReadCount(reader, MaximumSampleCount, "pose");
                 if (poseCount != timeCount)
                 {
-                    throw new InvalidDataException("A cached pose track does not match the timeline.");
+                    throw new InvalidDataException(L.F("diagnostic.cache.trackTimelineMismatch"));
                 }
                 var poses = new PhantomPose[poseCount];
                 for (var poseIndex = 0; poseIndex < poseCount; poseIndex++)
@@ -155,7 +156,7 @@ namespace MPCCT.PhantomSystem.Editor
                     var rotation = ReadQuaternion(reader);
                     if (!IsFinite(position) || !IsFinite(rotation))
                     {
-                        throw new InvalidDataException("A cached pose contains a non-finite value.");
+                        throw new InvalidDataException(L.F("diagnostic.cache.nonFinitePose"));
                     }
                     poses[poseIndex] = new PhantomPose(position, rotation);
                 }
@@ -165,7 +166,7 @@ namespace MPCCT.PhantomSystem.Editor
             var keptTrackCount = ReadCount(reader, MaximumTrackCount, "kept-index track");
             if (keptTrackCount != trackCount)
             {
-                throw new InvalidDataException("The cached reduction data has the wrong track count.");
+                throw new InvalidDataException(L.F("diagnostic.cache.reductionTrackCount"));
             }
             var keptIndices = new IReadOnlyList<int>[keptTrackCount];
             for (var trackIndex = 0; trackIndex < keptTrackCount; trackIndex++)
@@ -179,7 +180,7 @@ namespace MPCCT.PhantomSystem.Editor
                         || indices[index] >= timeCount
                         || index > 0 && indices[index] <= indices[index - 1])
                     {
-                        throw new InvalidDataException("A cached kept-index list is invalid.");
+                        throw new InvalidDataException(L.F("diagnostic.cache.invalidKeptIndices"));
                     }
                 }
                 keptIndices[trackIndex] = indices;
@@ -200,7 +201,7 @@ namespace MPCCT.PhantomSystem.Editor
             var value = reader.ReadInt32();
             if (value < 0 || value > maximum)
             {
-                throw new InvalidDataException($"The cached {name} count is invalid.");
+                throw new InvalidDataException(L.F("diagnostic.cache.invalidCount", name));
             }
             return value;
         }
@@ -210,7 +211,7 @@ namespace MPCCT.PhantomSystem.Editor
             var value = reader.ReadInt32();
             if (value < 0 || value >= (int)HumanBodyBones.LastBone)
             {
-                throw new InvalidDataException("The cache contains an invalid Humanoid bone.");
+                throw new InvalidDataException(L.F("diagnostic.cache.invalidBone"));
             }
             return (HumanBodyBones)value;
         }

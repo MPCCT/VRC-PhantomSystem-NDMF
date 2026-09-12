@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -103,7 +104,7 @@ namespace MPCCT.PhantomSystem.Editor
             if (constantIntervalsByTrack.Count != trackCount)
             {
                 throw new ArgumentException(
-                    "Constant interval track count must match the sampled pose track count.",
+                    L.F("diagnostic.sampling.trackCount"),
                     nameof(constantIntervalsByTrack));
             }
 
@@ -187,7 +188,7 @@ namespace MPCCT.PhantomSystem.Editor
             }
             if (sourceTimes.Count == 0)
             {
-                throw new ArgumentException("At least one source sample time is required.", nameof(sourceTimes));
+                throw new ArgumentException(L.F("diagnostic.sampling.emptyTimeline"), nameof(sourceTimes));
             }
             if (trackCount < 0)
             {
@@ -202,7 +203,7 @@ namespace MPCCT.PhantomSystem.Editor
                 if (sourceTimes[index] <= sourceTimes[index - 1])
                 {
                     throw new ArgumentException(
-                        "Source sample times must be strictly increasing.",
+                        L.F("diagnostic.sampling.unorderedTimeline"),
                         nameof(sourceTimes));
                 }
             }
@@ -236,7 +237,7 @@ namespace MPCCT.PhantomSystem.Editor
             if (poses == null || poses.Length != trackCount)
             {
                 throw new InvalidOperationException(
-                    $"Pose evaluator returned {poses?.Length ?? 0} tracks; expected {trackCount}.");
+                    L.F("diagnostic.sampling.evaluatorTrackCount", poses?.Length ?? 0, trackCount));
             }
             samples.Add(time, poses);
         }

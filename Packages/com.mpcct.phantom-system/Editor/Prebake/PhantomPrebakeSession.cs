@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
@@ -30,7 +31,7 @@ namespace MPCCT.PhantomSystem.Editor
                     CleanupAll();
                     if (ConsumeAutomaticCleanupPending())
                     {
-                        PhantomPrebakeService.CleanupGeneratedAssets("leaving Play Mode");
+                        PhantomPrebakeService.CleanupGeneratedAssets(L.D("diagnostic.cleanup.playMode"));
                     }
                 }
             };

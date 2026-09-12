@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using System.Collections.Generic;
 using UnityEngine;
 using VRC.Dynamics;
@@ -21,7 +22,7 @@ namespace MPCCT.PhantomSystem.Editor
             if (baseLeftHand == null || baseRightHand == null)
             {
                 report.InternalError(
-                    $"Slot '{slot.SlotId}' enables Phantom Grabbing, but the base avatar does not expose both Humanoid hand bones.",
+                    L.D("diagnostic.grabbing.missingHands", slot.SlotId),
                     baseAnimator);
                 return;
             }

@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using UnityEngine;
 using static MPCCT.PhantomSystem.Editor.PhantomAnimatorClipUtility;
 using static MPCCT.PhantomSystem.Editor.PhantomAnimatorGraphUtility;
@@ -12,7 +13,7 @@ namespace MPCCT.PhantomSystem.Editor
             if (context.PhantomGrabbingBoneDisplayPath == null)
             {
                 context.Report.InternalError(
-                    $"Slot '{context.Slot.SlotId}' could not resolve the generated Phantom Grabbing bone display.",
+                    L.D("diagnostic.rig.boneDisplayPaths", context.Slot.SlotId),
                     context.ErrorContext);
                 return;
             }

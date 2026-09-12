@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -69,8 +70,7 @@ namespace MPCCT.PhantomSystem.Editor
             {
                 BypassCount++;
                 Debug.LogWarning(
-                    $"[PhantomSystem] Could not create a Humanoid bake cache key for '{source?.name}'. "
-                    + $"The clip will be baked normally. {exception.Message}");
+                    L.D("diagnostic.cache.keyFailed", source?.name, exception.Message));
                 return null;
             }
         }
@@ -104,7 +104,7 @@ namespace MPCCT.PhantomSystem.Editor
                     data = PhantomHumanoidBakeCacheSerializer.Read(reader, key);
                     if (stream.Position != stream.Length)
                     {
-                        throw new InvalidDataException("The cache entry contains trailing data.");
+                        throw new InvalidDataException(L.F("diagnostic.cache.trailingData"));
                     }
                 }
 
@@ -117,8 +117,7 @@ namespace MPCCT.PhantomSystem.Editor
                 TryDeleteFile(path);
                 MissCount++;
                 Debug.LogWarning(
-                    $"[PhantomSystem] Ignored a damaged Humanoid bake cache entry '{key}'. "
-                    + $"The clip will be baked again. {exception.Message}");
+                    L.D("diagnostic.cache.damaged", key, exception.Message));
                 data = null;
                 return false;
             }
@@ -163,8 +162,7 @@ namespace MPCCT.PhantomSystem.Editor
             {
                 WriteFailureCount++;
                 Debug.LogWarning(
-                    $"[PhantomSystem] Could not save Humanoid bake cache entry '{key}'. "
-                    + $"The current build can continue without it. {exception.Message}");
+                    L.D("diagnostic.cache.writeFailed", key, exception.Message));
             }
             finally
             {
@@ -187,20 +185,9 @@ namespace MPCCT.PhantomSystem.Editor
                 return;
             }
 
-            var message = $"Humanoid bake cache: {HitCount} hit(s), {MissCount} miss(es)";
-            if (BypassCount > 0)
-            {
-                message += $", {BypassCount} bypass(es)";
-            }
-            if (WriteFailureCount > 0)
-            {
-                message += $", {WriteFailureCount} write failure(s)";
-            }
-            if (VirtualClipFastPathHitCount > 0)
-            {
-                message += $", {VirtualClipFastPathHitCount} VirtualClip fast-path hit(s)";
-            }
-            report.Info(message + ".", context);
+            report.Info(
+                L.D("diagnostic.cache.summary", HitCount, MissCount, BypassCount, WriteFailureCount),
+                context);
         }
 
         internal static PhantomHumanoidBakeCacheStatistics GetStatistics()
@@ -302,8 +289,7 @@ namespace MPCCT.PhantomSystem.Editor
             catch (Exception exception)
             {
                 Debug.LogWarning(
-                    "[PhantomSystem] Could not remove incompatible Humanoid bake cache data. "
-                    + exception.Message);
+                    L.D("diagnostic.cache.cleanupFailed", exception.Message));
             }
         }
 

@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -115,7 +116,7 @@ namespace MPCCT.PhantomSystem.Editor
             if (entry == null)
             {
                 throw new InvalidOperationException(
-                    $"Core parameter '{name}' is not enabled for the current PhantomSystem slot.");
+                    L.F("diagnostic.parameter.disabledCore", name));
             }
 
             return entry;

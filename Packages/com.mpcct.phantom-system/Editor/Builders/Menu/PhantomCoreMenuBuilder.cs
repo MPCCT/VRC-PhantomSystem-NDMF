@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using System.Collections.Generic;
 using nadena.dev.modular_avatar.core;
 using nadena.dev.ndmf;
@@ -186,9 +187,9 @@ namespace MPCCT.PhantomSystem.Editor
             menu.name = $"PhantomSystem_{slot.SlotId}_Menu";
             menu.controls = new List<VRCExpressionsMenu.Control>
             {
-                Toggle("Activate", PhantomParameterNames.Activate(slot.Slot), "power"),
-                Toggle("Freeze", PhantomParameterNames.Freeze(slot.Slot), "snowflake"),
-                Toggle("Position Lock", PhantomParameterNames.PositionLock(slot.Slot), "lock")
+                Toggle(L.S("menu.activate"), PhantomParameterNames.Activate(slot.Slot), "power"),
+                Toggle(L.S("menu.freeze"), PhantomParameterNames.Freeze(slot.Slot), "snowflake"),
+                Toggle(L.S("menu.positionLock"), PhantomParameterNames.PositionLock(slot.Slot), "lock")
             };
 
             if (slot.Slot.enableScaleControl
@@ -199,7 +200,7 @@ namespace MPCCT.PhantomSystem.Editor
                 ctx.AssetSaver.SaveAsset(settingsMenu);
                 menu.controls.Add(new VRCExpressionsMenu.Control
                 {
-                    name = "Settings",
+                    name = L.S("menu.settings"),
                     type = VRCExpressionsMenu.Control.ControlType.SubMenu,
                     subMenu = settingsMenu,
                     icon = PhantomMenuIconAssets.Load("settings")
@@ -223,7 +224,7 @@ namespace MPCCT.PhantomSystem.Editor
                 {
                     new VRCExpressionsMenu.Control
                     {
-                        name = "Scale",
+                        name = L.S("menu.scale"),
                         type = VRCExpressionsMenu.Control.ControlType.RadialPuppet,
                         icon = PhantomMenuIconAssets.Load("arrows-diagonal"),
                         subParameters = new[]
@@ -233,7 +234,7 @@ namespace MPCCT.PhantomSystem.Editor
                     },
                     new VRCExpressionsMenu.Control
                     {
-                        name = "Reset Scale",
+                        name = L.S("menu.resetScale"),
                         type = VRCExpressionsMenu.Control.ControlType.Button,
                         parameter = new VRCExpressionsMenu.Control.Parameter
                         {
@@ -242,13 +243,13 @@ namespace MPCCT.PhantomSystem.Editor
                         value = 1f,
                         icon = PhantomMenuIconAssets.Load("restore")
                     },
-                    Toggle("Mirror", PhantomParameterNames.Mirror(slot.Slot), "flip-horizontal")
+                    Toggle(L.S("menu.mirror"), PhantomParameterNames.Mirror(slot.Slot), "flip-horizontal")
                 });
             }
             if (slot.Slot.enablePhantomGrabbing)
             {
                 menu.controls.Add(Toggle(
-                    "Bone Display",
+                    L.S("menu.bones"),
                     PhantomParameterNames.PhantomGrabbingShowBones(slot.Slot),
                     "bone"));
             }
@@ -258,7 +259,7 @@ namespace MPCCT.PhantomSystem.Editor
                 ctx.AssetSaver.SaveAsset(phantomViewMenu);
                 menu.controls.Add(new VRCExpressionsMenu.Control
                 {
-                    name = "Phantom View",
+                    name = L.S("menu.view"),
                     type = VRCExpressionsMenu.Control.ControlType.SubMenu,
                     subMenu = phantomViewMenu,
                     icon = PhantomMenuIconAssets.Load("eye")
@@ -276,12 +277,12 @@ namespace MPCCT.PhantomSystem.Editor
             menu.controls = new List<VRCExpressionsMenu.Control>
             {
                 Toggle(
-                    "Enabled",
+                    L.S("menu.enabled"),
                     PhantomParameterNames.PhantomViewEnabled(slot.Slot),
                     "eye"),
                 new VRCExpressionsMenu.Control
                 {
-                    name = "Stereo Strength",
+                    name = L.S("menu.stereo"),
                     type = VRCExpressionsMenu.Control.ControlType.RadialPuppet,
                     icon = PhantomMenuIconAssets.Load("arrows-diagonal"),
                     subParameters = new[]
@@ -294,7 +295,7 @@ namespace MPCCT.PhantomSystem.Editor
                 },
                 new VRCExpressionsMenu.Control
                 {
-                    name = "Mask Size",
+                    name = L.S("menu.mask"),
                     type = VRCExpressionsMenu.Control.ControlType.RadialPuppet,
                     icon = PhantomMenuIconAssets.Load("arrows-diagonal"),
                     subParameters = new[]

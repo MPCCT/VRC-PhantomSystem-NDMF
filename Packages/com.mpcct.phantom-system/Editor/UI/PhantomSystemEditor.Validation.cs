@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -18,8 +19,8 @@ namespace MPCCT.PhantomSystem.Editor
             var nextExpanded = EditorGUILayout.Foldout(
                 expanded,
                 result == null
-                    ? "Review Any Alerts"
-                    : $"Review Any Alerts ({result.Issues.Count})",
+                    ? L.S("alerts.title")
+                    : L.F("alerts.title.count", result.Issues.Count),
                 true);
             if (nextExpanded != expanded)
             {
@@ -33,13 +34,13 @@ namespace MPCCT.PhantomSystem.Editor
 
             if (result == null)
             {
-                EditorGUILayout.LabelField("Checking source avatar...", EditorStyles.miniLabel);
+                EditorGUILayout.LabelField(L.S("alerts.checking"), EditorStyles.miniLabel);
             }
             else
             {
                 if (result.Issues.Count == 0)
                 {
-                    EditorGUILayout.LabelField("No source validation alerts.", EditorStyles.miniLabel);
+                    EditorGUILayout.LabelField(L.S("alerts.none"), EditorStyles.miniLabel);
                 }
 
                 foreach (var issue in result.Issues)
@@ -52,27 +53,27 @@ namespace MPCCT.PhantomSystem.Editor
                 || result.CompatibilityStatus == PhantomCompatibilityStatus.NotScanned)
             {
                 EditorGUILayout.LabelField(
-                    "Component Compatibility",
-                    "Not scanned",
+                    L.S("alerts.compatibility"),
+                    L.S("alerts.notScanned"),
                     EditorStyles.miniLabel);
                 return;
             }
 
             var compatibilitySummary =
-                $"{result.NdmfEditorOnlyComponentCount} NDMF component(s)";
+                L.F("alerts.components", result.NdmfEditorOnlyComponentCount);
             if (result.UnclassifiedComponentCount > 0)
             {
                 compatibilitySummary +=
-                    $" · {result.UnclassifiedComponentTypeCount} warning(s) across "
-                    + $"{result.UnclassifiedComponentCount} component(s)";
+                    L.F("alerts.unclassified", result.UnclassifiedComponentTypeCount,
+                        result.UnclassifiedComponentCount);
             }
             else
             {
-                compatibilitySummary += " · no unclassified script components";
+                compatibilitySummary += L.S("alerts.classified");
             }
 
             EditorGUILayout.LabelField(
-                "Component Compatibility",
+                L.S("alerts.compatibility"),
                 compatibilitySummary,
                 EditorStyles.miniLabel);
         }
@@ -122,8 +123,8 @@ namespace MPCCT.PhantomSystem.Editor
                     selectButtonWidth,
                     rowRect.height);
                 var selectLabel = selectionTargets.Length > 1
-                    ? $"Select ({selectionTargets.Length})"
-                    : "Select";
+                    ? L.F("common.select.count", selectionTargets.Length)
+                    : L.S("common.select");
                 if (GUI.Button(selectRect, selectLabel))
                 {
                     Selection.objects = selectionTargets;
@@ -141,20 +142,20 @@ namespace MPCCT.PhantomSystem.Editor
         {
             if (validationReport == null)
             {
-                return "Checking...";
+                return L.S("status.checking");
             }
 
             if (validationReport.HasErrors)
             {
-                return "Has Errors";
+                return L.S("status.errors");
             }
 
             if (validationReport.Slots.Any(slot => slot.HasWarnings))
             {
-                return "Warnings";
+                return L.S("status.warnings");
             }
 
-            return slots.arraySize == 0 ? "No Slots" : "Ready";
+            return slots.arraySize == 0 ? L.S("status.noSlots") : L.S("status.ready");
         }
 
         private string SlotStatus(int slotIndex)
@@ -174,27 +175,27 @@ namespace MPCCT.PhantomSystem.Editor
         {
             if (result == null)
             {
-                return "Checking...";
+                return L.S("status.checking");
             }
 
             if (result.HasErrors)
             {
-                return "Error";
+                return L.S("status.error");
             }
 
             if (result.HasWarnings)
             {
                 var warningCount = result.Issues.Count(issue =>
                     issue.Severity == PhantomValidationSeverity.Warning);
-                var warningText = warningCount == 1 ? "1 warning" : $"{warningCount} warnings";
+                var warningText = warningCount == 1 ? L.S("status.warning.one") : L.F("status.warning.many", warningCount);
                 return bitCost.HasValue
-                    ? $"{warningText} · {bitCost.Value} bits"
+                    ? L.F("status.warning.cost", warningText, bitCost.Value)
                     : warningText;
             }
 
             return bitCost.HasValue
-                ? $"{bitCost.Value} bits"
-                : "Ready";
+                ? L.F("common.bits", bitCost.Value)
+                : L.S("status.ready");
         }
 
         private static void DrawIndentedHelpBox(string message, MessageType messageType)

@@ -497,10 +497,15 @@ namespace MPCCT.PhantomSystem.Editor.Tests
         public void SharedSourceController_IsConvertedIndependentlyPerSlot()
         {
             var avatar = new GameObject("Avatar");
-            var clone1 = CreateChild(avatar.transform, "Clone1");
-            var clone2 = CreateChild(avatar.transform, "Clone2");
-            CreateChild(clone1.transform, "Bone");
-            CreateChild(clone2.transform, "Bone");
+            var runtime = CreateChild(avatar.transform, "Runtime");
+            var clone1 = CreateChild(runtime.transform, "Clone1");
+            var clone2 = CreateChild(runtime.transform, "Clone2");
+            foreach (var clone in new[] { clone1, clone2 })
+            {
+                var bone = CreateChild(clone.transform, "Bone");
+                var tail = CreateChild(bone.transform, "Tail");
+                clone.AddComponent<SkinnedMeshRenderer>().bones = new[] { bone.transform, tail.transform };
+            }
             CreateChild(clone1.transform, "Driver");
             CreateChild(clone2.transform, "Driver");
             avatar.AddComponent<Animator>();
@@ -511,6 +516,12 @@ namespace MPCCT.PhantomSystem.Editor.Tests
                 sourceClip,
                 EditorCurveBinding.FloatCurve("Bone", typeof(Transform), "m_LocalPosition.x"),
                 AnimationCurve.Constant(0f, 1f, 0f));
+            AnimationUtility.SetEditorCurve(
+                sourceClip, EditorCurveBinding.FloatCurve("Bone", typeof(Transform), "m_LocalScale.x"),
+                AnimationCurve.Constant(0f, 1f, 1.2f));
+            AnimationUtility.SetEditorCurve(
+                sourceClip, EditorCurveBinding.FloatCurve("Bone/Tail", typeof(Transform), "m_LocalRotation.x"),
+                AnimationCurve.Constant(0f, 1f, 0.2f));
             var sourceTracking = ScriptableObject.CreateInstance<VRCAnimatorTrackingControl>();
             sourceTracking.trackingHead = VRC_AnimatorTrackingControl.TrackingType.Tracking;
             var sourcePlayAudio = ScriptableObject.CreateInstance<VRCAnimatorPlayAudio>();
@@ -602,9 +613,9 @@ namespace MPCCT.PhantomSystem.Editor.Tests
                 Assert.AreEqual("AudioIndex", sourcePlayAudio.ParameterName);
 
                 var slot1Binding = ((VirtualClip)virtual1.Layers.Single().StateMachine.AllStates().Single().Motion)
-                    .GetFloatCurveBindings().Single();
+                    .GetFloatCurveBindings().Single(PhantomFxBoneAnimationFilter.IsDummyBinding);
                 var slot2Binding = ((VirtualClip)virtual2.Layers.Single().StateMachine.AllStates().Single().Motion)
-                    .GetFloatCurveBindings().Single();
+                    .GetFloatCurveBindings().Single(PhantomFxBoneAnimationFilter.IsDummyBinding);
                 Assert.IsTrue(PhantomFxBoneAnimationFilter.IsDummyBinding(slot1Binding));
                 Assert.IsTrue(PhantomFxBoneAnimationFilter.IsDummyBinding(slot2Binding));
                 Assert.AreEqual(1, slot1.ConvertedClipReferences.Count);
@@ -630,7 +641,7 @@ namespace MPCCT.PhantomSystem.Editor.Tests
 
                 var buildState = new PhantomBuildState
                 {
-                    System = new PhantomSystemBuildState()
+                    System = new PhantomSystemBuildState { RuntimeRoot = runtime }
                 };
                 buildState.System.Slots.Add(slot1);
                 buildState.System.Slots.Add(slot2);
@@ -644,6 +655,26 @@ namespace MPCCT.PhantomSystem.Editor.Tests
                     context.ObjectRegistry,
                     buildState,
                     committedClip2));
+                foreach (var pair in new[] { (slot1, committedClip1), (slot2, committedClip2) })
+                {
+                    var bindings = AnimationUtility.GetCurveBindings(pair.Item2);
+                    var prefix = AnimationUtility.CalculateTransformPath(pair.Item1.CloneRoot.transform, avatar.transform);
+                    Assert.IsTrue(bindings.Any(binding => binding.path == prefix + "/Bone"
+                        && binding.propertyName == "m_LocalScale.x"));
+                    Assert.IsTrue(bindings.Any(binding => binding.path == prefix + "/Bone/Tail"
+                        && binding.propertyName == "m_LocalRotation.x"));
+                }
+                avatar.GetComponent<VRCAvatarDescriptor>().baseAnimationLayers = new[]
+                {
+                    new VRCAvatarDescriptor.CustomAnimLayer
+                    {
+                        type = VRCAvatarDescriptor.AnimLayerType.FX,
+                        animatorController = merge1.animator
+                    }
+                };
+                AnimationBindingDiagnostics.InspectFinalAvatar(context, buildState);
+                Assert.IsFalse(buildState.Report.HasErrors,
+                    string.Join("\n", buildState.Report.Errors));
             }
             finally
             {
@@ -1034,7 +1065,9 @@ namespace MPCCT.PhantomSystem.Editor.Tests
                     CloneArmature = armature.transform
                 };
                 slot.CloneBones[HumanBodyBones.Hips] = hips.transform;
-                var bonePaths = PhantomFxBoneAnimationFilter.CollectBonePaths(slot);
+                slot.CloneBoneConstraintTypes[HumanBodyBones.Hips] =
+                    typeof(VRC.SDK3.Dynamics.Constraint.Components.VRCParentConstraint);
+                var bonePaths = PhantomFxBoneAnimationFilter.CollectTransformChannels(slot);
                 var muscleBinding = EditorCurveBinding.FloatCurve(
                     string.Empty,
                     typeof(Animator),
@@ -1121,7 +1154,7 @@ namespace MPCCT.PhantomSystem.Editor.Tests
 
                 var result = PhantomFxBoneAnimationFilter.Filter(
                     clip,
-                    new HashSet<string>(),
+                    new Dictionary<string, PhantomFxBoneAnimationFilter.TransformChannels>(),
                     new HashSet<string>());
 
                 Assert.IsTrue(result.Changed);
@@ -1158,7 +1191,7 @@ namespace MPCCT.PhantomSystem.Editor.Tests
 
                 var result = PhantomFxBoneAnimationFilter.Filter(
                     clip,
-                    new HashSet<string>(),
+                    new Dictionary<string, PhantomFxBoneAnimationFilter.TransformChannels>(),
                     new HashSet<string>());
 
                 Assert.IsFalse(result.Changed);
@@ -1191,7 +1224,7 @@ namespace MPCCT.PhantomSystem.Editor.Tests
 
                 var result = PhantomFxBoneAnimationFilter.Filter(
                     clip,
-                    new HashSet<string>(),
+                    new Dictionary<string, PhantomFxBoneAnimationFilter.TransformChannels>(),
                     new HashSet<string>());
 
                 Assert.IsTrue(result.Changed);
@@ -1235,6 +1268,9 @@ namespace MPCCT.PhantomSystem.Editor.Tests
                     MergeAnimator = mergeAnimator
                 };
             state.CloneToAnimationDriverPaths["Bone"] = "Driver";
+            state.CloneBones[HumanBodyBones.Hips] = cloneRoot.transform.Find("Bone");
+            state.CloneBoneConstraintTypes[HumanBodyBones.Hips] =
+                typeof(VRC.SDK3.Dynamics.Constraint.Components.VRCParentConstraint);
             state.ParameterPlan = CreateParameterPlan(state.Slot, "AudioIndex");
             return state;
         }

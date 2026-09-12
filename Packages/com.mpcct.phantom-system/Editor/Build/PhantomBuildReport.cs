@@ -2,8 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using nadena.dev.ndmf;
+using nadena.dev.ndmf.localization;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 
 namespace MPCCT.PhantomSystem.Editor
 {
@@ -18,9 +21,13 @@ namespace MPCCT.PhantomSystem.Editor
 
         private int reportedErrorCount;
 
-        public void Warning(string message, UnityEngine.Object context = null)
+        public void Warning(string message, UnityEngine.Object context = null) =>
+            Warning((PhantomDiagnostic)message, context);
+
+        internal void Warning(PhantomDiagnostic message, UnityEngine.Object context = null)
         {
-            Debug.LogWarning("[PhantomSystem] " + message, context);
+            // Warnings appear in NDMF's console, but never enter the blocking error list.
+            ReportToNdmf(new PhantomBuildIssue(PhantomValidationSeverity.Warning, message, context, null));
         }
 
         public void Info(string message, UnityEngine.Object context = null)
@@ -28,86 +35,77 @@ namespace MPCCT.PhantomSystem.Editor
             Debug.Log("[PhantomSystem] " + message, context);
         }
 
-        public void Error(string message, UnityEngine.Object context = null)
+        internal void Info(PhantomDiagnostic message, UnityEngine.Object context = null) =>
+            Info(message?.ToString(), context);
+
+        public void Error(string message, UnityEngine.Object context = null) =>
+            Error((PhantomDiagnostic)message, context);
+
+        internal void Error(PhantomDiagnostic message, UnityEngine.Object context = null)
         {
             issues.Add(new PhantomBuildIssue(
-                PhantomValidationSeverity.ConfigurationError,
-                message,
-                context,
-                null));
+                PhantomValidationSeverity.ConfigurationError, message, context, null));
         }
 
         public void InternalError(
             string message,
             UnityEngine.Object context = null,
-            System.Exception exception = null)
+            Exception exception = null) =>
+            InternalError((PhantomDiagnostic)message, context, exception);
+
+        internal void InternalError(
+            PhantomDiagnostic message,
+            UnityEngine.Object context = null,
+            Exception exception = null)
         {
             issues.Add(new PhantomBuildIssue(
-                PhantomValidationSeverity.InternalError,
-                "Internal build error: " + message,
-                context,
-                exception));
+                PhantomValidationSeverity.InternalError, message, context, exception));
         }
 
-        public bool BeginPass()
-        {
-            return !IsAborted;
-        }
+        public bool BeginPass() => !IsAborted;
 
-        public void ThrowIfErrors()
-        {
-            AbortIfErrors();
-        }
+        public void ThrowIfErrors() => AbortIfErrors();
 
         public void AbortIfErrors()
         {
-            if (!HasErrors || IsAborted)
-            {
-                return;
-            }
+            if (!HasErrors || IsAborted) return;
 
             IsAborted = true;
-            ReportPendingErrorsToNdmf();
+            for (var i = reportedErrorCount; i < issues.Count; i++)
+            {
+                ReportToNdmf(issues[i]);
+            }
+            reportedErrorCount = issues.Count;
             throw new PhantomBuildAbortException();
         }
 
-        private void ReportPendingErrorsToNdmf()
+        private static void ReportToNdmf(PhantomBuildIssue issue)
         {
-            for (var i = reportedErrorCount; i < issues.Count; i++)
+            using (ErrorReport.WithContextObject(issue.Context))
             {
-                var issue = issues[i];
-                if (issue.Context != null)
-                {
-                    using (ErrorReport.WithContextObject(issue.Context))
-                    {
-                        ErrorReport.ReportError(new PhantomBuildError(issue));
-                    }
-                }
-                else
-                {
-                    ErrorReport.ReportError(new PhantomBuildError(issue));
-                }
+                ErrorReport.ReportError(new PhantomBuildError(issue));
             }
-
-            reportedErrorCount = issues.Count;
         }
     }
 
     internal sealed class PhantomBuildIssue
     {
         public PhantomValidationSeverity Severity { get; }
-        public string Message { get; }
+        internal PhantomDiagnostic Diagnostic { get; }
+        public string Message => Severity == PhantomValidationSeverity.InternalError
+            ? L.F("diagnostic.report.internal", Diagnostic)
+            : Diagnostic?.ToString();
         public UnityEngine.Object Context { get; }
         public Exception Exception { get; }
 
         public PhantomBuildIssue(
             PhantomValidationSeverity severity,
-            string message,
+            PhantomDiagnostic message,
             UnityEngine.Object context,
             Exception exception)
         {
             Severity = severity;
-            Message = message;
+            Diagnostic = message;
             Context = context;
             Exception = exception;
         }
@@ -117,46 +115,93 @@ namespace MPCCT.PhantomSystem.Editor
             : $"{Message}\n{Exception}";
     }
 
-    internal sealed class PhantomBuildAbortException : System.InvalidOperationException
+    internal sealed class PhantomBuildAbortException : InvalidOperationException
     {
         public PhantomBuildAbortException()
-            : base("PhantomSystem build failed. See the NDMF Console for details.")
+            : base(L.S("diagnostic.report.aborted"))
         {
         }
     }
 
-    internal sealed class PhantomBuildError : IError
+    internal sealed class PhantomBuildError : SimpleError
     {
-        private const string Title = "PhantomSystem build failed";
         private readonly PhantomBuildIssue issue;
 
-        public PhantomBuildError(PhantomBuildIssue issue)
+        public PhantomBuildError(PhantomBuildIssue issue) => this.issue = issue;
+
+        public override Localizer Localizer => L.Localizer;
+        public override string TitleKey => issue.Severity == PhantomValidationSeverity.Warning
+            ? "diagnostic.report.warning"
+            : "diagnostic.report.failed";
+        public override ErrorSeverity Severity => issue.Severity == PhantomValidationSeverity.Warning
+            ? ErrorSeverity.NonFatal
+            : ErrorSeverity.Error;
+        public override string FormatDetails() => issue.DiagnosticMessage;
+        public override string ToMessage() => $"[PhantomSystem] {issue.DiagnosticMessage}";
+
+        public override VisualElement CreateVisualElement(ErrorReport report) =>
+            new SceneSafeError(this, report).CreateVisualElement(report);
+
+        /// <summary>
+        /// Keep NDMF's standard localized UI, but treat references to a closed scene
+        /// as text. The underlying report and its object references stay intact.
+        /// </summary>
+        private sealed class SceneSafeError : SimpleError
         {
-            this.issue = issue;
-        }
+            private readonly PhantomBuildError source;
+            private readonly ErrorReport report;
 
-        public ErrorSeverity Severity => ErrorSeverity.Error;
+            internal SceneSafeError(PhantomBuildError source, ErrorReport report)
+            {
+                this.source = source;
+                this.report = report;
+            }
 
-        public void AddReference(ObjectReference obj)
-        {
-            // Required by IError. PhantomSystem supplies its context through
-            // ErrorReport.WithContextObject when the error is reported.
-        }
+            public override Localizer Localizer => source.Localizer;
+            public override string TitleKey => source.TitleKey;
+            public override ErrorSeverity Severity => source.Severity;
 
-        public VisualElement CreateVisualElement(ErrorReport report)
-        {
-            var root = new VisualElement();
-            var title = new Label(Title);
-            title.style.unityFontStyleAndWeight = FontStyle.Bold;
+            public override ObjectReference[] References => CanReadReportScene()
+                ? source.References
+                : source.References.Where(IsPersistent).ToArray();
 
-            root.Add(title);
-            root.Add(new Label(issue.DiagnosticMessage));
-            return root;
-        }
+            public override string FormatDetails()
+            {
+                var details = source.FormatDetails();
+                if (CanReadReportScene()) return details;
 
-        public string ToMessage()
-        {
-            return $"[PhantomSystem] {issue.DiagnosticMessage}";
+                var unresolved = source.References
+                    .Where(reference => !IsPersistent(reference))
+                    .Select(reference => string.IsNullOrEmpty(reference.Path)
+                        ? report?.AvatarRootPath ?? reference.ToString()
+                        : reference.Path)
+                    .Where(path => !string.IsNullOrEmpty(path))
+                    .Distinct()
+                    .ToArray();
+                return unresolved.Length == 0
+                    ? details
+                    : details + "\n" + string.Join("\n", unresolved);
+            }
+
+            private bool CanReadReportScene()
+            {
+                if (report == null) return false;
+                try
+                {
+                    // NDMF 1.14 does not check Scene.IsValid before enumerating roots.
+                    // A valid scene with a missing avatar is safe: NDMF shows plain text.
+                    report.TryResolveAvatar(out _);
+                    return true;
+                }
+                catch (ArgumentException)
+                {
+                    // Test Runner and scene changes can unload the report's scene.
+                    return false;
+                }
+            }
+
+            private static bool IsPersistent(ObjectReference reference) =>
+                reference.Object != null && EditorUtility.IsPersistent(reference.Object);
         }
     }
 }

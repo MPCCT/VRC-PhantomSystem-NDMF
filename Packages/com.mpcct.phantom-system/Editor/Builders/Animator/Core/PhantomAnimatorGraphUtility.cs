@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using System.Collections.Generic;
 using UnityEditor.Animations;
 using UnityEngine;
@@ -119,7 +120,7 @@ namespace MPCCT.PhantomSystem.Editor
                     break;
                 default:
                     throw new System.InvalidOperationException(
-                        $"Unsupported core Animator parameter type '{entry.ControllerParameterType}' for '{name}'.");
+                        L.F("diagnostic.animator.unsupportedCoreType", entry.ControllerParameterType, name));
             }
         }
 
@@ -254,8 +255,7 @@ namespace MPCCT.PhantomSystem.Editor
                 if (childState.state != null && childState.state.motion == null)
                 {
                     context.Report.Error(
-                        $"Generated Animator layer '{layerName}' contains state "
-                        + $"'{childState.state.name}' without a Motion.",
+                        L.D("diagnostic.animator.missingMotion", layerName, childState.state.name),
                         context.Controller);
                 }
             }

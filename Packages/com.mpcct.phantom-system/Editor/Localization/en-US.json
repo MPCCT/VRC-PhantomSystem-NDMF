@@ -1,0 +1,1264 @@
+{
+  "entries": [
+    {
+      "key": "language.editor",
+      "value": "Language"
+    },
+    {
+      "key": "common.refresh",
+      "value": "Refresh"
+    },
+    {
+      "key": "common.select",
+      "value": "Select"
+    },
+    {
+      "key": "common.select.count",
+      "value": "Select ({0})"
+    },
+    {
+      "key": "common.up",
+      "value": "Up"
+    },
+    {
+      "key": "common.down",
+      "value": "Down"
+    },
+    {
+      "key": "common.remove",
+      "value": "Remove"
+    },
+    {
+      "key": "common.clear",
+      "value": "Clear"
+    },
+    {
+      "key": "common.cancel",
+      "value": "Cancel"
+    },
+    {
+      "key": "common.ok",
+      "value": "OK"
+    },
+    {
+      "key": "common.bits",
+      "value": "{0} bits"
+    },
+    {
+      "key": "header.cost",
+      "value": "{0} slot(s) · estimated PhantomSystem contribution {1} bits"
+    },
+    {
+      "key": "header.analyzing",
+      "value": "{0} slot(s) · analyzing parameters..."
+    },
+    {
+      "key": "header.description",
+      "value": "Each source avatar is independently prebaked through NDMF. Configure and validate each slot below; the original source avatar is never modified."
+    },
+    {
+      "key": "slots.title",
+      "value": "Slots"
+    },
+    {
+      "key": "slots.empty",
+      "value": "No slots are configured. Add a slot and assign a humanoid source avatar."
+    },
+    {
+      "key": "slots.add",
+      "value": "Add Slot"
+    },
+    {
+      "key": "slot.name",
+      "value": "Slot Name"
+    },
+    {
+      "key": "slot.source",
+      "value": "Phantom Avatar"
+    },
+    {
+      "key": "slot.spawn",
+      "value": "Spawn Override"
+    },
+    {
+      "key": "slot.includeMenu",
+      "value": "Include Phantom Menu"
+    },
+    {
+      "key": "slot.includeMenu.tooltip",
+      "value": "Include the final Expression Menu produced by this phantom avatar's NDMF prebake."
+    },
+    {
+      "key": "slot.grabbing",
+      "value": "Enable Phantom Grabbing"
+    },
+    {
+      "key": "slot.grabbing.tooltip",
+      "value": "While the phantom is frozen, Rock&Roll gesture lets either hand move its Hips through contact grabbing, while a generated Humanoid PhysBone proxy lets its body react and be posed. Turning Freeze off disables Phantom Grabbing and returns the phantom to base-avatar following."
+    },
+    {
+      "key": "slot.scale",
+      "value": "Enable Scale Control"
+    },
+    {
+      "key": "slot.scale.tooltip",
+      "value": "Add per-slot radial scale control, reset, and X-axis mirror controls."
+    },
+    {
+      "key": "slot.view",
+      "value": "Enable Phantom View"
+    },
+    {
+      "key": "slot.view.tooltip",
+      "value": "Add a local stereo view rendered from the phantom's Humanoid Head."
+    },
+    {
+      "key": "slot.parameters",
+      "value": "Parameter Settings"
+    },
+    {
+      "key": "slot.prefix",
+      "value": "Parameter Prefix"
+    },
+    {
+      "key": "slot.namespace",
+      "value": "Namespace Phantom Parameters"
+    },
+    {
+      "key": "slot.sourceExcluded",
+      "value": "Source FX, Action, Gesture, parameters, and menu are excluded."
+    },
+    {
+      "key": "slot.advanced",
+      "value": "Advanced"
+    },
+    {
+      "key": "slot.removeControls",
+      "value": "Remove Source Controls"
+    },
+    {
+      "key": "slot.removeControls.tooltip",
+      "value": "Exclude this phantom's prebaked FX, Action, and Gesture controllers, source parameter definitions, and final source Expression Menu. PhantomSystem Core controls remain installed."
+    },
+    {
+      "key": "slot.rotation",
+      "value": "Use Rotation Constraint"
+    },
+    {
+      "key": "slot.rotation.tooltip",
+      "value": "Use Rotation Constraints instead of Parent Constraints for non-Hips humanoid bones."
+    },
+    {
+      "key": "slot.worldRotation",
+      "value": "Rotation Solve In World Space"
+    },
+    {
+      "key": "slot.worldRotation.tooltip",
+      "value": "Solve generated Rotation Constraints in world space."
+    },
+    {
+      "key": "slot.immobile",
+      "value": "Override PhysBone Immobile Type"
+    },
+    {
+      "key": "slot.immobile.tooltip",
+      "value": "Set every PhysBone in this slot to All Motion. This can fix cases where a frozen phantom's PhysBones move along with the base avatar, but it overrides the source settings and may break PhysBone behavior."
+    },
+    {
+      "key": "slot.tracking",
+      "value": "Try Convert Animator Tracking Control"
+    },
+    {
+      "key": "slot.tracking.tooltip",
+      "value": "Convert supported Animator Tracking Control behaviors into PhantomSystem bone-group synchronization. Unsupported face simulation is reported as a partial conversion."
+    },
+    {
+      "key": "slot.nearClip",
+      "value": "Phantom View Near Clip (m)"
+    },
+    {
+      "key": "slot.nearClip.tooltip",
+      "value": "Near clipping distance at 1x phantom scale. Increase it if the phantom's face obscures the view. The generated camera value follows Phantom Scale automatically."
+    },
+    {
+      "key": "system.title",
+      "value": "System Options"
+    },
+    {
+      "key": "system.installMenu",
+      "value": "Install Phantom Menu"
+    },
+    {
+      "key": "system.installMenu.tooltip",
+      "value": "Generate and install the PhantomSystem Core menu."
+    },
+    {
+      "key": "system.menuLocation",
+      "value": "Select Core Menu Location"
+    },
+    {
+      "key": "system.installerHelp",
+      "value": "Configure only the attached MA Menu Installer's target; its source menu is supplied at build time."
+    },
+    {
+      "key": "system.settings",
+      "value": "Open Global Settings"
+    },
+    {
+      "key": "system.bakeHelp",
+      "value": "Modular Avatar's regular Manual Bake does not run the VRChat preprocess hook used by PhantomSystem. This manual bake button first prebakes all phantom sources, then runs NDMF's normal manual avatar bake."
+    },
+    {
+      "key": "system.bake",
+      "value": "Manual Bake Avatar with PhantomSystem"
+    },
+    {
+      "key": "system.bake.tooltip",
+      "value": "Manually bake the avatar: prebake every configured phantom source, then run NDMF's normal Manual Bake Avatar workflow."
+    },
+    {
+      "key": "sharing.title",
+      "value": "Same-name Parameter Sharing"
+    },
+    {
+      "key": "sharing.analyzing",
+      "value": "Analyzing NDMF parameters..."
+    },
+    {
+      "key": "sharing.cost",
+      "value": "Source {0} bits · shared -{1} bits · PhantomSystem {2} bits · final {3} bits"
+    },
+    {
+      "key": "sharing.disabled",
+      "value": "Parameter namespacing is disabled. Compatible same-name parameters already share their original names. Incompatible collisions are automatically moved under this Slot's Original prefix."
+    },
+    {
+      "key": "sharing.empty",
+      "value": "No same-name expression parameters were found on the base avatar."
+    },
+    {
+      "key": "sharing.compatible",
+      "value": "Share Compatible"
+    },
+    {
+      "key": "sharing.keep",
+      "value": "Keep this phantom parameter unrenamed so it shares the base parameter."
+    },
+    {
+      "key": "sharing.network",
+      "value": "network"
+    },
+    {
+      "key": "sharing.local",
+      "value": "local"
+    },
+    {
+      "key": "sharing.avatarParameters",
+      "value": "Avatar Parameters · {0}"
+    },
+    {
+      "key": "sharing.unknown",
+      "value": "Unknown Parameter Source"
+    },
+    {
+      "key": "sharing.avatarTooltip",
+      "value": "Parameters declared by the prebaked avatar's VRCExpressionParameters asset."
+    },
+    {
+      "key": "sharing.unknownTooltip",
+      "value": "NDMF did not expose a source component for this resolved parameter."
+    },
+    {
+      "key": "sharing.provider",
+      "value": "an unlabelled NDMF provider"
+    },
+    {
+      "key": "sharing.plugin",
+      "value": "the {0} NDMF plugin"
+    },
+    {
+      "key": "sharing.providedBy",
+      "value": "Provided by {0} at '{1}' through {2}."
+    },
+    {
+      "key": "sharing.root",
+      "value": "Avatar Root"
+    },
+    {
+      "key": "sharing.removeStale",
+      "value": "Remove Stale Rules"
+    },
+    {
+      "key": "alerts.title",
+      "value": "Review Any Alerts"
+    },
+    {
+      "key": "alerts.title.count",
+      "value": "Review Any Alerts ({0})"
+    },
+    {
+      "key": "alerts.checking",
+      "value": "Checking source avatar..."
+    },
+    {
+      "key": "alerts.none",
+      "value": "No source validation alerts."
+    },
+    {
+      "key": "alerts.compatibility",
+      "value": "Component Compatibility"
+    },
+    {
+      "key": "alerts.notScanned",
+      "value": "Not scanned"
+    },
+    {
+      "key": "alerts.components",
+      "value": "{0} NDMF component(s)"
+    },
+    {
+      "key": "alerts.unclassified",
+      "value": " · {0} warning(s) across {1} component(s)"
+    },
+    {
+      "key": "alerts.classified",
+      "value": " · no unclassified script components"
+    },
+    {
+      "key": "status.checking",
+      "value": "Checking..."
+    },
+    {
+      "key": "status.errors",
+      "value": "Has Errors"
+    },
+    {
+      "key": "status.error",
+      "value": "Error"
+    },
+    {
+      "key": "status.warnings",
+      "value": "Warnings"
+    },
+    {
+      "key": "status.noSlots",
+      "value": "No Slots"
+    },
+    {
+      "key": "status.ready",
+      "value": "Ready"
+    },
+    {
+      "key": "status.warning.one",
+      "value": "1 warning"
+    },
+    {
+      "key": "status.warning.many",
+      "value": "{0} warnings"
+    },
+    {
+      "key": "status.warning.cost",
+      "value": "{0} · {1} bits"
+    },
+    {
+      "key": "settings.window",
+      "value": "PhantomSystem Settings"
+    },
+    {
+      "key": "settings.title",
+      "value": "PhantomSystem Global Settings"
+    },
+    {
+      "key": "settings.description",
+      "value": "These settings are shared by every PhantomSystem avatar in this Unity project. A stable snapshot is taken at the beginning of each build."
+    },
+    {
+      "key": "settings.view",
+      "value": "Phantom View"
+    },
+    {
+      "key": "settings.texture",
+      "value": "Texture Size"
+    },
+    {
+      "key": "settings.texture.tooltip",
+      "value": "Resolution of each shared Phantom View eye RenderTexture."
+    },
+    {
+      "key": "settings.textureHelp",
+      "value": "Applied equally to the shared left-eye and right-eye RenderTextures."
+    },
+    {
+      "key": "settings.largeTexture",
+      "value": "4096 creates two very large render targets and can consume substantial GPU memory. Use it only after profiling the target PC setup."
+    },
+    {
+      "key": "settings.conversion",
+      "value": "Humanoid Animation Conversion"
+    },
+    {
+      "key": "settings.sampleRate",
+      "value": "Maximum Adaptive Sample Rate"
+    },
+    {
+      "key": "settings.sampleRate.tooltip",
+      "value": "Limits automatically inserted samples. Original key times are preserved as candidates."
+    },
+    {
+      "key": "settings.positionError",
+      "value": "Position Error Tolerance"
+    },
+    {
+      "key": "settings.positionError.tooltip",
+      "value": "Maximum local-position interpolation error used for adaptive subdivision and reduction."
+    },
+    {
+      "key": "settings.rotationError",
+      "value": "Rotation Error Tolerance"
+    },
+    {
+      "key": "settings.rotationError.tooltip",
+      "value": "Maximum local-rotation angular error used for adaptive subdivision and reduction."
+    },
+    {
+      "key": "settings.degrees",
+      "value": "degrees"
+    },
+    {
+      "key": "settings.toleranceHelp",
+      "value": "Smaller tolerances preserve more motion detail but produce larger AnimationClips. If the sample-rate limit is reached before tolerance is met, the build reports a warning."
+    },
+    {
+      "key": "settings.cache",
+      "value": "Humanoid Bake Cache"
+    },
+    {
+      "key": "settings.cacheData",
+      "value": "Cached Pose Data"
+    },
+    {
+      "key": "settings.cacheStats",
+      "value": "{0} entries, {1}"
+    },
+    {
+      "key": "settings.cacheHelp",
+      "value": "The cache is project-local derived data stored under Library. It is not referenced by the built avatar and can be cleared at any time."
+    },
+    {
+      "key": "settings.clearCache",
+      "value": "Clear Humanoid Bake Cache"
+    },
+    {
+      "key": "settings.reset",
+      "value": "Reset to Defaults"
+    },
+    {
+      "key": "tools.deleteTitle",
+      "value": "Delete all generated Phantom prebake assets?"
+    },
+    {
+      "key": "tools.deleteDescription",
+      "value": "Successful VRC builds normally remove these assets automatically. Every remaining PhantomSystem-managed PhantomPrebake_<Hash> directory will be deleted without checking references. Completed VRC and manual-bake results do not depend on these intermediate assets. This cannot be undone."
+    },
+    {
+      "key": "tools.deleteAll",
+      "value": "Delete All"
+    },
+    {
+      "key": "tools.deletedTitle",
+      "value": "Phantom prebake asset deletion"
+    },
+    {
+      "key": "tools.noAssets",
+      "value": "No generated Phantom prebake asset directories were found."
+    },
+    {
+      "key": "tools.deleted",
+      "value": "Found {0} generated prebake directories.\n\nRemoved: {1}\nFailed to remove: {2}"
+    },
+    {
+      "key": "tools.clearTitle",
+      "value": "Clear Humanoid bake cache?"
+    },
+    {
+      "key": "tools.clearDescription",
+      "value": "Delete {0} cached Humanoid bake entries ({1}) from this project's Library folder?\n\nThe cache contains only derived pose data and will be rebuilt when needed."
+    },
+    {
+      "key": "tools.clear",
+      "value": "Clear Cache"
+    },
+    {
+      "key": "menu.activate",
+      "value": "Activate"
+    },
+    {
+      "key": "menu.freeze",
+      "value": "Freeze"
+    },
+    {
+      "key": "menu.positionLock",
+      "value": "Position Lock"
+    },
+    {
+      "key": "menu.settings",
+      "value": "Settings"
+    },
+    {
+      "key": "menu.scale",
+      "value": "Scale"
+    },
+    {
+      "key": "menu.resetScale",
+      "value": "Reset Scale"
+    },
+    {
+      "key": "menu.mirror",
+      "value": "Mirror"
+    },
+    {
+      "key": "menu.bones",
+      "value": "Bone Display"
+    },
+    {
+      "key": "menu.view",
+      "value": "Phantom View"
+    },
+    {
+      "key": "menu.enabled",
+      "value": "Enabled"
+    },
+    {
+      "key": "menu.stereo",
+      "value": "Stereo Strength"
+    },
+    {
+      "key": "menu.mask",
+      "value": "Mask Size"
+    },
+    {
+      "key": "menu.original",
+      "value": "Original Menu"
+    },
+    {
+      "key": "menu.source",
+      "value": "{0} Menu"
+    },
+    {
+      "key": "diagnostic.build.passFailed",
+      "value": "Pass '{0}' threw unexpectedly."
+    },
+    {
+      "key": "diagnostic.driver.incompleteContext",
+      "value": "Slot '{0}' could not create its Driver neutral animator because the build context is incomplete."
+    },
+    {
+      "key": "diagnostic.driver.invalidHumanoid",
+      "value": "Slot '{0}' could not sample its Driver neutral pose because its cloned Animator is not a valid Humanoid."
+    },
+    {
+      "key": "diagnostic.driver.sampleFailed",
+      "value": "Slot '{0}' could not sample its Humanoid Driver neutral pose: {1}"
+    },
+    {
+      "key": "diagnostic.driver.missingBone",
+      "value": "Slot '{0}' has no Driver transform for Humanoid bone '{1}'."
+    },
+    {
+      "key": "diagnostic.driver.missingPath",
+      "value": "Slot '{0}' could not resolve the avatar-relative Driver path for Humanoid bone '{1}'."
+    },
+    {
+      "key": "diagnostic.driver.missingParent",
+      "value": "Slot '{0}' could not resolve the sampling pose parent for Humanoid bone '{1}'."
+    },
+    {
+      "key": "diagnostic.animator.missingMotion",
+      "value": "Generated Animator layer '{0}' contains state '{1}' without a Motion."
+    },
+    {
+      "key": "diagnostic.animator.priorityExhausted",
+      "value": "Slot '{0}' cannot allocate a Merge Animator priority because the base avatar already uses int.MaxValue."
+    },
+    {
+      "key": "diagnostic.rig.positionLockPaths",
+      "value": "Slot '{0}' could not resolve PositionLock helper paths."
+    },
+    {
+      "key": "diagnostic.rig.bodyProxyPaths",
+      "value": "Slot '{0}' could not resolve the generated body proxy skeleton required by Phantom Grabbing."
+    },
+    {
+      "key": "diagnostic.rig.boneDisplayPaths",
+      "value": "Slot '{0}' could not resolve the generated Phantom Grabbing bone display."
+    },
+    {
+      "key": "diagnostic.rig.grabbingConstraintPaths",
+      "value": "Slot '{0}' could not resolve the generated constraint paths required by Phantom Grabbing."
+    },
+    {
+      "key": "diagnostic.rig.viewPaths",
+      "value": "Slot '{0}' could not resolve the generated Phantom View paths."
+    },
+    {
+      "key": "diagnostic.rig.scalePaths",
+      "value": "Slot '{0}' could not resolve its ScaleRoot or MirrorRoot path."
+    },
+    {
+      "key": "diagnostic.layerControl.missingDescriptor",
+      "value": "Cannot validate Phantom Animator Layer Controls because the final avatar descriptor is missing."
+    },
+    {
+      "key": "diagnostic.layerControl.duplicateName",
+      "value": "Merged {0} controller contains duplicate PhantomSystem layer name '{1}'. Animator Layer Control targets are ambiguous."
+    },
+    {
+      "key": "diagnostic.layerControl.missingMergedController",
+      "value": "Cannot disable Converted Action layers because the merged {0} controller is missing."
+    },
+    {
+      "key": "diagnostic.layerControl.missingActionLayer",
+      "value": "Could not resolve Converted Action layer '{0}' in the merged {1} controller."
+    },
+    {
+      "key": "diagnostic.layerControl.actionAtZero",
+      "value": "Converted Action layer '{0}' became merged {1} layer 0 and cannot be weight-controlled."
+    },
+    {
+      "key": "diagnostic.layerControl.unresolvedTarget",
+      "value": "Could not resolve Phantom Animator Layer Control target before VRCFury processing: '{0}/{1}'."
+    },
+    {
+      "key": "diagnostic.layerControl.markersBeforeVrcfury",
+      "value": "Merged {0} controller still contains {1} temporary Phantom Animator Layer Control marker(s) before VRCFury processing."
+    },
+    {
+      "key": "diagnostic.layerControl.markersFinal",
+      "value": "Final {0} controller still contains {1} temporary Phantom Animator Layer Control marker(s)."
+    },
+    {
+      "key": "diagnostic.cache.keyFailed",
+      "value": "[PhantomSystem] Could not create a Humanoid bake cache key for '{0}'. The clip will be baked normally. {1}"
+    },
+    {
+      "key": "diagnostic.cache.damaged",
+      "value": "[PhantomSystem] Ignored a damaged Humanoid bake cache entry '{0}'. The clip will be baked again. {1}"
+    },
+    {
+      "key": "diagnostic.cache.writeFailed",
+      "value": "[PhantomSystem] Could not save Humanoid bake cache entry '{0}'. The current build can continue without it. {1}"
+    },
+    {
+      "key": "diagnostic.cache.cleanupFailed",
+      "value": "[PhantomSystem] Could not remove incompatible Humanoid bake cache data. {0}"
+    },
+    {
+      "key": "diagnostic.conversion.fxMirror",
+      "value": "Slot '{0}' FX state '{1}' uses parameter-driven Humanoid Mirror ('{2}'). Source FX bone animation is removed, so PhantomSystem will ignore this Mirror parameter."
+    },
+    {
+      "key": "diagnostic.conversion.mirror",
+      "value": "Slot '{0}' {1} state '{2}' uses parameter-driven Humanoid Mirror ('{3}'). PhantomSystem baked the state's default Mirror value ({4}) and will ignore runtime changes to that Mirror parameter."
+    },
+    {
+      "key": "diagnostic.conversion.fxFiltered",
+      "value": "Slot '{0}' removed {1} skeletal Transform curve(s) and {2} non-parameter Animator curve(s) from {3} Source FX clip variant(s). A dummy binding preserves each affected clip's duration and prevents empty-clip Write Defaults behavior."
+    },
+    {
+      "key": "diagnostic.conversion.unsupportedBindings",
+      "value": "Slot '{0}' {1} clip '{2}' skipped {3} unsupported Animator binding(s){4}"
+    },
+    {
+      "key": "diagnostic.conversion.rootMotion",
+      "value": "Slot '{0}' {1} clip '{2}' localized Root Motion to its phantom Hips."
+    },
+    {
+      "key": "diagnostic.conversion.rootScale",
+      "value": "Slot '{0}' {1} clip '{2}' ignored {3} root scale binding(s)."
+    },
+    {
+      "key": "diagnostic.conversion.samplingLimit",
+      "value": "Slot '{0}' {1} clip '{2}' reached the adaptive sampling limit ({3:0.###} FPS) before all bone errors fell within the configured tolerance."
+    },
+    {
+      "key": "diagnostic.behaviour.trackingConverted",
+      "value": "Slot '{0}' converted {1} Animator Tracking Control behavior(s) into {2} phantom parameter driver(s)."
+    },
+    {
+      "key": "diagnostic.behaviour.trackingRemoved",
+      "value": "Slot '{0}' removed {1} Animator Tracking Control behavior(s) without conversion."
+    },
+    {
+      "key": "diagnostic.behaviour.locomotionRemoved",
+      "value": "Slot '{0}' removed {1} avatar-global Animator Locomotion Control behavior(s)."
+    },
+    {
+      "key": "diagnostic.behaviour.poseSpaceRemoved",
+      "value": "Slot '{0}' removed {1} avatar-global Animator Temporary Pose Space behavior(s)."
+    },
+    {
+      "key": "diagnostic.behaviour.playableRemoved",
+      "value": "Slot '{0}' removed {1} Playable Layer Control behavior(s) with unavailable or unsupported targets."
+    },
+    {
+      "key": "diagnostic.behaviour.actionConverted",
+      "value": "Slot '{0}' converted {1} binary Action Playable Layer Control behavior(s) into instant controls for all Converted Action layers."
+    },
+    {
+      "key": "diagnostic.behaviour.actionNonBinary",
+      "value": "Slot '{0}' removed {1} Action Playable Layer Control behavior(s) whose Goal Weight was neither 0 nor 1."
+    },
+    {
+      "key": "diagnostic.behaviour.actionBlendIgnored",
+      "value": "Slot '{0}' ignored Blend Duration on {1} converted Action Playable Layer Control behavior(s); Converted Action switching is instant."
+    },
+    {
+      "key": "diagnostic.behaviour.actionLayerRemoved",
+      "value": "Slot '{0}' removed {1} Animator Layer Control behavior(s) targeting Action because Converted Action weight is controlled as one playable group."
+    },
+    {
+      "key": "diagnostic.behaviour.layerRetargeted",
+      "value": "Slot '{0}' scheduled {1} Animator Layer Control behavior(s) for final layer retargeting."
+    },
+    {
+      "key": "diagnostic.behaviour.layerRemoved",
+      "value": "Slot '{0}' removed {1} Animator Layer Control behavior(s) with unavailable or unsupported targets."
+    },
+    {
+      "key": "diagnostic.behaviour.eyesPartial",
+      "value": "Slot '{0}' converts Eyes & Eyelids using available eye bones only."
+    },
+    {
+      "key": "diagnostic.behaviour.mouthPartial",
+      "value": "Slot '{0}' converts Mouth & Jaw using the available jaw bone only."
+    },
+    {
+      "key": "diagnostic.conversion.unregisteredController",
+      "value": "Slot '{0}' {1} Source Merge Animator was not registered in NDMF Animator Services."
+    },
+    {
+      "key": "diagnostic.rig.missingCloneArmature",
+      "value": "Slot '{0}' could not resolve the prebaked phantom armature from humanoid hips."
+    },
+    {
+      "key": "diagnostic.conversion.unsupportedController",
+      "value": "Slot '{0}' uses unsupported {1} controller type '{2}'."
+    },
+    {
+      "key": "diagnostic.menu.missingCore",
+      "value": "Slot '{0}' requested source menu installation, but the enabled Core Menu builder returned no menu."
+    },
+    {
+      "key": "diagnostic.rig.missingBaseAnimator",
+      "value": "Base avatar Animator disappeared before constraint generation."
+    },
+    {
+      "key": "diagnostic.rig.missingBaseArmature",
+      "value": "Base avatar armature could not be resolved from humanoid hips."
+    },
+    {
+      "key": "diagnostic.grabbing.missingHips",
+      "value": "Slot '{0}' enables Phantom Grabbing, but its baked avatar has no Humanoid Hips."
+    },
+    {
+      "key": "diagnostic.grabbing.missingProxyHips",
+      "value": "Slot '{0}' could not generate the Phantom Grabbing body proxy Hips."
+    },
+    {
+      "key": "diagnostic.boneDisplay.missingMaterial",
+      "value": "Phantom Grabbing bone display material was not found at '{0}'."
+    },
+    {
+      "key": "diagnostic.boneDisplay.missingSegments",
+      "value": "Slot '{0}' generated no Phantom Grabbing body segments for bone display."
+    },
+    {
+      "key": "diagnostic.boneDisplay.missingMesh",
+      "value": "Phantom Grabbing bone display mesh was not found in '{0}'."
+    },
+    {
+      "key": "diagnostic.boneDisplay.zeroBounds",
+      "value": "Phantom Grabbing bone display template '{0}' must have non-zero X, Y, and Z bounds."
+    },
+    {
+      "key": "diagnostic.boneDisplay.emptyGeometry",
+      "value": "Phantom Grabbing bone display template '{0}' contains no geometry."
+    },
+    {
+      "key": "diagnostic.grabbing.missingHands",
+      "value": "Slot '{0}' enables Phantom Grabbing, but the base avatar does not expose both Humanoid hand bones."
+    },
+    {
+      "key": "diagnostic.view.missingCloneHead",
+      "value": "Slot '{0}' enables Phantom View, but its prebaked avatar has no Humanoid Head."
+    },
+    {
+      "key": "diagnostic.view.missingDescriptor",
+      "value": "Slot '{0}' enables Phantom View, but its prebaked avatar descriptor is unavailable."
+    },
+    {
+      "key": "diagnostic.view.missingBaseHead",
+      "value": "Slot '{0}' enables Phantom View, but the base avatar has no Humanoid Head."
+    },
+    {
+      "key": "diagnostic.view.missingShader",
+      "value": "Phantom View display shader was not found at '{0}'."
+    },
+    {
+      "key": "diagnostic.build.multipleComponents",
+      "value": "Avatar '{0}' contains {1} PhantomSystem components. Only one PhantomSystem component is supported per avatar. Merge all slots into one component and remove the additional components before building."
+    },
+    {
+      "key": "diagnostic.parameter.duplicatePrefix",
+      "value": "Slots '{0}' and '{1}' use the same core parameter prefix '{2}'."
+    },
+    {
+      "key": "diagnostic.parameter.coreConflict",
+      "value": "Slot '{0}' core parameter '{1}' conflicts with the base avatar ({2})."
+    },
+    {
+      "key": "diagnostic.parameter.unresolvedReferences",
+      "value": "Slot '{0}' kept {1} unresolved source parameter name(s) unchanged across {2} reference type(s): {3}. These references were not present in the pre-generation parameter resolution."
+    },
+    {
+      "key": "diagnostic.prebake.manualMissingDescriptor",
+      "value": "[PhantomSystem] Manual bake requires PhantomSystem to be inside a VRCAvatarDescriptor."
+    },
+    {
+      "key": "diagnostic.prebake.alreadyRunning",
+      "value": "[PhantomSystem] A phantom prebake is already running. Wait for it to finish before starting a manual bake."
+    },
+    {
+      "key": "diagnostic.prebake.manualFailed",
+      "value": "[PhantomSystem] Manual avatar bake failed. See the NDMF Console for details."
+    },
+    {
+      "key": "diagnostic.prebake.unconsumed",
+      "value": "[PhantomSystem] The phantom sources were prebaked, but the main NDMF build did not consume them. Enable NDMF Apply on Build/Play and retry."
+    },
+    {
+      "key": "diagnostic.prebake.automaticFailed",
+      "value": "[PhantomSystem] Automatic phantom prebake failed. The avatar build has been stopped."
+    },
+    {
+      "key": "diagnostic.prebake.cleanupPartial",
+      "value": "[PhantomSystem] Failed to remove {0} of {1} generated prebake directories during {2}. Use Tools > PhantomSystem > Delete Prebake Assets to retry."
+    },
+    {
+      "key": "diagnostic.prebake.cleanupFailed",
+      "value": "[PhantomSystem] Could not clean generated prebake assets during {0}. The avatar build can continue. {1}"
+    },
+    {
+      "key": "diagnostic.binding.missingTarget",
+      "value": "Final {0} clip '{1}' has an invalid phantom binding '{2}' ({3}.{4}). The missing target may have been left intentionally by another build tool."
+    },
+    {
+      "key": "diagnostic.binding.visibleBone",
+      "value": "Converted {0} clip '{1}' still animates visible phantom humanoid bone '{2}' through '{3}'. Bone animation must target the Phantom Animation Driver skeleton."
+    },
+    {
+      "key": "diagnostic.binding.fxConflict",
+      "value": "Converted Source FX clip '{0}' still animates phantom skeleton transform '{1}' through '{2}'. Source FX curves that conflict with generated rig controls must be removed before controller merging."
+    },
+    {
+      "key": "diagnostic.binding.unsupportedAnimator",
+      "value": "Converted {0} clip '{1}' still contains an unsupported or humanoid Animator binding '{2}'."
+    },
+    {
+      "key": "diagnostic.binding.protectedRoot",
+      "value": "Converted {0} clip '{1}' animates protected phantom root '{2}' through '{3}'. Root Motion must target Hips only."
+    },
+    {
+      "key": "diagnostic.binding.missingFx",
+      "value": "Final FX controller is missing while Converted Action layers are present."
+    },
+    {
+      "key": "diagnostic.binding.actionNotUnique",
+      "value": "Final FX controller does not contain exactly one Converted Action layer named '{0}'."
+    },
+    {
+      "key": "diagnostic.binding.actionAtZero",
+      "value": "Converted Action layer '{0}' became FX layer 0."
+    },
+    {
+      "key": "diagnostic.binding.actionWeight",
+      "value": "Converted Action layer '{0}' has final default weight {1:0.###} instead of 0."
+    },
+    {
+      "key": "diagnostic.cache.clearFailed",
+      "value": "[PhantomSystem] Could not clear the Humanoid bake cache. {0}"
+    },
+    {
+      "key": "diagnostic.cache.cleared",
+      "value": "[PhantomSystem] Cleared the Humanoid bake cache."
+    },
+    {
+      "key": "diagnostic.validation.PHS201",
+      "value": "Parameter '{0}' will be renamed to '{1}' to avoid an incompatible collision ({2})."
+    },
+    {
+      "key": "diagnostic.validation.PHS300",
+      "value": "PhantomSystem on '{0}' has no slots."
+    },
+    {
+      "key": "diagnostic.validation.PHS301",
+      "value": "Slot '{0}' has no PhantomSystem prebake result. Manual Bake commands do not run the VRChat preprocess hook; use 'Manual Bake Avatar with PhantomSystem' or VRChat SDK Build/Upload."
+    },
+    {
+      "key": "diagnostic.validation.PHS302",
+      "value": "Prebaked phantom for Slot '{0}' has no VRCAvatarDescriptor."
+    },
+    {
+      "key": "diagnostic.validation.PHS303",
+      "value": "Prebaked phantom for Slot '{0}' has no Humanoid Animator."
+    },
+    {
+      "key": "diagnostic.validation.PHS001",
+      "value": "The slot data is missing."
+    },
+    {
+      "key": "diagnostic.validation.PHS002",
+      "value": "Slot Name is empty; it will be resolved as '{0}'."
+    },
+    {
+      "key": "diagnostic.validation.PHS010",
+      "value": "No phantom avatar is assigned."
+    },
+    {
+      "key": "diagnostic.validation.PHS011",
+      "value": "The slot references the base avatar itself."
+    },
+    {
+      "key": "diagnostic.validation.PHS012",
+      "value": "The phantom source is inside the base avatar hierarchy."
+    },
+    {
+      "key": "diagnostic.validation.PHS013",
+      "value": "The phantom source root has no Animator."
+    },
+    {
+      "key": "diagnostic.validation.PHS014",
+      "value": "The phantom source Animator has no Avatar asset."
+    },
+    {
+      "key": "diagnostic.validation.PHS015",
+      "value": "The phantom source Animator is not a valid Humanoid."
+    },
+    {
+      "key": "diagnostic.validation.PHS016",
+      "value": "The phantom source Humanoid has no resolvable Hips bone."
+    },
+    {
+      "key": "diagnostic.validation.PHS017",
+      "value": "Phantom View requires the phantom source Humanoid to expose a Head bone."
+    },
+    {
+      "key": "diagnostic.validation.PHS018",
+      "value": "The phantom source contains {0} nested PhantomSystem component(s)."
+    },
+    {
+      "key": "diagnostic.validation.PHS020",
+      "value": "The phantom source contains {0} missing script(s) on {1} GameObject(s)."
+    },
+    {
+      "key": "diagnostic.validation.PHS100",
+      "value": "PhantomSystem must be placed under a VRCAvatarDescriptor."
+    },
+    {
+      "key": "diagnostic.validation.PHS101",
+      "value": "The base avatar root has no Animator."
+    },
+    {
+      "key": "diagnostic.validation.PHS102",
+      "value": "The base avatar Animator must use a valid Humanoid Avatar."
+    },
+    {
+      "key": "diagnostic.validation.PHS103",
+      "value": "The base avatar Humanoid has no resolvable Hips bone."
+    },
+    {
+      "key": "diagnostic.validation.PHS104",
+      "value": "Phantom View requires the base avatar Humanoid to expose a Head bone."
+    },
+    {
+      "key": "diagnostic.validation.PHS105",
+      "value": "Phantom Grabbing requires both Humanoid hand bones on the base avatar."
+    },
+    {
+      "key": "diagnostic.validation.PHS021",
+      "value": "Component type '{0}' does not implement INDMFEditorOnly;phantom prebake compatibility cannot be verified."
+    },
+    {
+      "key": "diagnostic.validation.PHS030",
+      "value": "Slot Name '{0}' is duplicated."
+    },
+    {
+      "key": "diagnostic.validation.PHS032",
+      "value": "The core parameter namespace is duplicated ('{0}')."
+    },
+    {
+      "key": "diagnostic.validation.PHS031",
+      "value": "Slot hierarchy name '{0}' is duplicated after invalid path characters are normalized."
+    },
+    {
+      "key": "diagnostic.animator.unsupportedCoreType",
+      "value": "Unsupported core Animator parameter type '{0}' for '{1}'."
+    },
+    {
+      "key": "diagnostic.sampling.trackCount",
+      "value": "Constant interval track count must match the sampled pose track count."
+    },
+    {
+      "key": "diagnostic.sampling.emptyTimeline",
+      "value": "At least one source sample time is required."
+    },
+    {
+      "key": "diagnostic.sampling.unorderedTimeline",
+      "value": "Source sample times must be strictly increasing."
+    },
+    {
+      "key": "diagnostic.sampling.evaluatorTrackCount",
+      "value": "Pose evaluator returned {0} tracks; expected {1}."
+    },
+    {
+      "key": "diagnostic.cache.trailingData",
+      "value": "The cache entry contains trailing data."
+    },
+    {
+      "key": "diagnostic.cache.unsupportedHeader",
+      "value": "The cache header is not supported."
+    },
+    {
+      "key": "diagnostic.cache.keyMismatch",
+      "value": "The cache key does not match its filename."
+    },
+    {
+      "key": "diagnostic.cache.invalidDiagnostics",
+      "value": "The cache diagnostic counts are invalid."
+    },
+    {
+      "key": "diagnostic.cache.invalidTimeline",
+      "value": "The cached sample timeline is invalid."
+    },
+    {
+      "key": "diagnostic.cache.invalidDimensions",
+      "value": "The cached pose dimensions are invalid."
+    },
+    {
+      "key": "diagnostic.cache.trackTimelineMismatch",
+      "value": "A cached pose track does not match the timeline."
+    },
+    {
+      "key": "diagnostic.cache.nonFinitePose",
+      "value": "A cached pose contains a non-finite value."
+    },
+    {
+      "key": "diagnostic.cache.reductionTrackCount",
+      "value": "The cached reduction data has the wrong track count."
+    },
+    {
+      "key": "diagnostic.cache.invalidKeptIndices",
+      "value": "A cached kept-index list is invalid."
+    },
+    {
+      "key": "diagnostic.cache.invalidCount",
+      "value": "The cached {0} count is invalid."
+    },
+    {
+      "key": "diagnostic.cache.invalidBone",
+      "value": "The cache contains an invalid Humanoid bone."
+    },
+    {
+      "key": "diagnostic.sampling.invalidHumanoid",
+      "value": "'{0}' must have a valid humanoid Animator on its root."
+    },
+    {
+      "key": "diagnostic.driver.noOutputPaths",
+      "value": "At least one Humanoid Driver output path is required."
+    },
+    {
+      "key": "diagnostic.driver.noBoneOutput",
+      "value": "Humanoid bone '{0}' has no Driver output path."
+    },
+    {
+      "key": "diagnostic.driver.duplicateOutput",
+      "value": "Multiple Humanoid bones resolve to Driver output path '{0}'."
+    },
+    {
+      "key": "diagnostic.driver.noNeutralRotation",
+      "value": "Humanoid bone '{0}' has no sampled neutral rotation."
+    },
+    {
+      "key": "diagnostic.driver.emptyOutputPath",
+      "value": "Humanoid Driver output paths must not be empty."
+    },
+    {
+      "key": "diagnostic.sampling.noMuscles",
+      "value": "Unity returned no Humanoid muscles while sampling the neutral pose."
+    },
+    {
+      "key": "diagnostic.sampling.missingNeutralBone",
+      "value": "Unity could not resolve Humanoid bone '{0}' in the neutral-pose sampling hierarchy."
+    },
+    {
+      "key": "diagnostic.sampling.missingParentPath",
+      "value": "Humanoid bone '{0}' has no sampling pose-parent path."
+    },
+    {
+      "key": "diagnostic.sampling.missingParent",
+      "value": "Unity could not resolve sampling pose parent '{0}' for Humanoid bone '{1}'."
+    },
+    {
+      "key": "diagnostic.sampling.bindFailed",
+      "value": "Unity could not bind humanoid avatar '{0}' to the temporary sampling hierarchy."
+    },
+    {
+      "key": "diagnostic.cache.unpreparedHit",
+      "value": "A prepared Humanoid cache hit is required."
+    },
+    {
+      "key": "diagnostic.conversion.blendTreeChildCount",
+      "value": "Converted BlendTree motion count must match the source child count."
+    },
+    {
+      "key": "diagnostic.conversion.virtualizeFailed",
+      "value": "NDMF failed to virtualize converted clip '{0}'."
+    },
+    {
+      "key": "diagnostic.parameter.disabledCore",
+      "value": "Core parameter '{0}' is not enabled for the current PhantomSystem slot."
+    },
+    {
+      "key": "diagnostic.parameter.reason.derivedExists",
+      "value": "one or more derived dynamic parameters already exist"
+    },
+    {
+      "key": "diagnostic.parameter.reason.missing",
+      "value": "parameter information is missing"
+    },
+    {
+      "key": "diagnostic.parameter.reason.unknownType",
+      "value": "the parameter type is unknown"
+    },
+    {
+      "key": "diagnostic.parameter.reason.type",
+      "value": "type mismatch: {0} vs {1}"
+    },
+    {
+      "key": "diagnostic.parameter.reason.animatorOnly",
+      "value": "animator-only state differs"
+    },
+    {
+      "key": "diagnostic.parameter.reason.network",
+      "value": "network sync state differs"
+    },
+    {
+      "key": "diagnostic.parameter.reason.hidden",
+      "value": "hidden state differs"
+    },
+    {
+      "key": "diagnostic.parameter.reason.default",
+      "value": "default value differs: {0} vs {1}"
+    },
+    {
+      "key": "diagnostic.parameter.reason.saved",
+      "value": "saved state differs"
+    },
+    {
+      "key": "diagnostic.prebake.ndmfFailed",
+      "value": "NDMF reported errors while prebaking phantom '{0}'."
+    },
+    {
+      "key": "diagnostic.prebake.descriptorLost",
+      "value": "Prebaked phantom '{0}' no longer has a VRCAvatarDescriptor."
+    },
+    {
+      "key": "diagnostic.prebake.animatorLost",
+      "value": "Prebaked phantom '{0}' no longer has a humanoid Animator."
+    },
+    {
+      "key": "diagnostic.prebake.validationFailed",
+      "value": "PhantomSystem configuration validation failed:\n{0}"
+    },
+    {
+      "key": "diagnostic.report.internal",
+      "value": "Internal build error: {0}"
+    },
+    {
+      "key": "diagnostic.report.aborted",
+      "value": "PhantomSystem build failed. See the NDMF Console for details."
+    },
+    {
+      "key": "diagnostic.report.failed",
+      "value": "PhantomSystem build failed"
+    },
+    {
+      "key": "diagnostic.report.warning",
+      "value": "PhantomSystem build warning"
+    },
+    {
+      "key": "diagnostic.report.coded",
+      "value": "[{0}] {1}"
+    },
+    {
+      "key": "diagnostic.list.more",
+      "value": "{0}, +{1} more"
+    },
+    {
+      "key": "diagnostic.conversion.boneClipCount",
+      "value": "{0} ({1} clip(s))"
+    },
+    {
+      "key": "diagnostic.conversion.missingBones",
+      "value": "Slot '{0}' could not bake curves for {1} unavailable optional humanoid bone(s) referenced by {2} converted clip(s): {3}. Affected clip examples: {4}. Curves for unavailable bones were skipped; remaining animation curves were preserved. Add the missing bones to the source Humanoid mapping only if those animations are required."
+    },
+    {
+      "key": "diagnostic.cache.summary",
+      "value": "Humanoid bake cache: {0} hit(s), {1} miss(es), {2} bypass(es), {3} write failure(s)."
+    },
+    {
+      "key": "diagnostic.ui.missingInstaller",
+      "value": "The required MA Menu Installer is missing."
+    },
+    {
+      "key": "diagnostic.ui.bakeMissingDescriptor",
+      "value": "PhantomSystem must be placed inside an avatar with a VRCAvatarDescriptor before it can be manually baked."
+    },
+    {
+      "key": "diagnostic.ui.staleSharing",
+      "value": "Stored sharing rules are no longer eligible and will fall back to namespacing: {0}"
+    },
+    {
+      "key": "diagnostic.ui.cacheTitle",
+      "value": "Humanoid bake cache"
+    },
+    {
+      "key": "diagnostic.ui.cacheClearFailed",
+      "value": "The cache could not be cleared. See the Console for details."
+    },
+    {
+      "key": "diagnostic.cleanup.playMode",
+      "value": "leaving Play Mode"
+    },
+    {
+      "key": "diagnostic.cleanup.postprocess",
+      "value": "VRC avatar postprocess"
+    },
+    {
+      "key": "diagnostic.cleanup.unconsumed",
+      "value": "unconsumed prebake"
+    },
+    {
+      "key": "diagnostic.cleanup.before",
+      "value": "before prebake"
+    },
+    {
+      "key": "diagnostic.cleanup.failed",
+      "value": "failed prebake"
+    },
+    {
+      "key": "diagnostic.cleanup.manual",
+      "value": "manual avatar bake"
+    }
+  ]
+}

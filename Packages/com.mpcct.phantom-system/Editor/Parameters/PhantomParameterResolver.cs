@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,7 +20,7 @@ namespace MPCCT.PhantomSystem.Editor
     {
         public string OriginalName;
         public string FinalName;
-        public string Reason;
+        public PhantomDiagnostic Reason;
     }
 
     internal sealed class PhantomSlotParameterResolution
@@ -53,7 +54,7 @@ namespace MPCCT.PhantomSystem.Editor
     {
         public List<PhantomSlotParameterResolution> Slots { get; } =
             new List<PhantomSlotParameterResolution>();
-        public List<string> Errors { get; } = new List<string>();
+        public List<PhantomDiagnostic> Errors { get; } = new List<PhantomDiagnostic>();
         public int TotalContributionCost => Slots.Sum(slot => slot.FinalContributionCost);
     }
 
@@ -225,7 +226,7 @@ namespace MPCCT.PhantomSystem.Editor
                 {
                     OriginalName = source.Name,
                     FinalName = finalPrefix,
-                    Reason = "one or more derived dynamic parameters already exist"
+                    Reason = L.D("diagnostic.parameter.reason.derivedExists")
                 });
             }
         }
@@ -272,8 +273,7 @@ namespace MPCCT.PhantomSystem.Editor
                 {
                     duplicateSlots.Add(slotIndex);
                     result.Errors.Add(
-                        $"Slots '{inputs[previousSlot].Identity.SlotId}' and '{input.Identity.SlotId}' "
-                        + $"use the same core parameter prefix '{input.Identity.ParameterPrefix}'.");
+                        L.D("diagnostic.parameter.duplicatePrefix", inputs[previousSlot].Identity.SlotId, input.Identity.SlotId, input.Identity.ParameterPrefix));
                 }
                 else
                 {
@@ -297,8 +297,7 @@ namespace MPCCT.PhantomSystem.Editor
                         if (!PhantomParameterCompatibility.AreCompatible(existing, core, out var reason))
                         {
                             result.Errors.Add(
-                                $"Slot '{input.Identity.SlotId}' core parameter '{core.Name}' conflicts with "
-                                + $"the base avatar ({reason}).");
+                                L.D("diagnostic.parameter.coreConflict", input.Identity.SlotId, core.Name, reason));
                         }
                         continue;
                     }
@@ -371,47 +370,47 @@ namespace MPCCT.PhantomSystem.Editor
         public static bool AreCompatible(
             PhantomParameterDefinition left,
             PhantomParameterDefinition right,
-            out string reason)
+            out PhantomDiagnostic reason)
         {
             if (left == null || right == null)
             {
-                reason = "parameter information is missing";
+                reason = L.D("diagnostic.parameter.reason.missing");
                 return false;
             }
             if (left.ParameterType == null || right.ParameterType == null)
             {
-                reason = "the parameter type is unknown";
+                reason = L.D("diagnostic.parameter.reason.unknownType");
                 return false;
             }
             if (left.ParameterType != right.ParameterType)
             {
-                reason = $"type mismatch: {left.ParameterType} vs {right.ParameterType}";
+                reason = L.D("diagnostic.parameter.reason.type", left.ParameterType, right.ParameterType);
                 return false;
             }
             if (left.IsAnimatorOnly != right.IsAnimatorOnly)
             {
-                reason = "animator-only state differs";
+                reason = L.D("diagnostic.parameter.reason.animatorOnly");
                 return false;
             }
             if (left.WantSynced != right.WantSynced)
             {
-                reason = "network sync state differs";
+                reason = L.D("diagnostic.parameter.reason.network");
                 return false;
             }
             if (left.IsHidden != right.IsHidden)
             {
-                reason = "hidden state differs";
+                reason = L.D("diagnostic.parameter.reason.hidden");
                 return false;
             }
             if (left.DefaultValue.HasValue && right.DefaultValue.HasValue
                 && !Mathf.Approximately(left.DefaultValue.Value, right.DefaultValue.Value))
             {
-                reason = $"default value differs: {left.DefaultValue.Value} vs {right.DefaultValue.Value}";
+                reason = L.D("diagnostic.parameter.reason.default", left.DefaultValue.Value, right.DefaultValue.Value);
                 return false;
             }
             if (left.Saved.HasValue && right.Saved.HasValue && left.Saved.Value != right.Saved.Value)
             {
-                reason = "saved state differs";
+                reason = L.D("diagnostic.parameter.reason.saved");
                 return false;
             }
 

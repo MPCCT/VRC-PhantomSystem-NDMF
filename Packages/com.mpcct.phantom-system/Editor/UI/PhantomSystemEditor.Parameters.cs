@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
@@ -17,7 +18,7 @@ namespace MPCCT.PhantomSystem.Editor
             var expanded = GetSharedParameterFoldout(slotIndex);
             var nextExpanded = EditorGUILayout.Foldout(
                 expanded,
-                "Same-name Parameter Sharing",
+                L.S("sharing.title"),
                 true);
             if (nextExpanded != expanded)
             {
@@ -34,23 +35,21 @@ namespace MPCCT.PhantomSystem.Editor
                 : null;
             if (slotAnalysis == null)
             {
-                EditorGUILayout.LabelField("Analyzing NDMF parameters...", EditorStyles.miniLabel);
+                EditorGUILayout.LabelField(L.S("sharing.analyzing"), EditorStyles.miniLabel);
                 ScheduleRefresh();
                 return false;
             }
 
             EditorGUILayout.LabelField(
-                $"Source {slotAnalysis.SourceParameterCost} bits · "
-                + $"shared -{slotAnalysis.SharedParameterSavings} bits · "
-                + $"PhantomSystem {slotAnalysis.GeneratedParameterCost} bits · "
-                + $"final {slotAnalysis.FinalContributionCost} bits",
-                EditorStyles.miniLabel);
+                L.F("sharing.cost", slotAnalysis.SourceParameterCost,
+                    slotAnalysis.SharedParameterSavings, slotAnalysis.GeneratedParameterCost,
+                    slotAnalysis.FinalContributionCost),
+                EditorStyles.wordWrappedMiniLabel);
 
             if (!renameProperty.boolValue)
             {
                 DrawIndentedHelpBox(
-                    "Parameter namespacing is disabled. Compatible same-name parameters already share their original "
-                    + "names. Incompatible collisions are automatically moved under this Slot's Original prefix.",
+                    L.S("sharing.disabled"),
                     MessageType.Info);
                 return false;
             }
@@ -58,7 +57,7 @@ namespace MPCCT.PhantomSystem.Editor
             if (slotAnalysis.Candidates.Count == 0)
             {
                 EditorGUILayout.LabelField(
-                    "No same-name expression parameters were found on the base avatar.",
+                    L.S("sharing.empty"),
                     EditorStyles.miniLabel);
                 return DrawStaleRules(sharedNames, new HashSet<string>());
             }
@@ -78,7 +77,7 @@ namespace MPCCT.PhantomSystem.Editor
                 actionRect.y,
                 actionRect.width - shareRect.width,
                 actionRect.height);
-            if (GUI.Button(shareRect, "Share Compatible", EditorStyles.miniButtonLeft))
+            if (GUI.Button(shareRect, L.S("sharing.compatible"), EditorStyles.miniButtonLeft))
             {
                 foreach (var candidate in slotAnalysis.Candidates.Where(candidate => candidate.IsCompatible))
                 {
@@ -86,7 +85,7 @@ namespace MPCCT.PhantomSystem.Editor
                 }
             }
 
-            if (GUI.Button(clearRect, "Clear", EditorStyles.miniButtonRight))
+            if (GUI.Button(clearRect, L.S("common.clear"), EditorStyles.miniButtonRight))
             {
                 if (sharedNames.arraySize > 0)
                 {
@@ -161,7 +160,7 @@ namespace MPCCT.PhantomSystem.Editor
                     $"{ParameterSourceCategoryLabel(sourceParameter, slot)} ({candidates.Count})",
                     ParameterSourceCategoryTooltip(sourceParameter, slot)),
                 true);
-            if (canSelect && GUI.Button(selectRect, "Select", EditorStyles.miniButton))
+            if (canSelect && GUI.Button(selectRect, L.S("common.select"), EditorStyles.miniButton))
             {
                 Selection.activeObject = sourceComponent;
                 EditorGUIUtility.PingObject(sourceComponent);
@@ -195,7 +194,7 @@ namespace MPCCT.PhantomSystem.Editor
         {
             var changed = false;
             var selected = ContainsString(sharedNames, candidate.Name);
-            var syncLabel = candidate.SourceParameter.WantSynced ? "network" : "local";
+            var syncLabel = candidate.SourceParameter.WantSynced ? L.S("sharing.network") : L.S("sharing.local");
             var label = $"{candidate.Name}  ({candidate.SourceParameter.ParameterType}, {syncLabel})";
             using (new EditorGUI.DisabledScope(!candidate.IsCompatible))
             {
@@ -208,7 +207,7 @@ namespace MPCCT.PhantomSystem.Editor
                     new GUIContent(
                         label,
                         candidate.IsCompatible
-                            ? "Keep this phantom parameter unrenamed so it shares the base parameter."
+                            ? L.S("sharing.keep")
                             : candidate.IncompatibilityReason),
                     selected);
                 if (next != selected)
@@ -268,13 +267,13 @@ namespace MPCCT.PhantomSystem.Editor
             if (source is VRCAvatarDescriptor)
             {
                 return string.IsNullOrWhiteSpace(pluginName)
-                    ? "Avatar Parameters · VRChat SDK"
-                    : $"Avatar Parameters · {pluginName}";
+                    ? L.F("sharing.avatarParameters", "VRChat SDK")
+                    : L.F("sharing.avatarParameters", pluginName);
             }
 
             var componentName = source != null
                 ? ObjectNames.NicifyVariableName(source.GetType().Name)
-                : "Unknown Parameter Source";
+                : L.S("sharing.unknown");
             var sourcePath = ParameterSourcePath(source, slot);
             return string.IsNullOrWhiteSpace(sourcePath)
                 ? componentName
@@ -289,19 +288,19 @@ namespace MPCCT.PhantomSystem.Editor
             var pluginName = parameter?.SourcePlugin?.DisplayName;
             if (source is VRCAvatarDescriptor)
             {
-                return "Parameters declared by the prebaked avatar's VRCExpressionParameters asset.";
+                return L.S("sharing.avatarTooltip");
             }
 
             if (source == null)
             {
-                return "NDMF did not expose a source component for this resolved parameter.";
+                return L.S("sharing.unknownTooltip");
             }
 
             var pluginText = string.IsNullOrWhiteSpace(pluginName)
-                ? "an unlabelled NDMF provider"
-                : $"the {pluginName} NDMF plugin";
+                ? L.S("sharing.provider")
+                : L.F("sharing.plugin", pluginName);
             var sourcePath = ParameterSourcePath(source, slot);
-            return $"Provided by {source.GetType().FullName} at '{sourcePath}' through {pluginText}.";
+            return L.F("sharing.providedBy", source.GetType().FullName, sourcePath, pluginText);
         }
 
         private static string ParameterSourcePath(Component source, PhantomSlot slot)
@@ -322,7 +321,7 @@ namespace MPCCT.PhantomSystem.Editor
 
             if (source.transform == avatarRoot)
             {
-                return "Avatar Root";
+                return L.S("sharing.root");
             }
 
             return AnimationUtility.CalculateTransformPath(source.transform, avatarRoot);
@@ -348,14 +347,13 @@ namespace MPCCT.PhantomSystem.Editor
             }
 
             DrawIndentedHelpBox(
-                "Stored sharing rules are no longer eligible and will fall back to namespacing: "
-                + string.Join(", ", staleNames),
+                L.F("diagnostic.ui.staleSharing", string.Join(", ", staleNames)),
                 MessageType.Warning);
             var buttonRect = EditorGUI.IndentedRect(
                 EditorGUILayout.GetControlRect(
                     false,
                     EditorGUIUtility.singleLineHeight));
-            if (!GUI.Button(buttonRect, "Remove Stale Rules", EditorStyles.miniButton))
+            if (!GUI.Button(buttonRect, L.S("sharing.removeStale"), EditorStyles.miniButton))
             {
                 return false;
             }

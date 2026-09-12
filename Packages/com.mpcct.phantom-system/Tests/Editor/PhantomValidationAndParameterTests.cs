@@ -13,6 +13,19 @@ namespace MPCCT.PhantomSystem.Editor.Tests
 {
     public sealed class PhantomValidationAndParameterTests
     {
+        private string previousLanguage;
+
+        [SetUp]
+        public void SetUpLanguage()
+        {
+            previousLanguage = nadena.dev.ndmf.localization.LanguagePrefs.Language;
+            nadena.dev.ndmf.localization.LanguagePrefs.Language = "en-US";
+        }
+
+        [TearDown]
+        public void RestoreLanguage() =>
+            nadena.dev.ndmf.localization.LanguagePrefs.Language = previousLanguage;
+
         [Test]
         public void SlotIdentity_UsesDefaultForWhitespace()
         {
@@ -1293,9 +1306,18 @@ namespace MPCCT.PhantomSystem.Editor.Tests
                 Message = "compatibility cannot be verified"
             });
 
-            Assert.AreEqual(
-                "1 warning · 13 bits",
-                PhantomSystemEditor.FormatSlotStatus(result, 13));
+            var previousLanguage = nadena.dev.ndmf.localization.LanguagePrefs.Language;
+            try
+            {
+                nadena.dev.ndmf.localization.LanguagePrefs.Language = "en-US";
+                Assert.AreEqual(
+                    "1 warning · 13 bits",
+                    PhantomSystemEditor.FormatSlotStatus(result, 13));
+            }
+            finally
+            {
+                nadena.dev.ndmf.localization.LanguagePrefs.Language = previousLanguage;
+            }
         }
 
         private static PhantomSlotParameterResolution Resolve(

@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using nadena.dev.modular_avatar.core;
 using UnityEditor;
 using UnityEngine;
@@ -10,20 +11,18 @@ namespace MPCCT.PhantomSystem.Editor
         private void DrawSystemOptions()
         {
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField("System Options", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(L.S("system.title"), EditorStyles.boldLabel);
 
             var installMenu = options.FindPropertyRelative("installPhantomMenu");
             EditorGUILayout.PropertyField(
                 installMenu,
-                new GUIContent(
-                    "Install Phantom Menu",
-                    "Generate and install the PhantomSystem Core menu."));
+                L.G("system.installMenu"));
 
             var authoring = target as PhantomAuthoring;
             var installer = authoring != null ? authoring.coreMenuInstaller : null;
             using (new EditorGUI.DisabledScope(!installMenu.boolValue || installer == null))
             {
-                if (GUILayout.Button("Select Core Menu Location"))
+                if (GUILayout.Button(L.S("system.menuLocation")))
                 {
                     installer.OpenSelectMenu();
                 }
@@ -31,13 +30,13 @@ namespace MPCCT.PhantomSystem.Editor
 
             EditorGUILayout.LabelField(
                 installer != null
-                    ? "Configure only the attached MA Menu Installer's target; its source menu is supplied at build time."
-                    : "The required MA Menu Installer is missing.",
+                    ? L.S("system.installerHelp")
+                    : L.S("diagnostic.ui.missingInstaller"),
                 EditorStyles.miniLabel);
 
             EditorGUILayout.Space();
 
-            if (GUILayout.Button("Open Global Settings"))
+            if (GUILayout.Button(L.S("system.settings")))
             {
                 PhantomSystemGlobalSettingsWindow.Open();
             }
@@ -49,9 +48,7 @@ namespace MPCCT.PhantomSystem.Editor
         {
             EditorGUILayout.Space();
             EditorGUILayout.HelpBox(
-                "Modular Avatar's regular Manual Bake does not run the VRChat preprocess hook used by "
-                + "PhantomSystem. Use this button to prebake all phantom sources before running NDMF's "
-                + "normal manual avatar bake.",
+                L.S("system.bakeHelp"),
                 MessageType.Info);
 
             var authoring = target as PhantomAuthoring;
@@ -64,9 +61,7 @@ namespace MPCCT.PhantomSystem.Editor
                        || PhantomPrebakeSession.IsPrebaking))
             {
                 if (GUILayout.Button(
-                        new GUIContent(
-                            "Bake Avatar with PhantomSystem",
-                            "Prebake every configured phantom source, then run NDMF's normal Manual Bake Avatar workflow.")))
+                        L.G("system.bake")))
                 {
                     serializedObject.ApplyModifiedProperties();
                     EditorApplication.delayCall += () =>
@@ -83,7 +78,7 @@ namespace MPCCT.PhantomSystem.Editor
             if (avatar == null)
             {
                 EditorGUILayout.HelpBox(
-                    "PhantomSystem must be placed inside an avatar with a VRCAvatarDescriptor before it can be baked.",
+                    L.S("diagnostic.ui.bakeMissingDescriptor"),
                     MessageType.Error);
             }
         }

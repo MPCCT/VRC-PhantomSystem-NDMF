@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using System;
 using System.Collections.Generic;
 using nadena.dev.ndmf;
@@ -38,7 +39,7 @@ namespace MPCCT.PhantomSystem.Editor
             if (preparation == null || !preparation.IsCacheHit)
             {
                 throw new ArgumentException(
-                    "A prepared Humanoid cache hit is required.",
+                    L.F("diagnostic.cache.unpreparedHit"),
                     nameof(preparation));
             }
 

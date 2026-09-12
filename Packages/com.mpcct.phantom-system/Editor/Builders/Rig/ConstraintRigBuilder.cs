@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using nadena.dev.ndmf;
 using UnityEngine;
 using VRC.Dynamics;
@@ -21,14 +22,14 @@ namespace MPCCT.PhantomSystem.Editor
             var baseAnimator = ctx.AvatarRootObject.GetComponent<Animator>();
             if (baseAnimator == null)
             {
-                report.InternalError("Base avatar Animator disappeared before constraint generation.", ctx.AvatarRootObject);
+                report.InternalError(L.D("diagnostic.rig.missingBaseAnimator"), ctx.AvatarRootObject);
                 return;
             }
 
             var baseArmature = baseAnimator.GetBoneTransform(HumanBodyBones.Hips)?.parent;
             if (baseArmature == null)
             {
-                report.InternalError("Base avatar armature could not be resolved from humanoid hips.", baseAnimator);
+                report.InternalError(L.D("diagnostic.rig.missingBaseArmature"), baseAnimator);
                 return;
             }
 

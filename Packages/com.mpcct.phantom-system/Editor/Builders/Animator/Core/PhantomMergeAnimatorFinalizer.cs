@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using System.Linq;
 using nadena.dev.modular_avatar.core;
 using nadena.dev.ndmf;
@@ -120,7 +121,7 @@ namespace MPCCT.PhantomSystem.Editor
             if (priority == int.MaxValue)
             {
                 report.Error(
-                    $"Slot '{slot.SlotId}' cannot allocate a Merge Animator priority because the base avatar already uses int.MaxValue.",
+                    L.D("diagnostic.animator.priorityExhausted", slot.SlotId),
                     slot.CloneRoot);
                 return int.MaxValue;
             }

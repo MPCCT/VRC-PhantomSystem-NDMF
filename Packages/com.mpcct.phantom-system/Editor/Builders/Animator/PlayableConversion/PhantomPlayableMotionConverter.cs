@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -23,7 +24,7 @@ namespace MPCCT.PhantomSystem.Editor
         private readonly VRCAvatarDescriptor.AnimLayerType playable;
         private readonly PhantomVirtualPathMapper pathMapper;
         private readonly HashSet<string> animatorParameterNames;
-        private readonly HashSet<string> fxBonePaths;
+        private readonly IReadOnlyDictionary<string, PhantomFxBoneAnimationFilter.TransformChannels> fxTransformChannels;
         private int filteredFxClipCount;
         private int removedFxAnimatorCurveCount;
         private int removedFxTransformCurveCount;
@@ -50,9 +51,9 @@ namespace MPCCT.PhantomSystem.Editor
             pathMapper = new PhantomVirtualPathMapper(
                 context.AvatarRootTransform,
                 slot.CloneRoot);
-            fxBonePaths = playable == VRCAvatarDescriptor.AnimLayerType.FX
-                ? PhantomFxBoneAnimationFilter.CollectBonePaths(slot)
-                : new HashSet<string>(StringComparer.Ordinal);
+            fxTransformChannels = playable == VRCAvatarDescriptor.AnimLayerType.FX
+                ? PhantomFxBoneAnimationFilter.CollectTransformChannels(slot)
+                : new Dictionary<string, PhantomFxBoneAnimationFilter.TransformChannels>(StringComparer.Ordinal);
         }
 
         public static void Convert(
@@ -105,7 +106,8 @@ namespace MPCCT.PhantomSystem.Editor
                     descriptorMask,
                     sourceLayerMask,
                     $"PhantomSystem_{slot.SlotId}_{playable}_{layers[layerIndex].Name}_Mask",
-                    context.AvatarRootTransform);
+                    context.AvatarRootTransform,
+                    applyHumanoidBodyMask: playable != VRCAvatarDescriptor.AnimLayerType.FX);
                 if (convertedMask == null)
                 {
                     continue;
@@ -133,17 +135,13 @@ namespace MPCCT.PhantomSystem.Editor
                 if (playable == VRCAvatarDescriptor.AnimLayerType.FX)
                 {
                     report.Warning(
-                        $"Slot '{slot.SlotId}' FX state '{state.Name}' uses parameter-driven Humanoid Mirror "
-                        + $"('{state.MirrorParameter}'). Source FX bone animation is removed, so PhantomSystem "
-                        + "will ignore this Mirror parameter.",
+                        L.D("diagnostic.conversion.fxMirror", slot.SlotId, state.Name, state.MirrorParameter),
                         slot.CloneRoot);
                 }
                 else
                 {
                     report.Warning(
-                        $"Slot '{slot.SlotId}' {playable} state '{state.Name}' uses parameter-driven Humanoid Mirror "
-                        + $"('{state.MirrorParameter}'). PhantomSystem baked the state's default Mirror value "
-                        + $"({state.Mirror}) and will ignore runtime changes to that Mirror parameter.",
+                        L.D("diagnostic.conversion.mirror", slot.SlotId, playable, state.Name, state.MirrorParameter, state.Mirror),
                         slot.CloneRoot);
                 }
             }
@@ -279,7 +277,7 @@ namespace MPCCT.PhantomSystem.Editor
             if (convertedMotions == null || convertedMotions.Count != source.Children.Count)
             {
                 throw new ArgumentException(
-                    "Converted BlendTree motion count must match the source child count.",
+                    L.F("diagnostic.conversion.blendTreeChildCount"),
                     nameof(convertedMotions));
             }
 
@@ -465,7 +463,7 @@ namespace MPCCT.PhantomSystem.Editor
                 mapped.path = pathMapper.ToCloneRelative(binding.path);
                 return PhantomFxBoneAnimationFilter.ShouldRemove(
                     mapped,
-                    fxBonePaths,
+                    fxTransformChannels,
                     animatorParameterNames);
             });
             if (!requiresFiltering)
@@ -483,7 +481,7 @@ namespace MPCCT.PhantomSystem.Editor
                     pathMapper.ToCloneRelative);
                 var result = PhantomFxBoneAnimationFilter.Filter(
                     converted,
-                    fxBonePaths,
+                    fxTransformChannels,
                     animatorParameterNames);
                 if (!result.Changed)
                 {
@@ -546,10 +544,7 @@ namespace MPCCT.PhantomSystem.Editor
             }
 
             report.Info(
-                $"Slot '{slot.SlotId}' removed {removedFxTransformCurveCount} skeletal Transform "
-                + $"curve(s) and {removedFxAnimatorCurveCount} non-parameter Animator curve(s) from "
-                + $"{filteredFxClipCount} Source FX clip variant(s). A dummy binding preserves each "
-                + "affected clip's duration and prevents empty-clip Write Defaults behavior.",
+                L.D("diagnostic.conversion.fxFiltered", slot.SlotId, removedFxTransformCurveCount, removedFxAnimatorCurveCount, filteredFxClipCount),
                 slot.CloneRoot);
         }
 
@@ -588,33 +583,28 @@ namespace MPCCT.PhantomSystem.Editor
                     .Distinct(StringComparer.Ordinal)
                     .Take(5));
                 report.Warning(
-                    $"Slot '{slot.SlotId}' {playable} clip '{sourceName}' skipped "
-                    + $"{result.SkippedAnimatorBindings.Count} unsupported Animator binding(s)"
-                    + (string.IsNullOrEmpty(propertySummary) ? "." : $": {propertySummary}."),
+                    L.D("diagnostic.conversion.unsupportedBindings", slot.SlotId, playable, sourceName, result.SkippedAnimatorBindings.Count, (string.IsNullOrEmpty(propertySummary) ? "." : $": {propertySummary}.")),
                     slot.CloneRoot);
             }
 
             if (result.RootMotionLocalized)
             {
                 report.Info(
-                    $"Slot '{slot.SlotId}' {playable} clip '{sourceName}' localized Root Motion to its phantom Hips.",
+                    L.D("diagnostic.conversion.rootMotion", slot.SlotId, playable, sourceName),
                     slot.CloneRoot);
             }
 
             if (result.IgnoredRootScaleBindings.Count > 0)
             {
                 report.Warning(
-                    $"Slot '{slot.SlotId}' {playable} clip '{sourceName}' ignored "
-                    + $"{result.IgnoredRootScaleBindings.Count} root scale binding(s).",
+                    L.D("diagnostic.conversion.rootScale", slot.SlotId, playable, sourceName, result.IgnoredRootScaleBindings.Count),
                     slot.CloneRoot);
             }
 
             if (result.HitSampleRateLimit)
             {
                 report.Warning(
-                    $"Slot '{slot.SlotId}' {playable} clip '{sourceName}' reached the "
-                    + $"adaptive sampling limit ({result.SampleRate:0.###} FPS) before all bone errors "
-                    + "fell within the configured tolerance.",
+                    L.D("diagnostic.conversion.samplingLimit", slot.SlotId, playable, sourceName, result.SampleRate),
                     slot.CloneRoot);
             }
         }

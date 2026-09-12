@@ -1,3 +1,4 @@
+using L = MPCCT.PhantomSystem.Editor.PhantomLocalization;
 using UnityEditor.Animations;
 using UnityEngine;
 using VRC.SDK3.Dynamics.Constraint.Components;
@@ -30,8 +31,7 @@ namespace MPCCT.PhantomSystem.Editor
                 || string.IsNullOrEmpty(context.PhantomGrabbingHipsConstraintPath))
             {
                 context.Report.InternalError(
-                    $"Slot '{context.Slot.SlotId}' could not resolve the generated "
-                    + "constraint paths required by Phantom Grabbing.",
+                    L.D("diagnostic.rig.grabbingConstraintPaths", context.Slot.SlotId),
                     context.ErrorContext);
                 return;
             }
