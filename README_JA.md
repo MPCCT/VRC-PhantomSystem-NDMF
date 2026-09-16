@@ -167,6 +167,12 @@ Prebake は実行されません。
   対応する Behaviour は変換され、削除または一部変換された内容はビルド時に報告されます。
 - パラメーター駆動の Animator State Mirror は、実行時の変化に対応していません。State の
   既定 Mirror 値を Bake し、ビルド時に Warning を表示します。
+- 複製された Prebake 済みの分身は、本体の MA Mesh Settings の継承を自動的に遮断し、
+  光源アンカー、Root Bone、Bounds を保持します。
+- MA Material Swap は分身を自動的に除外しません。**Target Root** が未指定、または Avatar
+  ルートの場合、置換条件に一致する分身のマテリアルも対象になります。本体で MA Material Swap
+  を使用する際は、本体の対象メッシュのみを含むノードを Target Root に指定してください。
+  詳細は [MA Material Swap ドキュメント](https://modular-avatar.nadena.dev/ja/docs/reference/reaction/material-swap)を参照してください。
 - PhantomSystem は一時的な分身 Prebake Clone 上でのみ Modular Avatar MMD World Support を
   無効にし、Prebake 専用の MMD 互換 Layer が後続の Layer Control に影響することを防ぎます。
   分身元と本体アバターの設定は変更されません。

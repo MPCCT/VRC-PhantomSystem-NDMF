@@ -144,6 +144,9 @@ PhysBone Immobile Type 覆盖。
   支持的行为，并对被移除或部分转换的内容给出构建警告。
 - 参数驱动的 Animator State Mirror 暂不支持运行时变化；构建时会使用该 State 的默认 Mirror
   值并给出警告。
+- 复制后的预烘焙分身会自动阻止本体 MA Mesh Settings 的继承，保留其光照锚点、根骨骼和包围盒。
+- MA Material Swap 不会自动排除分身。其 **Target Root** 留空或指向 Avatar 根时，
+  与替换规则匹配的分身材质也会受影响。因此在本体上使用 MA Material Swap 时请将 Target Root 指向仅包含本体目标网格的节点。详见 [MA Material Swap 文档](https://modular-avatar.nadena.dev/docs/reference/reaction/material-swap)。
 - PhantomSystem 会仅在临时分身 Prebake 副本上关闭 Modular Avatar MMD World Support，避免
   Prebake 专用的 MMD 兼容层干扰后续 Layer Control；分身源原物体和本体设置不会被修改。
 - 成功完成 VRC 构建、PhantomSystem 手动 Bake 或退出 Apply on Play 后，会自动清理生成的

@@ -1,3 +1,4 @@
+using nadena.dev.modular_avatar.core;
 using nadena.dev.ndmf;
 using UnityEngine;
 using VRC.Dynamics;
@@ -38,6 +39,7 @@ namespace MPCCT.PhantomSystem.Editor
                 clone.transform.localScale = Vector3.one;
                 clone.SetActive(false);
                 RemoveBuildOnlyComponents(clone);
+                PreservePrebakedMeshSettings(clone);
                 ApplyPhysBoneOverrides(slot, clone);
 
                 slot.CloneRoot = clone;
@@ -91,6 +93,19 @@ namespace MPCCT.PhantomSystem.Editor
             {
                 Object.DestroyImmediate(rootAnimator);
             }
+        }
+
+        private static void PreservePrebakedMeshSettings(GameObject cloneRoot)
+        {
+            // Prebaking has already resolved each renderer's anchor, root bone and bounds.
+            // Stop the host avatar's MA settings from applying to this subtree a second time.
+            var settings = cloneRoot.GetComponent<ModularAvatarMeshSettings>()
+                ?? cloneRoot.AddComponent<ModularAvatarMeshSettings>();
+            settings.InheritProbeAnchor = ModularAvatarMeshSettings.InheritMode.DontSet;
+            settings.InheritBounds = ModularAvatarMeshSettings.InheritMode.DontSet;
+            // MA resolves these references even when the corresponding mode is DontSet.
+            settings.ProbeAnchor ??= new AvatarObjectReference();
+            settings.RootBone ??= new AvatarObjectReference();
         }
 
         private static void RemoveBuildOnlyComponents(GameObject cloneRoot)

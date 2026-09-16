@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Preserve prebaked phantom probe anchors, root bones, and mesh bounds by blocking inherited MA Mesh Settings on each cloned phantom root.
+
 ## 0.3.1
 
 ### Added

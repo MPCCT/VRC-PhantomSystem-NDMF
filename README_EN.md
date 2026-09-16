@@ -189,6 +189,13 @@ Open project-wide settings with **Open Global Settings** on the component or
   removed or partially converted content during the build.
 - Parameter-driven Animator State Mirror changes are not supported at runtime.
   The State's default Mirror value is baked and a build warning is reported.
+- Cloned prebaked phantoms automatically block inherited MA Mesh Settings from
+  the base avatar, preserving their probe anchors, root bones, and bounds.
+- MA Material Swap does not automatically exclude phantoms. If **Target Root**
+  is empty or points to the avatar root, matching phantom materials are also
+  affected. When using MA Material Swap on the base avatar, set Target Root to
+  a node containing only the intended base-avatar meshes. See the
+  [MA Material Swap documentation](https://modular-avatar.nadena.dev/docs/reference/reaction/material-swap).
 - PhantomSystem disables Modular Avatar MMD World Support only on temporary
   phantom Prebake clones so Prebake-only MMD compatibility layers cannot disturb
   later Layer Controls. The source phantom and base avatar settings are not
